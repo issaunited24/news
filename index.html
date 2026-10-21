@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b0c0f">
+<meta name="theme-color" content="#07050d">
 <meta name="color-scheme" content="dark">
 <title>Briefly</title>
 <link rel="manifest" href="manifest.json">
@@ -11,197 +11,241 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Manrope:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@500;600&family=JetBrains+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: one column feed, sticky header + tab rail, bottom sheets for menus */
+/* Nocturne shell (violet night, glass) + Titanium story plates (machined metal, underglow) */
 :root {
-  --bg: #0b0c0f;
-  --surface: #14161b;
-  --surface-2: #1b1e25;
-  --line: #252932;
-  --fg: #eceef2;
-  --muted: #8d93a0;
-  --faint: #5d6370;
-  --red: #ff4a3d;
-  --red-soft: rgba(255, 74, 61, .14);
-  --amber: #f3a93b;
-  --amber-soft: rgba(243, 169, 59, .14);
-  --up: #36c47e;
-  --up-soft: rgba(54, 196, 126, .13);
-  --down: #ff5f57;
-  --down-soft: rgba(255, 95, 87, .13);
-  --display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
-  --body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --bg: #07050d;
+  --ink: #f1f0f6;
+  --ink-2: #cfcbdb;
+  --muted: #9a91b8;
+  --faint: #6f6a80;
+  --violet: #a78bfa;
+  --plate-1: #211f28;
+  --plate-2: #16151b;
+  --plate-edge: #2d2b35;
+  --lcd: #0b0a10;
+  --up: #3ff5b0;
+  --down: #ff5c86;
+  --flat: #8d86a8;
+  --red: 255, 61, 100;
+  --gold: 255, 180, 50;
+  --cyan: 50, 210, 255;
+  --red-t: #ff6a7e;
+  --gold-t: #ffc463;
+  --cyan-t: #6fe2ff;
+  --wordmark: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  --ui: Manrope, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --label: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --head: Barlow, Manrope, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--fg); }
-body { font: 15px/1.45 var(--body); -webkit-font-smoothing: antialiased; padding-bottom: env(safe-area-inset-bottom, 0px); }
-button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 15px/1.45 var(--ui); -webkit-font-smoothing: antialiased; min-height: 100vh; padding-bottom: env(safe-area-inset-bottom, 0px); overflow-x: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
 a { color: inherit; text-decoration: none; }
-:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; border-radius: 6px; }
+:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; border-radius: 8px; }
 [hidden] { display: none !important; }
-.wrap { max-width: 720px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Atmosphere */
+.sky { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.sky i { position: absolute; border-radius: 50%; filter: blur(80px); }
+.sky .o1 { width: 360px; height: 360px; right: -160px; top: -130px; background: rgba(124, 58, 237, .30); }
+.sky .o2 { width: 320px; height: 320px; left: -180px; top: 55%; background: rgba(255, 45, 120, .13); }
+.sky .grain { position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px); background-size: 3px 3px; }
+.wrap { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
 /* Header */
-header.top { position: sticky; top: 0; z-index: 20; background: rgba(11, 12, 15, .92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
-.bar { display: flex; align-items: center; gap: 12px; padding-block: 12px 8px; }
-.logo { font: 800 26px/1 var(--display); letter-spacing: -.02em; display: flex; align-items: baseline; gap: 2px; }
-.logo i { width: 8px; height: 8px; border-radius: 50%; background: var(--red); display: inline-block; margin-left: 2px; transform: translateY(-1px); }
-.updated { margin-left: auto; font: 500 11px var(--mono); color: var(--muted); text-align: right; }
-.updated.stale { color: var(--amber); }
-.icon-btn { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: var(--muted); }
-.icon-btn:active { background: var(--surface-2); }
-.icon-btn svg { width: 20px; height: 20px; }
-.spin svg { animation: spin .8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-block: 4px 10px; }
+header.top { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-inset-top, 0px); background: linear-gradient(180deg, rgba(7,5,13,.92), rgba(7,5,13,.78)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,.05); }
+.bar { display: flex; align-items: center; gap: 10px; padding-block: 12px 4px; }
+.logo { font: 800 25px/1 var(--wordmark); letter-spacing: -.035em; text-shadow: 0 0 18px rgba(167,139,250,.55); }
+.live { display: flex; align-items: center; gap: 6px; font: 500 10px var(--mono); color: #c9bff5; padding: 3px 8px 3px 7px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+.live.stale { color: var(--gold-t); }
+.ping { position: relative; width: 7px; height: 7px; border-radius: 50%; background: #ff3d71; }
+.ping::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #ff3d71; animation: ping 1.8s cubic-bezier(0,0,.2,1) infinite; }
+.live.stale .ping, .live.stale .ping::after { background: var(--gold-t); }
+.icons { margin-left: auto; display: flex; margin-right: -8px; }
+.ib { width: 42px; height: 42px; display: grid; place-items: center; color: #b9b0d9; border-radius: 12px; position: relative; }
+.ib svg { width: 19px; height: 19px; }
+.ib.on { color: #fff; }
+.ib.on::after { content: ""; position: absolute; bottom: 6px; width: 4px; height: 4px; border-radius: 50%; background: var(--violet); box-shadow: 0 0 6px var(--violet); }
+.ib .badge { position: absolute; top: 6px; right: 5px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: var(--violet); color: #12091f; font: 700 9.5px/15px var(--ui); text-align: center; }
+.tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-block: 6px 12px; margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px))); padding-right: 16px; }
 .tabs::-webkit-scrollbar { display: none; }
-.tab { flex: none; padding: 7px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); }
-.tab[aria-selected="true"] { color: var(--bg); background: var(--fg); border-color: var(--fg); }
-.tab .n { font: 500 11px var(--mono); margin-left: 6px; opacity: .7; }
+.tab { flex: none; padding: 7px 13px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--muted); transition: color .2s, background .2s, box-shadow .2s; }
+.tab[aria-selected="true"] { color: #fff; background: rgba(167,139,250,.18); box-shadow: inset 0 0 0 1px rgba(167,139,250,.45), 0 0 16px rgba(167,139,250,.35); }
+.search { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; height: 42px; padding: 0 6px 0 12px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(167,139,250,.35); box-shadow: 0 0 14px rgba(167,139,250,.15); color: var(--muted); }
+.search input { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--ink); font: 500 15px var(--ui); }
+.search input::placeholder { color: var(--faint); }
+.search button { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: var(--muted); }
 
-/* Breaking strip */
-.breaking { margin-top: 14px; border-radius: 14px; background: linear-gradient(90deg, var(--red-soft), transparent 80%), var(--surface); border: 1px solid rgba(255, 74, 61, .35); padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; }
-.breaking .tag { flex: none; font: 800 11px/1 var(--display); letter-spacing: .12em; color: #fff; background: var(--red); padding: 5px 7px; border-radius: 6px; margin-top: 2px; display: flex; align-items: center; gap: 6px; }
-.breaking .tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: pulse 1.4s ease-in-out infinite; }
-@keyframes pulse { 50% { opacity: .25; } }
-.breaking a { font-weight: 600; line-height: 1.35; min-width: 0; }
-.breaking .src { display: block; font: 500 11px var(--mono); color: var(--muted); margin-top: 4px; }
-.breaking .dots { display: flex; gap: 4px; margin-top: 8px; }
-.breaking .dots b { width: 14px; height: 3px; border-radius: 2px; background: var(--line); }
-.breaking .dots b.on { background: var(--red); }
+/* Section header row */
+.row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 14px 2px 12px; }
+.seg { font: 600 13px var(--wordmark); display: flex; gap: 2px; align-items: baseline; }
+.seg button { padding: 4px 2px; color: var(--faint); font: inherit; }
+.seg button[aria-pressed="true"] { color: var(--ink); }
+.seg .sl { color: var(--faint); }
+.meta-r { font: 500 10.5px var(--mono); color: #a99bf0; text-align: right; }
+.meta-r.muted { color: var(--faint); }
 
-/* Filter row */
-.filters { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; gap: 12px; }
-.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
-.seg button { padding: 5px 12px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--fg); }
-.count { font: 500 11px var(--mono); color: var(--faint); }
+/* Titanium plates */
+.feed { display: flex; flex-direction: column; gap: 18px; padding-bottom: 12px; }
+.mw { position: relative; content-visibility: auto; contain-intrinsic-size: auto 118px; animation: rise .5s ease both; }
+.mw .under { position: absolute; left: 2%; right: 2%; bottom: -16px; height: 40px; border-radius: 50%; background: radial-gradient(closest-side, rgba(var(--rgb), .7), rgba(var(--rgb), 0)); opacity: .8; pointer-events: none; }
+.mw.pulse .under { animation: breathe 3.6s ease-in-out infinite; }
+.mc { position: relative; display: block; border-radius: 9px; padding: 12px 14px 8px; overflow: hidden;
+  background: linear-gradient(180deg, var(--plate-1), var(--plate-2));
+  border: 1px solid var(--plate-edge);
+  box-shadow: 0 0 0 1px rgba(var(--rgb), .18), 0 14px 28px -14px rgba(var(--rgb), .75), 0 2px 8px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.55); }
+.mc::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(90deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px); }
+.mc .bleed { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg, rgba(var(--rgb), .20), rgba(var(--rgb), .05) 35%, rgba(var(--rgb), 0) 60%); }
+.mc .seam { position: absolute; left: 14%; right: 14%; bottom: 0; height: 1.5px; background: linear-gradient(90deg, rgba(var(--rgb), 0), rgba(var(--rgb), 1), rgba(var(--rgb), 0)); box-shadow: 0 0 8px rgba(var(--rgb), .9); }
+.mc > * { position: relative; }
+.head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.led { flex: none; width: 10px; height: 4px; border-radius: 2px; background: rgba(var(--rgb), 1); box-shadow: 0 0 6px rgba(var(--rgb), 1), 0 0 12px rgba(var(--rgb), .6); }
+.mw.pulse .led { animation: blink 1.6s steps(2, start) infinite; }
+.tag { font: 700 12px var(--label); letter-spacing: .14em; color: var(--t); }
+.age { font: 500 10px var(--mono); color: var(--faint); white-space: nowrap; }
+.new { font: 700 9px var(--mono); letter-spacing: .08em; color: #12091f; background: #c9bff5; padding: 1px 5px; border-radius: 4px; box-shadow: 0 0 8px rgba(167,139,250,.6); }
+.outlet { margin-left: auto; font: 600 13px var(--label); letter-spacing: .06em; color: var(--ink-2); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+.title { display: block; margin-top: 7px; font: 600 16px/1.26 var(--head); color: #f3f2f7; text-wrap: pretty; }
+.sum { margin: 5px 0 0; font-size: 13px; line-height: 1.4; color: #948ea8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.foot { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.cat { font: 500 9.5px var(--mono); letter-spacing: .12em; color: var(--faint); text-transform: uppercase; margin-right: auto; }
+.chip { font: 500 10px var(--mono); color: var(--ink-2); padding: 3px 8px; border-radius: 6px; background: rgba(0,0,0,.35); box-shadow: inset 0 1px 2px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.05); }
+.act { width: 36px; height: 34px; display: grid; place-items: center; color: var(--faint); border-radius: 8px; }
+.act svg { width: 16px; height: 16px; }
+.act.saved { color: var(--violet); filter: drop-shadow(0 0 5px rgba(167,139,250,.8)); }
+.others { margin: 4px 0 6px; display: flex; flex-direction: column; gap: 8px; padding: 8px 10px; border-radius: 6px; background: rgba(0,0,0,.3); box-shadow: inset 0 1px 3px rgba(0,0,0,.7); }
+.others a { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.others a b { font: 600 12px var(--label); letter-spacing: .06em; color: var(--ink-2); margin-right: 6px; text-transform: uppercase; }
+.feed.settled .mw { animation: none; }
+.divider { display: flex; align-items: center; gap: 10px; font: 500 10.5px var(--mono); color: #a99bf0; margin: -4px 2px; }
+.divider::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(167,139,250,.4), transparent); }
 
-/* Calendar */
-.cal { margin-top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-.cal h2 { font: 600 15px var(--display); margin: 0; padding: 12px 14px 8px; display: flex; justify-content: space-between; align-items: baseline; }
-.cal h2 small { font: 500 11px var(--mono); color: var(--muted); }
-.ev { display: grid; grid-template-columns: 54px 44px 1fr auto; gap: 10px; align-items: center; padding: 9px 14px; border-top: 1px solid var(--line); font-size: 13px; }
-.ev.past { opacity: .5; }
-.ev .when { font: 500 11px/1.25 var(--mono); color: var(--muted); }
-.ev .cur { font: 600 12px var(--mono); text-align: center; padding: 3px 0; border-radius: 6px; background: var(--surface-2); }
-.ev .name { min-width: 0; }
-.ev .nums { font: 500 10.5px var(--mono); color: var(--muted); display: block; margin-top: 2px; }
-.ev .imp { width: 8px; height: 8px; border-radius: 50%; }
-.ev .imp.high { background: var(--red); }
-.ev .imp.medium { background: var(--amber); }
-.cal .more { width: 100%; padding: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; font-weight: 600; }
-.note { font-size: 12px; color: var(--faint); margin: 10px 2px 0; }
+/* Forex plates */
+.mc.fx { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; padding: 10px 13px 8px 10px; }
+.lcd { display: flex; flex-direction: column; gap: 6px; padding: 6px 7px 5px; border-radius: 6px; background: linear-gradient(180deg, #07060b, #0d0c12); box-shadow: inset 0 2px 4px rgba(0,0,0,.9), inset 0 0 0 1px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.06); align-self: start; position: relative; }
+.lcd::after { content: ""; position: absolute; inset: 0; border-radius: 6px; background: linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,0) 40%); pointer-events: none; }
+.ch { display: flex; flex-direction: column; gap: 2px; }
+.ch-top { display: flex; justify-content: space-between; align-items: baseline; font: 500 8px var(--mono); letter-spacing: .04em; color: #a49fb6; }
+.ch-top b { font-weight: 600; }
+.meter { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 1.5px; }
+.meter i { height: 2px; border-radius: 1px; background: rgba(255,255,255,.08); }
+.ch svg { display: block; width: 74px; height: 16px; }
+.fx-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fx-body .title { margin-top: 0; font-size: 15px; }
+.why { font-size: 12px; line-height: 1.38; color: #8f89a3; }
+.curs { display: flex; gap: 4px; flex-wrap: wrap; }
+.cur { font: 600 10px var(--mono); padding: 2px 5px; border-radius: 4px; background: rgba(0,0,0,.35); color: var(--flat); }
+.cur.up { color: var(--up); }
+.cur.down { color: var(--down); }
 
-/* Story cards */
-.feed { display: flex; flex-direction: column; margin-top: 8px; }
-.story { padding-block: 16px; border-bottom: 1px solid var(--line); }
-.story-main { display: flex; gap: 14px; align-items: flex-start; }
-.story-text { flex: 1; min-width: 0; }
-.labels { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
-.lbl { font: 700 10px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; padding: 4px 6px; border-radius: 5px; }
-.lbl.brk { background: var(--red); color: #fff; }
-.lbl.major { color: var(--red); background: var(--red-soft); }
-.lbl.notable { color: var(--amber); background: var(--amber-soft); }
-.story h3 { font: 600 17px/1.3 var(--display); letter-spacing: -.005em; margin: 0; text-wrap: pretty; }
-.story.minor h3 { font-weight: 600; font-size: 16px; color: #d6d9df; }
-.story p { margin: 6px 0 0; color: var(--muted); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.thumb { flex: none; width: 88px; height: 88px; border-radius: 12px; object-fit: cover; background: var(--surface-2); }
-.meta { display: flex; align-items: center; gap: 8px; margin-top: 10px; font: 500 12px var(--mono); color: var(--muted); flex-wrap: wrap; }
-.meta .outlet { color: var(--fg); font-family: var(--body); font-weight: 600; font-size: 13px; }
-.meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--faint); }
-.meta .srcs { color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); padding: 2px 8px; border-radius: 999px; font: inherit; }
-.meta .menu { margin-left: auto; width: 30px; height: 26px; border-radius: 8px; color: var(--faint); display: grid; place-items: center; }
-.meta .menu svg { width: 18px; height: 18px; }
-.others { margin-top: 10px; display: flex; flex-direction: column; border-left: 2px solid var(--line); padding-left: 12px; gap: 8px; }
-.others a { font-size: 13px; color: var(--muted); }
-.others a b { color: var(--fg); font-weight: 600; margin-right: 6px; }
+/* Forex top modules */
+.next { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 18px; background: linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.01)), rgba(15,11,26,.8); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); margin-top: 2px; width: 100%; text-align: left; }
+.next svg.ring { flex: none; }
+.next .ring-dash { animation: dash 6s linear infinite; }
+.next-k { font: 500 9.5px var(--mono); letter-spacing: .14em; color: var(--gold-t); }
+.next-t { font: 600 17px/1.2 var(--wordmark); }
+.next-s { font-size: 11.5px; color: #8b83a8; }
+.next-c { margin-left: auto; font: 600 18px var(--mono); color: #fff1d6; text-shadow: 0 0 12px rgba(255,190,70,.6); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mkts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.mkt { padding: 8px 10px; border-radius: 10px; background: linear-gradient(180deg, var(--plate-1), var(--plate-2)); border: 1px solid var(--plate-edge); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 2px 6px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 1px; }
+.mkt-k { font: 700 11px var(--label); letter-spacing: .12em; color: var(--muted); }
+.mkt-v { font: 600 14px var(--mono); font-variant-numeric: tabular-nums; }
+.mkt-c { font: 500 10.5px var(--mono); }
+.cal { margin-top: 10px; border-radius: 12px; overflow: hidden; background: rgba(15,11,26,.75); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.ev { display: grid; grid-template-columns: 58px 40px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 9px 12px; border-top: 1px solid rgba(255,255,255,.05); font-size: 13px; }
+.ev:first-child { border-top: 0; }
+.ev.past { opacity: .45; }
+.ev .when { font: 500 10.5px/1.25 var(--mono); color: var(--muted); }
+.ev .ccy { font: 600 11px var(--mono); text-align: center; padding: 3px 0; border-radius: 5px; background: rgba(0,0,0,.4); }
+.ev .nums { font: 500 10px var(--mono); color: var(--faint); display: block; margin-top: 2px; }
+.ev .imp { width: 7px; height: 7px; border-radius: 50%; }
+.ev .imp.high { background: var(--red-t); box-shadow: 0 0 6px var(--red-t); }
+.ev .imp.medium { background: var(--gold-t); box-shadow: 0 0 6px var(--gold-t); }
+.cal-tog { width: 100%; padding: 10px; border-top: 1px solid rgba(255,255,255,.05); color: var(--muted); font-size: 12.5px; font-weight: 700; }
+.note { font-size: 11.5px; color: var(--faint); margin: 10px 2px 2px; }
 
-.fx { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
-.fx-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.impact { font: 700 10px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; padding: 5px 7px; border-radius: 6px; }
-.impact.high { background: var(--red); color: #fff; }
-.impact.medium { background: var(--amber-soft); color: var(--amber); }
-.impact.low { background: var(--surface-2); color: var(--muted); }
-.chip { font: 600 12px var(--mono); padding: 3px 8px; border-radius: 6px; background: var(--surface-2); color: var(--muted); display: inline-flex; gap: 4px; align-items: center; }
-.chip.up { background: var(--up-soft); color: var(--up); }
-.chip.down { background: var(--down-soft); color: var(--down); }
-.fx .why { font-size: 12.5px; color: var(--muted); }
-
+/* Empty, footer, more */
 .empty { text-align: center; padding: 56px 16px; color: var(--muted); }
-.empty h2 { font: 600 20px var(--display); color: var(--fg); margin: 0 0 8px; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-weight: 600; font-size: 14px; }
-.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-.btn.danger { color: var(--down); }
-.show-more { margin: 20px auto 8px; display: flex; }
-footer { text-align: center; color: var(--faint); font-size: 12px; padding: 24px 0 40px; }
+.empty h2 { font: 600 20px var(--wordmark); color: var(--ink); margin: 0 0 6px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 16px; border-radius: 12px; font-weight: 700; font-size: 14px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.btn.primary { background: rgba(167,139,250,.2); box-shadow: inset 0 0 0 1px rgba(167,139,250,.55), 0 0 16px rgba(167,139,250,.3); color: #fff; }
+.more { display: flex; margin: 18px auto 0; }
+footer { text-align: center; color: var(--faint); font-size: 11.5px; padding: 26px 0 40px; }
 
-/* Bottom sheets */
-.scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .55); z-index: 40; opacity: 0; transition: opacity .2s; }
+/* Sheets */
+.scrim { position: fixed; inset: 0; z-index: 40; background: rgba(4,2,10,.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); opacity: 0; transition: opacity .2s; }
 .scrim.open { opacity: 1; }
-.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; background: var(--surface); border-top: 1px solid var(--line); border-radius: 20px 20px 0 0; max-height: 86vh; overflow-y: auto; transform: translateY(100%); transition: transform .25s ease, visibility 0s .25s; visibility: hidden; padding-bottom: env(safe-area-inset-bottom, 0px); }
-.sheet.open { transform: none; visibility: visible; transition: transform .25s ease; }
-.sheet .inner { max-width: 720px; margin: 0 auto; padding: 8px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
-.grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 12px; }
-.sheet h2 { font: 700 20px var(--display); margin: 0 0 4px; }
-.sheet h4 { font: 600 12px var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 8px; }
-.sheet .item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 4px; border-bottom: 1px solid var(--line); text-align: left; font-size: 15px; }
-.sheet .item svg { width: 20px; height: 20px; color: var(--muted); flex: none; }
-.sheet .item small { margin-left: auto; color: var(--muted); font-size: 12px; }
-.pill-list { display: flex; flex-wrap: wrap; gap: 6px; }
-.pill-list button { padding: 6px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; }
-.pill-list button::after { content: " ✕"; color: var(--faint); }
-.src-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
-.src-row span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.src-row .ok { color: var(--up); font: 500 12px var(--mono); flex: none; }
-.src-row .bad { color: var(--down); font: 500 12px var(--mono); flex: none; }
-textarea { width: 100%; min-height: 110px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; padding: 10px; font: 12px/1.4 var(--mono); resize: vertical; }
-.row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; max-height: 86vh; overflow-y: auto; border-radius: 22px 22px 0 0; background: linear-gradient(180deg, rgba(30,24,48,.98), rgba(14,11,24,.98)); box-shadow: 0 -1px 0 rgba(167,139,250,.35), 0 -20px 60px rgba(124,58,237,.25); transform: translateY(100%); visibility: hidden; transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s .28s; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.sheet.open { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+.sheet .in { max-width: 640px; margin: 0 auto; padding: 8px max(18px, env(safe-area-inset-right, 0px)) 26px max(18px, env(safe-area-inset-left, 0px)); }
+.grab { width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.18); margin: 6px auto 14px; }
+.sheet h2 { font: 600 20px/1.25 var(--wordmark); margin: 0 0 4px; }
+.sheet h4 { font: 700 12px var(--label); letter-spacing: .14em; color: var(--muted); margin: 22px 0 8px; text-transform: uppercase; }
+.sheet .item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 50px; padding: 0 4px; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; font-size: 15px; font-weight: 600; }
+.sheet .item svg { width: 19px; height: 19px; color: var(--muted); flex: none; }
 .muted { color: var(--muted); font-size: 13px; }
-.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; opacity: 0; transition: .2s; z-index: 60; pointer-events: none; max-width: calc(100% - 32px); }
-.toast.show { opacity: 1; transform: translateX(-50%); }
-@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pills button { padding: 7px 11px; border-radius: 999px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); font-size: 13px; font-weight: 600; }
+.pills button::after { content: " ✕"; color: var(--faint); }
+.srcrow { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 13px; }
+.srcrow span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ok { color: var(--up); font: 500 11.5px var(--mono); flex: none; }
+.bad { color: var(--down); font: 500 11.5px var(--mono); flex: none; }
+textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: var(--ink); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 10px; font: 12px/1.4 var(--mono); resize: vertical; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); z-index: 60; padding: 11px 16px; border-radius: 12px; background: rgba(36,28,58,.97); box-shadow: inset 0 0 0 1px rgba(167,139,250,.4), 0 0 24px rgba(124,58,237,.35); font-weight: 700; font-size: 14px; opacity: 0; transition: .22s; pointer-events: none; max-width: calc(100% - 32px); }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@keyframes ping { 75%, 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes breathe { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+@keyframes blink { to { opacity: .35; } }
+@keyframes dash { to { stroke-dashoffset: -20; } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
+<div class="sky" aria-hidden="true"><i class="o1"></i><i class="o2"></i><div class="grain"></div></div>
+
 <header class="top">
   <div class="wrap">
     <div class="bar">
-      <div class="logo">Briefly<i></i></div>
-      <div class="updated" id="updated">Loading…</div>
-      <button class="icon-btn" id="refresh" aria-label="Refresh">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-      </button>
-      <button class="icon-btn" id="openSettings" aria-label="Settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
-      </button>
+      <div class="logo">Briefly</div>
+      <div class="live" id="live" title="Last update"><span class="ping"></span><span id="liveText">LIVE</span></div>
+      <div class="icons">
+        <button class="ib" id="btnSearch" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+        <button class="ib" id="btnSaved" aria-label="Saved stories"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span class="badge" id="savedCount" hidden></span></button>
+        <button class="ib" id="btnSettings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+      </div>
     </div>
+    <label class="search" id="searchBar" hidden>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search stories, outlets, currencies" aria-label="Search stories" autocomplete="off">
+      <button id="qClose" aria-label="Close search" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </label>
     <nav class="tabs" id="tabs" role="tablist"></nav>
   </div>
 </header>
 
 <main class="wrap">
-  <div id="breaking"></div>
-  <div class="filters" id="filters">
-    <div class="seg" role="group" aria-label="Which stories">
-      <button id="fImportant" aria-pressed="true">Important</button>
-      <button id="fAll" aria-pressed="false">All</button>
-    </div>
-    <span class="count" id="count"></span>
+  <div id="top"></div>
+  <div class="row" id="row">
+    <div class="seg" role="group" aria-label="Which stories"><button id="fImp" aria-pressed="true">Important</button><span class="sl">/</span><button id="fAll" aria-pressed="false">All</button></div>
+    <span class="meta-r" id="rowMeta"></span>
   </div>
-  <div id="calendar"></div>
   <div class="feed" id="feed"></div>
-  <button class="btn show-more" id="more" hidden>Show more</button>
+  <button class="btn more" id="more" hidden>Show more</button>
   <footer id="footer"></footer>
 </main>
 
 <div class="scrim" id="scrim" hidden></div>
-<section class="sheet" id="sheet" aria-modal="true" role="dialog"><div class="inner" id="sheetBody"></div></section>
-<div class="toast" id="toast"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="in" id="sheetBody"></div></section>
+<div class="toast" id="toast" role="status"></div>
 
 <script>
 const TABS = [
@@ -211,194 +255,310 @@ const TABS = [
   { id: 'tech', name: 'Tech & AI' },
   { id: 'business', name: 'Business' },
 ];
-const PAGE = 40;
+const PAGE = 30;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-/* ---------- Saved settings (on this phone) ---------- */
+/* ---------- Settings saved on this phone ---------- */
 const KEY = 'briefly.v1';
-const defaults = { tab: 'top', important: true, hidden: [], muted: [], boosted: [], calAll: false };
+const defaults = { tab: 'top', important: true, hidden: [], muted: [], boosted: [], calAll: false, saved: [], lastVisit: 0 };
 let prefs = { ...defaults };
 try { prefs = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch {} };
+const prevVisit = prefs.lastVisit || 0;            // used for the "new since your last visit" marker
+const markVisit = () => { prefs.lastVisit = Date.now(); save(); };
+document.addEventListener('visibilitychange', () => { if (document.hidden) markVisit(); });
+window.addEventListener('pagehide', markVisit);
 
-let data = null, shown = PAGE, expanded = new Set(), breakingIdx = 0, breakingTimer = null;
+let animateNext = true;
+let data = null, shown = PAGE, expanded = new Set(), view = 'feed', query = '', countdownTimer = null;
 
-/* ---------- Time helpers ---------- */
+/* ---------- Time ---------- */
 function ago(t) {
   const m = Math.round((Date.now() - t) / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return 'NOW';
+  if (m < 60) return `${m}M`;
   const h = Math.round(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.round(h / 24)}d ago`;
+  return h < 24 ? `${h}H` : `${Math.round(h / 24)}D`;
 }
 const dayFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
 const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
-/* ---------- Loading ---------- */
+/* ---------- Load ---------- */
 async function load(manual) {
-  const btn = $('refresh');
-  btn.classList.add('spin');
   try {
     const res = await fetch(`data/news.json?t=${Date.now()}`, { cache: 'no-store' });
     if (!res.ok) throw new Error(res.status);
     data = await res.json();
     if (manual) toast('Up to date');
-  } catch (e) {
+  } catch {
     if (manual) toast(data ? "Couldn't refresh. Check your connection." : 'No news yet');
-  } finally {
-    btn.classList.remove('spin');
-    render();
   }
+  render();
 }
 
-/* ---------- Ranking and filtering ---------- */
+/* ---------- Glow levels ---------- */
+// Red: breaking or high · Gold: medium · Cyan: low
+function level(s, tab) {
+  if (s.breaking) return { k: 'red', tag: 'BREAKING', pulse: true };
+  if (tab === 'forex' && s.fx) {
+    const i = s.fx.impact;
+    return i === 'high' ? { k: 'red', tag: 'HIGH' } : i === 'medium' ? { k: 'gold', tag: 'MEDIUM' } : { k: 'cyan', tag: 'LOW' };
+  }
+  return s.tier === 'major' ? { k: 'red', tag: 'HIGH' } : s.tier === 'notable' ? { k: 'gold', tag: 'MEDIUM' } : { k: 'cyan', tag: 'LOW' };
+}
+
+/* ---------- Filtering and ranking ---------- */
 function visible(s) {
   if (prefs.hidden.includes(s.id)) return false;
   if (prefs.muted.includes(s.outlet) && !s.sources.some(o => !prefs.muted.includes(o.outlet))) return false;
   return true;
 }
-function isImportant(s, tab) {
+function important(s, tab) {
   if (s.tier !== 'minor') return true;
   if (tab === 'forex' && s.fx && s.fx.impact !== 'low') return true;
   return prefs.boosted.includes(s.outlet);
 }
-function rankScore(s) {
-  const hours = (Date.now() - s.updatedAt) / 3600e3;
-  const boost = prefs.boosted.includes(s.outlet) ? 12 : 0;
-  return s.score + boost + (s.breaking ? 25 : 0) - hours * 4;
-}
-function storiesFor(tab, importantOnly) {
+const rankScore = s => s.score + (prefs.boosted.includes(s.outlet) ? 12 : 0) + (s.breaking ? 25 : 0) - (Date.now() - s.updatedAt) / 3600e3 * 4;
+function storiesFor(tab, impOnly) {
   if (!data) return [];
   let list = data.stories.filter(visible);
   if (tab !== 'top') list = list.filter(s => s.categories.includes(tab));
-  if (importantOnly) list = list.filter(s => isImportant(s, tab));
-  if (tab === 'top') list = [...list].sort((a, b) => rankScore(b) - rankScore(a));
-  else list = [...list].sort((a, b) => b.updatedAt - a.updatedAt);
-  return list;
+  if (impOnly) list = list.filter(s => important(s, tab));
+  return tab === 'top' ? [...list].sort((a, b) => rankScore(b) - rankScore(a)) : [...list].sort((a, b) => b.updatedAt - a.updatedAt);
 }
-
-/* ---------- Rendering ---------- */
-function renderTabs() {
-  $('tabs').innerHTML = TABS.map(t => {
-    const n = data ? storiesFor(t.id, true).length : '';
-    return `<button class="tab" role="tab" data-tab="${t.id}" aria-selected="${prefs.tab === t.id}">${esc(t.name)}${n !== '' ? `<span class="n">${n}</span>` : ''}</button>`;
-  }).join('');
+function searchResults(q) {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length || !data) return [];
+  return data.stories.filter(s => {
+    const hay = `${s.title} ${s.summary} ${s.outlet} ${s.sources.map(o => o.outlet).join(' ')} ${(s.fx?.currencies || []).map(c => c.code).join(' ')}`.toLowerCase();
+    return words.every(w => hay.includes(w));
+  }).sort((a, b) => b.updatedAt - a.updatedAt);
 }
+const isNew = s => prevVisit && s.firstSeen > prevVisit;
+const isSaved = id => prefs.saved.some(x => x.id === id);
 
-function renderUpdated() {
-  const el = $('updated');
-  if (!data) { el.textContent = ''; return; }
-  const mins = (Date.now() - data.updated) / 60000;
-  el.textContent = `Updated ${ago(data.updated)}`;
-  el.classList.toggle('stale', mins > 45);
-  el.title = new Date(data.updated).toLocaleString();
+/* ---------- Mini charts ---------- */
+const DIR = { up: { c: 'var(--up)', hex: '#3ff5b0', a: '▲' }, down: { c: 'var(--down)', hex: '#ff5c86', a: '▼' }, flat: { c: 'var(--flat)', hex: '#8d86a8', a: '–' } };
+let chartId = 0;
+function sparkline(points, dir, conf) {
+  const W = 72, H = 16, id = `g${chartId++}`, col = DIR[dir].hex;
+  if (!points || points.length < 6) {
+    return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><line x1="1" x2="${W - 1}" y1="${H / 2}" y2="${H / 2}" stroke="rgba(255,255,255,.18)" stroke-width="1" stroke-dasharray="2 2"/></svg>`;
+  }
+  const hist = points.slice(-22);
+  const diffs = hist.slice(1).map((v, i) => Math.abs(v - hist[i])).slice(-10);
+  const step = (diffs.reduce((a, b) => a + b, 0) / diffs.length) || hist[hist.length - 1] * 0.001;
+  const sign = dir === 'up' ? 1 : dir === 'down' ? -1 : 0;
+  const strength = conf ? 0.6 + conf / 10 : 0.4;
+  const last = hist[hist.length - 1];
+  const fc = [last];
+  for (let k = 1; k <= 5; k++) fc.push(last + sign * step * strength * k);
+  const all = hist.concat(fc.slice(1)), n = all.length;
+  const min = Math.min(...all), max = Math.max(...all);
+  const X = i => 1 + i * (W - 6) / (n - 1), Y = v => 2 + (1 - (v - min) / ((max - min) || 1)) * (H - 4.5);
+  const P = all.map((v, i) => [X(i), Y(v)]);
+  const f = x => x.toFixed(1);
+  const smooth = a => { let d = `M${f(a[0][0])} ${f(a[0][1])}`; for (let i = 0; i < a.length - 1; i++) { const p0 = a[i - 1] || a[i], p1 = a[i], p2 = a[i + 1], p3 = a[i + 2] || p2; d += ` C${f(p1[0] + (p2[0] - p0[0]) / 6)} ${f(p1[1] + (p2[1] - p0[1]) / 6)} ${f(p2[0] - (p3[0] - p1[0]) / 6)} ${f(p2[1] - (p3[1] - p1[1]) / 6)} ${f(p2[0])} ${f(p2[1])}`; } return d; };
+  const nowI = hist.length - 1, line = smooth(P);
+  const area = `${line} L${f(P[n - 1][0])} ${H} L${f(P[0][0])} ${H} Z`;
+  const [ex, ey] = P[n - 1];
+  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".38"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${area}" fill="url(#${id})"/>
+    <path d="${smooth(P.slice(0, nowI + 1))}" fill="none" stroke="${col}" stroke-width="1.2" opacity=".85"/>
+    <line x1="${f(P[nowI][0])}" x2="${f(P[nowI][0])}" y1="1" y2="${H - 1}" stroke="rgba(255,255,255,.2)" stroke-width=".6" stroke-dasharray="1 1.5"/>
+    <path d="${smooth(P.slice(nowI))}" fill="none" stroke="${col}" stroke-width="1.5" stroke-dasharray="2.2 1.5"/>
+    <circle cx="${f(ex)}" cy="${f(ey)}" r="2.8" fill="${col}" opacity=".25"/><circle cx="${f(ex)}" cy="${f(ey)}" r="1.4" fill="${col}"/>
+  </svg>`;
 }
-
-function renderBreaking() {
-  clearInterval(breakingTimer);
-  const box = $('breaking');
-  const list = data ? data.stories.filter(s => s.breaking && visible(s)).sort((a, b) => b.score - a.score).slice(0, 5) : [];
-  if (!list.length) { box.innerHTML = ''; return; }
-  const show = () => {
-    const s = list[breakingIdx % list.length];
-    box.innerHTML = `<div class="breaking"><span class="tag">BREAKING</span><div style="min-width:0">
-      <a href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a>
-      <span class="src">${esc(s.outlet)}${s.sources.length ? ` + ${s.sources.length} more` : ''} · ${ago(s.firstSeen)}</span>
-      ${list.length > 1 ? `<div class="dots">${list.map((_, i) => `<b class="${i === breakingIdx % list.length ? 'on' : ''}"></b>`).join('')}</div>` : ''}
-    </div></div>`;
-  };
-  show();
-  if (list.length > 1) breakingTimer = setInterval(() => { breakingIdx++; show(); }, 6000);
-}
-
-function arrow(dir) {
-  return { up: '▲', down: '▼', flat: '–', mixed: '↕' }[dir] || '?';
-}
-
-function fxBlock(fx) {
-  if (!fx) return '';
-  const chips = fx.currencies.map(c => `<span class="chip ${c.dir === 'up' ? 'up' : c.dir === 'down' ? 'down' : ''}">${esc(c.code)} ${arrow(c.dir)}</span>`).join('');
-  return `<div class="fx"><div class="fx-row"><span class="impact ${fx.impact}">${fx.impact} impact</span>${chips}</div><div class="why">${esc(fx.why)}</div></div>`;
-}
-
-function card(s, tab) {
-  const labels = [];
-  if (s.breaking) labels.push('<span class="lbl brk">Breaking</span>');
-  if (s.tier === 'major') labels.push('<span class="lbl major">Major</span>');
-  else if (s.tier === 'notable') labels.push('<span class="lbl notable">Notable</span>');
-  const open = expanded.has(s.id);
-  const others = s.sources.filter(o => !prefs.muted.includes(o.outlet));
-  return `<article class="story ${s.tier}" data-id="${s.id}">
-    <div class="story-main">
-      <div class="story-text">
-        ${labels.length ? `<div class="labels">${labels.join('')}</div>` : ''}
-        <a href="${esc(s.link)}" target="_blank" rel="noopener"><h3>${esc(s.title)}</h3></a>
-        ${s.summary ? `<p>${esc(s.summary)}</p>` : ''}
-      </div>
-      ${s.image ? `<img class="thumb" src="${esc(s.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
-    </div>
-    ${(tab === 'forex' || tab === 'top' || s.fx?.impact === 'high') ? fxBlock(s.fx) : ''}
-    <div class="meta">
-      <span class="outlet">${esc(s.outlet)}</span><span class="dot"></span><span>${ago(s.published)}</span>
-      ${others.length ? `<button class="srcs" data-act="toggle">+${others.length} source${others.length > 1 ? 's' : ''}</button>` : ''}
-      <button class="menu" data-act="menu" aria-label="Story options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
-    </div>
-    ${open && others.length ? `<div class="others">${others.map(o => `<a href="${esc(o.link)}" target="_blank" rel="noopener"><b>${esc(o.outlet)}</b>${esc(o.title)}</a>`).join('')}</div>` : ''}
-  </article>`;
-}
-
-function renderCalendar() {
-  const box = $('calendar');
-  if (prefs.tab !== 'forex' || !data?.calendar?.events?.length) { box.innerHTML = ''; return; }
-  const now = Date.now();
-  let evs = data.calendar.events.map(e => ({ ...e, t: Date.parse(e.time) })).filter(e => !Number.isNaN(e.t)).sort((a, b) => a.t - b.t);
-  const upcomingHigh = evs.filter(e => e.t > now - 3 * 3600e3 && (prefs.calAll || e.impact === 'high'));
-  const list = upcomingHigh.slice(0, prefs.calAll ? 40 : 6);
-  const rows = list.map(e => {
-    const d = new Date(e.t);
-    const nums = [e.actual ? `Actual ${e.actual}` : '', e.forecast ? `Fcst ${e.forecast}` : '', e.previous ? `Prev ${e.previous}` : ''].filter(Boolean).join(' · ');
-    const dirChip = e.dir ? ` <span class="chip ${e.dir}">${esc(e.currency)} ${arrow(e.dir)}</span>` : '';
-    return `<div class="ev ${e.t < now ? 'past' : ''}">
-      <span class="when">${dayFmt.format(d)}<br>${timeFmt.format(d)}</span>
-      <span class="cur">${esc(e.currency)}</span>
-      <span class="name">${esc(e.title)}${dirChip}${nums ? `<span class="nums">${esc(nums)}</span>` : ''}</span>
-      <span class="imp ${e.impact}" title="${e.impact} impact"></span>
+function chartsFor(fx) {
+  const a = fx.assets || { gold: { dir: 'flat' }, usd: { dir: 'flat' }, ndq: { dir: 'flat' } };
+  const m = data.markets?.items || {};
+  return [['GOLD', 'gold'], ['USD', 'usd'], ['NDQ', 'ndq']].map(([label, key]) => {
+    const f = a[key] || { dir: 'flat' }, d = DIR[f.dir] || DIR.flat, n = f.conf || 0;
+    const pts = m[key]?.points?.map(p => p[1]);
+    const meter = Array.from({ length: 10 }, (_, j) => j < n ? `<i style="background:${d.hex};box-shadow:0 0 3px ${d.hex}"></i>` : '<i></i>').join('');
+    const word = f.dir === 'up' ? 'up' : f.dir === 'down' ? 'down' : 'no clear move';
+    return `<div class="ch" role="img" aria-label="${label} forecast ${word}${n ? `, confidence ${n} of 10` : ''}">
+      <div class="ch-top"><span>${label} <span style="color:${d.hex}">${d.a}</span></span><b style="color:${n >= 8 ? '#fff' : n >= 6 ? '#d6d1e6' : '#8d86a8'}">${n ? `${n}/10` : '—'}</b></div>
+      <div class="meter">${meter}</div>
+      ${sparkline(pts, f.dir, n)}
     </div>`;
   }).join('');
-  box.innerHTML = `<section class="cal">
-    <h2>This week's events <small>${prefs.calAll ? 'high + medium' : 'high impact'}</small></h2>
-    ${rows || '<div class="ev"><span class="name muted" style="grid-column:1/-1">No more big events this week.</span></div>'}
-    <button class="more" id="calToggle">${prefs.calAll ? 'Show high impact only' : 'Show medium impact too'}</button>
-  </section>
-  <p class="note">Ratings come from simple rules and calendar data, not advice. Read the story before acting on it.</p>`;
 }
 
+/* ---------- Cards ---------- */
+const ICON = {
+  save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
+  saved: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
+};
+function head(s, lv) {
+  return `<div class="head"><span class="led"></span><span class="tag">${lv.tag}</span><span class="age">${ago(s.published)}</span>${isNew(s) ? '<span class="new">NEW</span>' : ''}<span class="outlet">${esc(s.outlet)}</span></div>`;
+}
+function foot(s, cat) {
+  const others = s.sources.filter(o => !prefs.muted.includes(o.outlet));
+  return `<div class="foot">
+    <span class="cat">${esc(cat)}</span>
+    ${others.length ? `<button class="chip" data-act="toggle">+${others.length} source${others.length > 1 ? 's' : ''}</button>` : ''}
+    <button class="act ${isSaved(s.id) ? 'saved' : ''}" data-act="save" aria-label="${isSaved(s.id) ? 'Remove from saved' : 'Save story'}">${isSaved(s.id) ? ICON.saved : ICON.save}</button>
+    <button class="act" data-act="menu" aria-label="Story options">${ICON.more}</button>
+  </div>
+  ${expanded.has(s.id) && others.length ? `<div class="others">${others.map(o => `<a href="${esc(o.link)}" target="_blank" rel="noopener"><b>${esc(o.outlet)}</b>${esc(o.title)}</a>`).join('')}</div>` : ''}`;
+}
+const catName = s => { const c = s.categories.find(c => c !== 'forex') || s.categories[0]; return (TABS.find(t => t.id === c) || { name: c || '' }).name; };
+function card(s, tab, i) {
+  const lv = level(s, tab);
+  const vars = `--rgb: var(--${lv.k}); --t: var(--${lv.k}-t); animation-delay: ${Math.min(i, 8) * 40}ms`;
+  if (tab === 'forex' && s.fx) {
+    const curs = (s.fx.currencies || []).filter(c => c.code !== 'USD' && c.code !== 'XAU' && c.dir !== 'unclear').map(c => `<span class="cur ${c.dir === 'up' ? 'up' : c.dir === 'down' ? 'down' : ''}">${esc(c.code)} ${DIR[c.dir]?.a || '–'}</span>`).join('');
+    return `<div class="mw ${lv.pulse ? 'pulse' : ''}" style="${vars}" data-id="${s.id}"><span class="under"></span>
+      <article class="mc fx"><span class="bleed"></span><span class="seam"></span>
+        <div class="lcd">${chartsFor(s.fx)}</div>
+        <div class="fx-body">
+          ${head(s, lv)}
+          <a class="title" href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a>
+          ${curs ? `<div class="curs">${curs}</div>` : ''}
+          <div class="why">${esc(s.fx.why)}</div>
+          ${foot(s, 'Forex')}
+        </div>
+      </article></div>`;
+  }
+  return `<div class="mw ${lv.pulse ? 'pulse' : ''}" style="${vars}" data-id="${s.id}"><span class="under"></span>
+    <article class="mc"><span class="bleed"></span><span class="seam"></span>
+      ${head(s, lv)}
+      <a class="title" href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a>
+      ${s.summary ? `<p class="sum">${esc(s.summary)}</p>` : ''}
+      ${foot(s, catName(s))}
+    </article></div>`;
+}
+
+/* ---------- Forex top: countdown, markets, calendar ---------- */
+function nextEvent() {
+  const now = Date.now();
+  return (data?.calendar?.events || []).map(e => ({ ...e, t: Date.parse(e.time) })).filter(e => e.impact === 'high' && e.t > now).sort((a, b) => a.t - b.t)[0];
+}
+function countdownText(t) {
+  const s = Math.max(0, Math.round((t - Date.now()) / 1000));
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+  if (d) return `${d}d ${h}h`;
+  if (h) return `${h}h ${String(m).padStart(2, '0')}m`;
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+function fmtPrice(key, v) {
+  if (v == null) return '—';
+  return key === 'usd' ? v.toFixed(2) : Math.round(v).toLocaleString();
+}
+function forexTop() {
+  const e = nextEvent();
+  let ring = 0;
+  if (e) { const span = 24 * 3600e3; ring = Math.max(0.04, Math.min(1, 1 - (e.t - Date.now()) / span)); }
+  const C = 2 * Math.PI * 19;
+  const m = data?.markets?.items || {};
+  const mk = [['GOLD', 'gold'], ['USD INDEX', 'usd'], ['NASDAQ', 'ndq']].map(([label, key]) => {
+    const it = m[key] || {};
+    const ch = it.change, col = ch > 0 ? 'var(--up)' : ch < 0 ? 'var(--down)' : 'var(--flat)';
+    return `<div class="mkt"><span class="mkt-k">${label}</span><span class="mkt-v">${fmtPrice(key, it.last)}</span><span class="mkt-c" style="color:${col}">${ch == null ? 'no data' : `${ch > 0 ? '+' : ''}${ch.toFixed(2)}% · ${it.span?.startsWith('5') ? '5d' : '30d'}`}</span></div>`;
+  }).join('');
+  const now = Date.now();
+  const evs = (data?.calendar?.events || []).map(x => ({ ...x, t: Date.parse(x.time) })).filter(x => !Number.isNaN(x.t) && x.t > now - 3 * 3600e3 && (prefs.calAll || x.impact === 'high')).sort((a, b) => a.t - b.t).slice(0, prefs.calAll ? 40 : 8);
+  const rows = evs.map(x => {
+    const d = new Date(x.t);
+    const nums = [x.actual ? `Act ${x.actual}` : '', x.forecast ? `Fcst ${x.forecast}` : '', x.previous ? `Prev ${x.previous}` : ''].filter(Boolean).join(' · ');
+    return `<div class="ev ${x.t < now ? 'past' : ''}"><span class="when">${dayFmt.format(d)}<br>${timeFmt.format(d)}</span><span class="ccy">${esc(x.currency)}</span><span>${esc(x.title)}${nums ? `<span class="nums">${esc(nums)}</span>` : ''}</span><span class="imp ${x.impact}"></span></div>`;
+  }).join('');
+  return `<button class="next" id="nextBtn" aria-expanded="${!!prefs.calOpen}">
+      <svg class="ring" width="46" height="46" viewBox="0 0 46 46" aria-hidden="true">
+        <circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/>
+        <circle cx="23" cy="23" r="19" fill="none" stroke="#ffcc66" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(C * ring).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 23 23)" style="filter:drop-shadow(0 0 4px rgba(255,190,70,.8))"/>
+        <circle class="ring-dash" cx="23" cy="23" r="13" fill="none" stroke="rgba(255,204,102,.25)" stroke-width="1" stroke-dasharray="2 3"/>
+      </svg>
+      <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+        <span class="next-k">${e ? 'NEXT HIGH-IMPACT EVENT' : 'CALENDAR'}</span>
+        <span class="next-t">${e ? `${esc(e.currency)} ${esc(e.title)}` : 'No more big events this week'}</span>
+        <span class="next-s">${e ? [e.forecast ? `Forecast ${esc(e.forecast)}` : '', e.previous ? `Previous ${esc(e.previous)}` : ''].filter(Boolean).join(' · ') || `${dayFmt.format(new Date(e.t))} ${timeFmt.format(new Date(e.t))}` : 'Tap to see the week'}${e ? ' · tap for calendar' : ''}</span>
+      </span>
+      ${e ? `<span class="next-c" id="countdown" data-t="${e.t}">${countdownText(e.t)}</span>` : ''}
+    </button>
+    ${prefs.calOpen ? `<div class="cal">${rows || '<div class="ev"><span style="grid-column:1/-1" class="muted">Nothing left on the calendar this week.</span></div>'}<button class="cal-tog" id="calTog">${prefs.calAll ? 'Show high impact only' : 'Show medium impact too'}</button></div>` : ''}
+    <div class="mkts">${mk}</div>
+    <p class="note">Charts: recent prices, then a dashed forecast from each story. Confidence is from simple rules, never a sure thing, and not financial advice.</p>`;
+}
+
+/* ---------- Render ---------- */
+function renderTabs() {
+  $('tabs').innerHTML = TABS.map(t => `<button class="tab" role="tab" data-tab="${t.id}" aria-selected="${view === 'feed' && prefs.tab === t.id}">${esc(t.name)}</button>`).join('');
+}
+function renderHeader() {
+  const live = $('live'), txt = $('liveText');
+  if (data) {
+    const mins = (Date.now() - data.updated) / 60000;
+    txt.textContent = mins < 1 ? 'LIVE' : `LIVE · ${ago(data.updated)}`;
+    live.classList.toggle('stale', mins > 45);
+    live.title = `Updated ${new Date(data.updated).toLocaleString()}`;
+  }
+  const n = prefs.saved.length;
+  $('savedCount').hidden = !n; $('savedCount').textContent = n;
+  $('btnSaved').classList.toggle('on', view === 'saved');
+  $('btnSearch').classList.toggle('on', view === 'search');
+}
 function render() {
-  renderTabs();
-  renderUpdated();
-  renderBreaking();
-  renderCalendar();
-  $('fImportant').setAttribute('aria-pressed', prefs.important);
-  $('fAll').setAttribute('aria-pressed', !prefs.important);
-  const feed = $('feed');
+  chartId = 0;
+  renderTabs(); renderHeader();
+  clearInterval(countdownTimer);
+  const feed = $('feed'), top = $('top'), row = $('row'), meta = $('rowMeta');
+  $('fImp').setAttribute('aria-pressed', prefs.important); $('fAll').setAttribute('aria-pressed', !prefs.important);
+
   if (!data) {
-    $('filters').hidden = true;
-    feed.innerHTML = `<div class="empty"><h2>First update is on its way</h2><p>Briefly collects fresh news about every 10 minutes. Check back in a few minutes.</p><button class="btn primary" data-act="reload">Try again</button></div>`;
-    $('more').hidden = true; $('footer').textContent = '';
+    top.innerHTML = ''; row.hidden = true; $('more').hidden = true; $('footer').textContent = '';
+    feed.innerHTML = `<div class="empty"><h2>First update is on its way</h2><p>Briefly collects fresh news about every 10 minutes.</p><button class="btn primary" data-act="reload">Try again</button></div>`;
     return;
   }
-  $('filters').hidden = false;
-  const list = storiesFor(prefs.tab, prefs.important);
-  $('count').textContent = `${list.length} ${list.length === 1 ? 'story' : 'stories'}`;
-  if (!list.length) {
-    feed.innerHTML = `<div class="empty"><h2>Nothing important right now</h2><p>Switch to All to see every story in this section.</p></div>`;
+
+  let list, tab = prefs.tab;
+  if (view === 'saved') {
+    top.innerHTML = ''; row.hidden = false;
+    $('row').querySelector('.seg').hidden = true;
+    list = prefs.saved.map(x => data.stories.find(s => s.id === x.id) || x);
+    meta.className = 'meta-r muted'; meta.textContent = `${list.length} SAVED`;
+    tab = 'saved';
+  } else if (view === 'search') {
+    top.innerHTML = ''; row.hidden = false;
+    $('row').querySelector('.seg').hidden = true;
+    list = searchResults(query);
+    meta.className = 'meta-r muted'; meta.textContent = query ? `${list.length} RESULT${list.length === 1 ? '' : 'S'}` : 'TYPE TO SEARCH';
+    tab = 'search';
   } else {
-    feed.innerHTML = list.slice(0, shown).map(s => card(s, prefs.tab)).join('');
+    row.hidden = false; $('row').querySelector('.seg').hidden = false;
+    top.innerHTML = tab === 'forex' ? forexTop() : '';
+    list = storiesFor(tab, prefs.important);
+    const fresh = list.filter(isNew).length;
+    meta.className = fresh ? 'meta-r' : 'meta-r muted';
+    meta.textContent = fresh ? `↑ ${fresh} NEW SINCE ${timeFmt.format(new Date(prevVisit))}` : `${list.length} STORIES`;
   }
+
+  if (!list.length) {
+    const msg = view === 'saved' ? ['Nothing saved yet', 'Tap the bookmark on any story to keep it here.']
+      : view === 'search' ? (query ? ['No matches', 'Try a different word, outlet or currency.'] : ['Search everything', 'Stories from the last 36 hours, by word, outlet or currency.'])
+      : ['Nothing important right now', 'Switch to All to see every story in this section.'];
+    feed.innerHTML = `<div class="empty"><h2>${msg[0]}</h2><p>${msg[1]}</p></div>`;
+  } else {
+    const cards = [];
+    const timeSorted = view === 'feed' && tab !== 'top' && prevVisit;
+    list.slice(0, shown).forEach((s, i) => {
+      cards.push(card(s, view === 'feed' ? tab : (s.fx && s.categories?.includes('forex') ? 'forex' : 'top'), i));
+      if (timeSorted && isNew(s) && list[i + 1] && !isNew(list[i + 1])) cards.push('<div class="divider">↑ NEW SINCE YOUR LAST VISIT</div>');
+    });
+    feed.innerHTML = cards.join('');
+  }
+  feed.classList.toggle('settled', !animateNext);
+  animateNext = false;
   $('more').hidden = list.length <= shown;
   $('footer').textContent = `${data.stats.working} of ${data.stats.sources} sources working · ${data.stats.stories} stories in the last 36 hours`;
+
+  const cd = $('countdown');
+  if (cd) countdownTimer = setInterval(() => { cd.textContent = countdownText(+cd.dataset.t); if (+cd.dataset.t <= Date.now()) render(); }, 1000);
 }
 
 /* ---------- Sheets ---------- */
@@ -409,57 +569,71 @@ function openSheet(html) {
 }
 function closeSheet() {
   $('scrim').classList.remove('open'); $('sheet').classList.remove('open');
-  setTimeout(() => { $('scrim').hidden = true; }, 250);
+  setTimeout(() => { $('scrim').hidden = true; }, 280);
 }
-const ICONS = {
-  hide: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7a11.6 11.6 0 0 1-3 4.2M6.6 6.6C4.3 8 2.7 10.2 2 12c1 2.5 5 7 10 7 1.6 0 3.1-.4 4.4-1.1"/></svg>',
-  mute: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
-  boost: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+const SI = {
   open: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>',
-  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
+  save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
+  hide: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7a11.6 11.6 0 0 1-3 4.2M6.6 6.6C4.3 8 2.7 10.2 2 12c1 2.5 5 7 10 7 1.6 0 3.1-.4 4.4-1.1"/></svg>',
+  boost: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  mute: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
 };
-
+const findStory = id => data?.stories.find(x => x.id === id) || prefs.saved.find(x => x.id === id);
 function storyMenu(id) {
-  const s = data.stories.find(x => x.id === id); if (!s) return;
-  const boosted = prefs.boosted.includes(s.outlet);
-  openSheet(`<h2 style="font-size:17px;line-height:1.3">${esc(s.title)}</h2>
-    <p class="muted">${esc(s.outlet)} · ${ago(s.published)}${s.why?.length ? ` · ranked for: ${esc(s.why.join(', '))}` : ''}</p>
-    <a class="item" href="${esc(s.link)}" target="_blank" rel="noopener">${ICONS.open}Open full story</a>
-    <button class="item" data-act="hide" data-id="${s.id}">${ICONS.hide}Hide this story</button>
-    <button class="item" data-act="boost" data-outlet="${esc(s.outlet)}">${ICONS.boost}${boosted ? `Stop prioritizing ${esc(s.outlet)}` : `Prioritize ${esc(s.outlet)}`}</button>
-    <button class="item" data-act="mute" data-outlet="${esc(s.outlet)}">${ICONS.mute}Mute ${esc(s.outlet)}</button>`);
+  const s = findStory(id); if (!s) return;
+  const boosted = prefs.boosted.includes(s.outlet), sv = isSaved(s.id);
+  openSheet(`<h2>${esc(s.title)}</h2>
+    <p class="muted">${esc(s.outlet)} · ${ago(s.published).toLowerCase()} ago${s.why?.length ? ` · ranked for ${esc(s.why.join(', '))}` : ''}</p>
+    <a class="item" href="${esc(s.link)}" target="_blank" rel="noopener">${SI.open}Open full story</a>
+    <button class="item" data-act="save" data-id="${s.id}">${SI.save}${sv ? 'Remove from saved' : 'Save for later'}</button>
+    <button class="item" data-act="hide" data-id="${s.id}">${SI.hide}Hide this story</button>
+    <button class="item" data-act="boost" data-outlet="${esc(s.outlet)}">${SI.boost}${boosted ? `Stop prioritizing ${esc(s.outlet)}` : `Prioritize ${esc(s.outlet)}`}</button>
+    <button class="item" data-act="mute" data-outlet="${esc(s.outlet)}">${SI.mute}Mute ${esc(s.outlet)}</button>`);
 }
-
 function settingsSheet() {
-  const pills = (arr, act) => arr.length ? `<div class="pill-list">${arr.map(o => `<button data-act="${act}" data-outlet="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : '<p class="muted">None.</p>';
-  const srcs = data ? data.sources.map(s => `<div class="src-row"><span>${esc(s.name)}${s.query ? ` <span class="muted">(${esc(s.query)})</span>` : ''} · <span class="muted">${esc(s.category)}</span></span>${s.ok ? `<span class="ok">${s.count} new</span>` : `<span class="bad">failing</span>`}</div>`).join('') : '<p class="muted">Loads after the first update.</p>';
-  const cal = data?.calendar;
+  const pills = (arr, act) => arr.length ? `<div class="pills">${arr.map(o => `<button data-act="${act}" data-outlet="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : '<p class="muted">None.</p>';
+  const srcs = data ? data.sources.map(s => `<div class="srcrow"><span>${esc(s.name)}${s.query ? ` <span class="muted">(${esc(s.query)})</span>` : ''} · <span class="muted">${esc(s.category)}</span></span>${s.ok ? `<span class="ok">${s.count} new</span>` : '<span class="bad">failing</span>'}</div>`).join('') : '<p class="muted">Loads after the first update.</p>';
+  const m = data?.markets?.items || {};
+  const mk = Object.values(m).map(x => `${x.name}: ${x.error ? 'unavailable' : `${x.source}${x.stale ? ' (saved copy)' : ''}`}`).join(' · ');
   openSheet(`<h2>Settings</h2>
-    <p class="muted">These settings are saved on this phone. Use backup to keep a copy.</p>
+    <p class="muted">Saved stories and settings live on this phone. Use backup to keep a copy.</p>
     <h4>Prioritized outlets</h4>${pills(prefs.boosted, 'unboost')}
     <h4>Muted outlets</h4>${pills(prefs.muted, 'unmute')}
     <h4>Hidden stories</h4>
-    <p class="muted">${prefs.hidden.length} hidden. ${prefs.hidden.length ? '<button class="btn" data-act="unhide" style="margin-left:8px;padding:6px 10px;font-size:13px">Show them again</button>' : ''}</p>
+    <p class="muted">${prefs.hidden.length} hidden${prefs.hidden.length ? ' <button class="btn" data-act="unhide" style="min-height:32px;padding:0 10px;margin-left:8px;font-size:13px">Show them again</button>' : '.'}</p>
     <h4>Backup</h4>
-    <p class="muted">Copy your settings and keep them somewhere safe, like a note. Paste them back to restore.</p>
-    <textarea id="backupText" aria-label="Backup text">${esc(JSON.stringify({ boosted: prefs.boosted, muted: prefs.muted, hidden: prefs.hidden }))}</textarea>
-    <div class="row"><button class="btn" data-act="copyBackup">${ICONS.copy.replace('<svg', '<svg width="16" height="16"')}Copy backup</button><button class="btn" data-act="restore">Restore from text</button></div>
-    <h4>How stories are ranked</h4>
-    <p class="muted">Stories rise when many outlets cover them, when an outlet puts them in its top stories, when they're marked breaking, and when they contain big-event words. Opinion pieces, reviews and deals sink. Forex ratings come from central bank and data language, currency moves in the headline, and the week's economic calendar.</p>
-    <h4>Sources</h4>${srcs}
-    ${cal ? `<p class="muted" style="margin-top:10px">Economic calendar: ${cal.ok === false ? 'last update failed, showing saved copy' : 'working'}.</p>` : ''}`);
+    <p class="muted">Copy this text and keep it in a note. Paste it back here to restore your saved stories and settings.</p>
+    <textarea id="backupText" aria-label="Backup text">${esc(JSON.stringify({ boosted: prefs.boosted, muted: prefs.muted, hidden: prefs.hidden, saved: prefs.saved }))}</textarea>
+    <div class="btns"><button class="btn" data-act="copyBackup">Copy backup</button><button class="btn" data-act="restore">Restore from text</button></div>
+    <h4>How it works</h4>
+    <p class="muted">Glow color shows importance: red for breaking or high, gold for medium, cyan for low. Stories rise when many outlets cover them, when outlets put them in their top stories, and when they contain big-event words. On Forex, each story forecasts gold, the US dollar and the Nasdaq, with a 1–10 confidence score from simple rules (capped at 9, because nothing in markets is certain).</p>
+    ${mk ? `<p class="muted">Prices: ${esc(mk)}.</p>` : ''}
+    <h4>Sources</h4>${srcs}`);
 }
 
-/* ---------- Events ---------- */
+/* ---------- Actions ---------- */
+function toggleSave(id) {
+  const s = findStory(id); if (!s) return;
+  if (isSaved(id)) { prefs.saved = prefs.saved.filter(x => x.id !== id); toast('Removed from saved'); }
+  else {
+    const { id: sid, title, link, outlet, summary, published, firstSeen, updatedAt, categories, score, tier, breaking, sources, fx } = s;
+    prefs.saved = [{ id: sid, title, link, outlet, summary, published, firstSeen, updatedAt, categories, score, tier, breaking: false, sources: sources || [], fx, why: s.why || [] }, ...prefs.saved].slice(0, 200);
+    toast('Saved for later');
+  }
+  save(); render();
+}
 document.addEventListener('click', e => {
   const tab = e.target.closest('.tab');
-  if (tab) { prefs.tab = tab.dataset.tab; shown = PAGE; save(); render(); window.scrollTo({ top: 0 }); return; }
+  if (tab) { animateNext = true; prefs.tab = tab.dataset.tab; view = 'feed'; shown = PAGE; $('searchBar').hidden = true; save(); render(); window.scrollTo({ top: 0 }); return; }
+  if (e.target.closest('#nextBtn')) { prefs.calOpen = !prefs.calOpen; save(); render(); return; }
+  if (e.target.closest('#calTog')) { prefs.calAll = !prefs.calAll; save(); render(); return; }
   const el = e.target.closest('[data-act]'); if (!el) return;
-  const act = el.dataset.act, id = el.closest('.story')?.dataset.id, outlet = el.dataset.outlet;
+  const act = el.dataset.act, id = el.dataset.id || el.closest('[data-id]')?.dataset.id, outlet = el.dataset.outlet;
   if (act === 'toggle') { expanded.has(id) ? expanded.delete(id) : expanded.add(id); render(); }
   else if (act === 'menu') storyMenu(id);
+  else if (act === 'save') { toggleSave(id); if (el.closest('.sheet')) closeSheet(); }
   else if (act === 'reload') load(true);
-  else if (act === 'hide') { prefs.hidden = [...prefs.hidden, el.dataset.id].slice(-500); save(); closeSheet(); render(); toast('Story hidden'); }
+  else if (act === 'hide') { prefs.hidden = [...prefs.hidden, id].slice(-500); save(); closeSheet(); render(); toast('Story hidden'); }
   else if (act === 'mute') { if (!prefs.muted.includes(outlet)) prefs.muted.push(outlet); prefs.boosted = prefs.boosted.filter(o => o !== outlet); save(); closeSheet(); render(); toast(`${outlet} muted`); }
   else if (act === 'boost') { prefs.boosted = prefs.boosted.includes(outlet) ? prefs.boosted.filter(o => o !== outlet) : [...prefs.boosted, outlet]; save(); closeSheet(); render(); toast(prefs.boosted.includes(outlet) ? `${outlet} prioritized` : `${outlet} back to normal`); }
   else if (act === 'unmute') { prefs.muted = prefs.muted.filter(o => o !== outlet); save(); render(); settingsSheet(); }
@@ -467,31 +641,39 @@ document.addEventListener('click', e => {
   else if (act === 'unhide') { prefs.hidden = []; save(); render(); settingsSheet(); toast('Hidden stories are back'); }
   else if (act === 'copyBackup') {
     const ta = $('backupText');
-    navigator.clipboard?.writeText(ta.value).then(() => toast('Backup copied'), () => { ta.select(); toast('Select all and copy'); }) ?? (ta.select(), toast('Select all and copy'));
+    const fallback = () => { ta.focus(); ta.select(); toast('Text selected. Tap Copy.'); };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(ta.value).then(() => toast('Backup copied'), fallback); else fallback();
   }
   else if (act === 'restore') {
     try {
       const b = JSON.parse($('backupText').value);
-      prefs.boosted = Array.isArray(b.boosted) ? b.boosted : []; prefs.muted = Array.isArray(b.muted) ? b.muted : []; prefs.hidden = Array.isArray(b.hidden) ? b.hidden : [];
+      const arr = v => Array.isArray(v) ? v : [];
+      prefs.boosted = arr(b.boosted); prefs.muted = arr(b.muted); prefs.hidden = arr(b.hidden); prefs.saved = arr(b.saved).filter(x => x && x.id && x.title && x.link);
       save(); render(); settingsSheet(); toast('Settings restored');
     } catch { toast("That text isn't a Briefly backup"); }
   }
 });
-$('calendar').addEventListener('click', e => { if (e.target.id === 'calToggle') { prefs.calAll = !prefs.calAll; save(); renderCalendar(); } });
-$('fImportant').onclick = () => { prefs.important = true; shown = PAGE; save(); render(); };
+$('fImp').onclick = () => { prefs.important = true; shown = PAGE; save(); render(); };
 $('fAll').onclick = () => { prefs.important = false; shown = PAGE; save(); render(); };
 $('more').onclick = () => { shown += PAGE; render(); };
-$('refresh').onclick = () => load(true);
-$('openSettings').onclick = settingsSheet;
+$('btnSettings').onclick = settingsSheet;
+$('btnSaved').onclick = () => { animateNext = true; view = view === 'saved' ? 'feed' : 'saved'; $('searchBar').hidden = true; shown = PAGE; render(); window.scrollTo({ top: 0 }); };
+$('btnSearch').onclick = () => {
+  if (view === 'search') { view = 'feed'; $('searchBar').hidden = true; render(); return; }
+  view = 'search'; shown = PAGE; $('searchBar').hidden = false; render(); $('q').focus();
+};
+$('qClose').onclick = () => { view = 'feed'; query = ''; $('q').value = ''; $('searchBar').hidden = true; render(); };
+let qTimer;
+$('q').addEventListener('input', e => { clearTimeout(qTimer); qTimer = setTimeout(() => { query = e.target.value.trim(); shown = PAGE; render(); }, 180); });
+$('live').addEventListener('click', () => load(true));
 $('scrim').onclick = closeSheet;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 
 let toastTimer;
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200); }
 
-// Refresh while open, and whenever you come back to the app
 setInterval(() => { if (!document.hidden) load(); }, 2 * 60e3);
-setInterval(renderUpdated, 30e3);
+setInterval(renderHeader, 30e3);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 load();
 </script>
