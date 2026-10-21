@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0f">
+<meta name="color-scheme" content="dark">
+<title>Briefly</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column feed, sticky header + tab rail, bottom sheets for menus */
+:root {
+  --bg: #0b0c0f;
+  --surface: #14161b;
+  --surface-2: #1b1e25;
+  --line: #252932;
+  --fg: #eceef2;
+  --muted: #8d93a0;
+  --faint: #5d6370;
+  --red: #ff4a3d;
+  --red-soft: rgba(255, 74, 61, .14);
+  --amber: #f3a93b;
+  --amber-soft: rgba(243, 169, 59, .14);
+  --up: #36c47e;
+  --up-soft: rgba(54, 196, 126, .13);
+  --down: #ff5f57;
+  --down-soft: rgba(255, 95, 87, .13);
+  --display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  --body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); }
+body { font: 15px/1.45 var(--body); -webkit-font-smoothing: antialiased; padding-bottom: env(safe-area-inset-bottom, 0px); }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; border-radius: 6px; }
+[hidden] { display: none !important; }
+.wrap { max-width: 720px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Header */
+header.top { position: sticky; top: 0; z-index: 20; background: rgba(11, 12, 15, .92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
+.bar { display: flex; align-items: center; gap: 12px; padding-block: 12px 8px; }
+.logo { font: 800 26px/1 var(--display); letter-spacing: -.02em; display: flex; align-items: baseline; gap: 2px; }
+.logo i { width: 8px; height: 8px; border-radius: 50%; background: var(--red); display: inline-block; margin-left: 2px; transform: translateY(-1px); }
+.updated { margin-left: auto; font: 500 11px var(--mono); color: var(--muted); text-align: right; }
+.updated.stale { color: var(--amber); }
+.icon-btn { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: var(--muted); }
+.icon-btn:active { background: var(--surface-2); }
+.icon-btn svg { width: 20px; height: 20px; }
+.spin svg { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-block: 4px 10px; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: none; padding: 7px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); }
+.tab[aria-selected="true"] { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+.tab .n { font: 500 11px var(--mono); margin-left: 6px; opacity: .7; }
+
+/* Breaking strip */
+.breaking { margin-top: 14px; border-radius: 14px; background: linear-gradient(90deg, var(--red-soft), transparent 80%), var(--surface); border: 1px solid rgba(255, 74, 61, .35); padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; }
+.breaking .tag { flex: none; font: 800 11px/1 var(--display); letter-spacing: .12em; color: #fff; background: var(--red); padding: 5px 7px; border-radius: 6px; margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+.breaking .tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.breaking a { font-weight: 600; line-height: 1.35; min-width: 0; }
+.breaking .src { display: block; font: 500 11px var(--mono); color: var(--muted); margin-top: 4px; }
+.breaking .dots { display: flex; gap: 4px; margin-top: 8px; }
+.breaking .dots b { width: 14px; height: 3px; border-radius: 2px; background: var(--line); }
+.breaking .dots b.on { background: var(--red); }
+
+/* Filter row */
+.filters { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; gap: 12px; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.seg button { padding: 5px 12px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--fg); }
+.count { font: 500 11px var(--mono); color: var(--faint); }
+
+/* Calendar */
+.cal { margin-top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.cal h2 { font: 600 15px var(--display); margin: 0; padding: 12px 14px 8px; display: flex; justify-content: space-between; align-items: baseline; }
+.cal h2 small { font: 500 11px var(--mono); color: var(--muted); }
+.ev { display: grid; grid-template-columns: 54px 44px 1fr auto; gap: 10px; align-items: center; padding: 9px 14px; border-top: 1px solid var(--line); font-size: 13px; }
+.ev.past { opacity: .5; }
+.ev .when { font: 500 11px/1.25 var(--mono); color: var(--muted); }
+.ev .cur { font: 600 12px var(--mono); text-align: center; padding: 3px 0; border-radius: 6px; background: var(--surface-2); }
+.ev .name { min-width: 0; }
+.ev .nums { font: 500 10.5px var(--mono); color: var(--muted); display: block; margin-top: 2px; }
+.ev .imp { width: 8px; height: 8px; border-radius: 50%; }
+.ev .imp.high { background: var(--red); }
+.ev .imp.medium { background: var(--amber); }
+.cal .more { width: 100%; padding: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; font-weight: 600; }
+.note { font-size: 12px; color: var(--faint); margin: 10px 2px 0; }
+
+/* Story cards */
+.feed { display: flex; flex-direction: column; margin-top: 8px; }
+.story { padding-block: 16px; border-bottom: 1px solid var(--line); }
+.story-main { display: flex; gap: 14px; align-items: flex-start; }
+.story-text { flex: 1; min-width: 0; }
+.labels { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.lbl { font: 700 10px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; padding: 4px 6px; border-radius: 5px; }
+.lbl.brk { background: var(--red); color: #fff; }
+.lbl.major { color: var(--red); background: var(--red-soft); }
+.lbl.notable { color: var(--amber); background: var(--amber-soft); }
+.story h3 { font: 600 17px/1.3 var(--display); letter-spacing: -.005em; margin: 0; text-wrap: pretty; }
+.story.minor h3 { font-weight: 600; font-size: 16px; color: #d6d9df; }
+.story p { margin: 6px 0 0; color: var(--muted); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.thumb { flex: none; width: 88px; height: 88px; border-radius: 12px; object-fit: cover; background: var(--surface-2); }
+.meta { display: flex; align-items: center; gap: 8px; margin-top: 10px; font: 500 12px var(--mono); color: var(--muted); flex-wrap: wrap; }
+.meta .outlet { color: var(--fg); font-family: var(--body); font-weight: 600; font-size: 13px; }
+.meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--faint); }
+.meta .srcs { color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); padding: 2px 8px; border-radius: 999px; font: inherit; }
+.meta .menu { margin-left: auto; width: 30px; height: 26px; border-radius: 8px; color: var(--faint); display: grid; place-items: center; }
+.meta .menu svg { width: 18px; height: 18px; }
+.others { margin-top: 10px; display: flex; flex-direction: column; border-left: 2px solid var(--line); padding-left: 12px; gap: 8px; }
+.others a { font-size: 13px; color: var(--muted); }
+.others a b { color: var(--fg); font-weight: 600; margin-right: 6px; }
+
+.fx { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.fx-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.impact { font: 700 10px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; padding: 5px 7px; border-radius: 6px; }
+.impact.high { background: var(--red); color: #fff; }
+.impact.medium { background: var(--amber-soft); color: var(--amber); }
+.impact.low { background: var(--surface-2); color: var(--muted); }
+.chip { font: 600 12px var(--mono); padding: 3px 8px; border-radius: 6px; background: var(--surface-2); color: var(--muted); display: inline-flex; gap: 4px; align-items: center; }
+.chip.up { background: var(--up-soft); color: var(--up); }
+.chip.down { background: var(--down-soft); color: var(--down); }
+.fx .why { font-size: 12.5px; color: var(--muted); }
+
+.empty { text-align: center; padding: 56px 16px; color: var(--muted); }
+.empty h2 { font: 600 20px var(--display); color: var(--fg); margin: 0 0 8px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-weight: 600; font-size: 14px; }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.btn.danger { color: var(--down); }
+.show-more { margin: 20px auto 8px; display: flex; }
+footer { text-align: center; color: var(--faint); font-size: 12px; padding: 24px 0 40px; }
+
+/* Bottom sheets */
+.scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .55); z-index: 40; opacity: 0; transition: opacity .2s; }
+.scrim.open { opacity: 1; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; background: var(--surface); border-top: 1px solid var(--line); border-radius: 20px 20px 0 0; max-height: 86vh; overflow-y: auto; transform: translateY(100%); transition: transform .25s ease, visibility 0s .25s; visibility: hidden; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.sheet.open { transform: none; visibility: visible; transition: transform .25s ease; }
+.sheet .inner { max-width: 720px; margin: 0 auto; padding: 8px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); }
+.grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 12px; }
+.sheet h2 { font: 700 20px var(--display); margin: 0 0 4px; }
+.sheet h4 { font: 600 12px var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 8px; }
+.sheet .item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 4px; border-bottom: 1px solid var(--line); text-align: left; font-size: 15px; }
+.sheet .item svg { width: 20px; height: 20px; color: var(--muted); flex: none; }
+.sheet .item small { margin-left: auto; color: var(--muted); font-size: 12px; }
+.pill-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill-list button { padding: 6px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; }
+.pill-list button::after { content: " ✕"; color: var(--faint); }
+.src-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.src-row span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.src-row .ok { color: var(--up); font: 500 12px var(--mono); flex: none; }
+.src-row .bad { color: var(--down); font: 500 12px var(--mono); flex: none; }
+textarea { width: 100%; min-height: 110px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; padding: 10px; font: 12px/1.4 var(--mono); resize: vertical; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.muted { color: var(--muted); font-size: 13px; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 14px; opacity: 0; transition: .2s; z-index: 60; pointer-events: none; max-width: calc(100% - 32px); }
+.toast.show { opacity: 1; transform: translateX(-50%); }
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="bar">
+      <div class="logo">Briefly<i></i></div>
+      <div class="updated" id="updated">Loading…</div>
+      <button class="icon-btn" id="refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </button>
+      <button class="icon-btn" id="openSettings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+      </button>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="breaking"></div>
+  <div class="filters" id="filters">
+    <div class="seg" role="group" aria-label="Which stories">
+      <button id="fImportant" aria-pressed="true">Important</button>
+      <button id="fAll" aria-pressed="false">All</button>
+    </div>
+    <span class="count" id="count"></span>
+  </div>
+  <div id="calendar"></div>
+  <div class="feed" id="feed"></div>
+  <button class="btn show-more" id="more" hidden>Show more</button>
+  <footer id="footer"></footer>
+</main>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" aria-modal="true" role="dialog"><div class="inner" id="sheetBody"></div></section>
+<div class="toast" id="toast"></div>
+
+<script>
+const TABS = [
+  { id: 'top', name: 'Top' },
+  { id: 'world', name: 'World' },
+  { id: 'forex', name: 'Forex' },
+  { id: 'tech', name: 'Tech & AI' },
+  { id: 'business', name: 'Business' },
+];
+const PAGE = 40;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- Saved settings (on this phone) ---------- */
+const KEY = 'briefly.v1';
+const defaults = { tab: 'top', important: true, hidden: [], muted: [], boosted: [], calAll: false };
+let prefs = { ...defaults };
+try { prefs = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch {} };
+
+let data = null, shown = PAGE, expanded = new Set(), breakingIdx = 0, breakingTimer = null;
+
+/* ---------- Time helpers ---------- */
+function ago(t) {
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+const dayFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+
+/* ---------- Loading ---------- */
+async function load(manual) {
+  const btn = $('refresh');
+  btn.classList.add('spin');
+  try {
+    const res = await fetch(`data/news.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status);
+    data = await res.json();
+    if (manual) toast('Up to date');
+  } catch (e) {
+    if (manual) toast(data ? "Couldn't refresh. Check your connection." : 'No news yet');
+  } finally {
+    btn.classList.remove('spin');
+    render();
+  }
+}
+
+/* ---------- Ranking and filtering ---------- */
+function visible(s) {
+  if (prefs.hidden.includes(s.id)) return false;
+  if (prefs.muted.includes(s.outlet) && !s.sources.some(o => !prefs.muted.includes(o.outlet))) return false;
+  return true;
+}
+function isImportant(s, tab) {
+  if (s.tier !== 'minor') return true;
+  if (tab === 'forex' && s.fx && s.fx.impact !== 'low') return true;
+  return prefs.boosted.includes(s.outlet);
+}
+function rankScore(s) {
+  const hours = (Date.now() - s.updatedAt) / 3600e3;
+  const boost = prefs.boosted.includes(s.outlet) ? 12 : 0;
+  return s.score + boost + (s.breaking ? 25 : 0) - hours * 4;
+}
+function storiesFor(tab, importantOnly) {
+  if (!data) return [];
+  let list = data.stories.filter(visible);
+  if (tab !== 'top') list = list.filter(s => s.categories.includes(tab));
+  if (importantOnly) list = list.filter(s => isImportant(s, tab));
+  if (tab === 'top') list = [...list].sort((a, b) => rankScore(b) - rankScore(a));
+  else list = [...list].sort((a, b) => b.updatedAt - a.updatedAt);
+  return list;
+}
+
+/* ---------- Rendering ---------- */
+function renderTabs() {
+  $('tabs').innerHTML = TABS.map(t => {
+    const n = data ? storiesFor(t.id, true).length : '';
+    return `<button class="tab" role="tab" data-tab="${t.id}" aria-selected="${prefs.tab === t.id}">${esc(t.name)}${n !== '' ? `<span class="n">${n}</span>` : ''}</button>`;
+  }).join('');
+}
+
+function renderUpdated() {
+  const el = $('updated');
+  if (!data) { el.textContent = ''; return; }
+  const mins = (Date.now() - data.updated) / 60000;
+  el.textContent = `Updated ${ago(data.updated)}`;
+  el.classList.toggle('stale', mins > 45);
+  el.title = new Date(data.updated).toLocaleString();
+}
+
+function renderBreaking() {
+  clearInterval(breakingTimer);
+  const box = $('breaking');
+  const list = data ? data.stories.filter(s => s.breaking && visible(s)).sort((a, b) => b.score - a.score).slice(0, 5) : [];
+  if (!list.length) { box.innerHTML = ''; return; }
+  const show = () => {
+    const s = list[breakingIdx % list.length];
+    box.innerHTML = `<div class="breaking"><span class="tag">BREAKING</span><div style="min-width:0">
+      <a href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a>
+      <span class="src">${esc(s.outlet)}${s.sources.length ? ` + ${s.sources.length} more` : ''} · ${ago(s.firstSeen)}</span>
+      ${list.length > 1 ? `<div class="dots">${list.map((_, i) => `<b class="${i === breakingIdx % list.length ? 'on' : ''}"></b>`).join('')}</div>` : ''}
+    </div></div>`;
+  };
+  show();
+  if (list.length > 1) breakingTimer = setInterval(() => { breakingIdx++; show(); }, 6000);
+}
+
+function arrow(dir) {
+  return { up: '▲', down: '▼', flat: '–', mixed: '↕' }[dir] || '?';
+}
+
+function fxBlock(fx) {
+  if (!fx) return '';
+  const chips = fx.currencies.map(c => `<span class="chip ${c.dir === 'up' ? 'up' : c.dir === 'down' ? 'down' : ''}">${esc(c.code)} ${arrow(c.dir)}</span>`).join('');
+  return `<div class="fx"><div class="fx-row"><span class="impact ${fx.impact}">${fx.impact} impact</span>${chips}</div><div class="why">${esc(fx.why)}</div></div>`;
+}
+
+function card(s, tab) {
+  const labels = [];
+  if (s.breaking) labels.push('<span class="lbl brk">Breaking</span>');
+  if (s.tier === 'major') labels.push('<span class="lbl major">Major</span>');
+  else if (s.tier === 'notable') labels.push('<span class="lbl notable">Notable</span>');
+  const open = expanded.has(s.id);
+  const others = s.sources.filter(o => !prefs.muted.includes(o.outlet));
+  return `<article class="story ${s.tier}" data-id="${s.id}">
+    <div class="story-main">
+      <div class="story-text">
+        ${labels.length ? `<div class="labels">${labels.join('')}</div>` : ''}
+        <a href="${esc(s.link)}" target="_blank" rel="noopener"><h3>${esc(s.title)}</h3></a>
+        ${s.summary ? `<p>${esc(s.summary)}</p>` : ''}
+      </div>
+      ${s.image ? `<img class="thumb" src="${esc(s.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
+    </div>
+    ${(tab === 'forex' || tab === 'top' || s.fx?.impact === 'high') ? fxBlock(s.fx) : ''}
+    <div class="meta">
+      <span class="outlet">${esc(s.outlet)}</span><span class="dot"></span><span>${ago(s.published)}</span>
+      ${others.length ? `<button class="srcs" data-act="toggle">+${others.length} source${others.length > 1 ? 's' : ''}</button>` : ''}
+      <button class="menu" data-act="menu" aria-label="Story options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+    </div>
+    ${open && others.length ? `<div class="others">${others.map(o => `<a href="${esc(o.link)}" target="_blank" rel="noopener"><b>${esc(o.outlet)}</b>${esc(o.title)}</a>`).join('')}</div>` : ''}
+  </article>`;
+}
+
+function renderCalendar() {
+  const box = $('calendar');
+  if (prefs.tab !== 'forex' || !data?.calendar?.events?.length) { box.innerHTML = ''; return; }
+  const now = Date.now();
+  let evs = data.calendar.events.map(e => ({ ...e, t: Date.parse(e.time) })).filter(e => !Number.isNaN(e.t)).sort((a, b) => a.t - b.t);
+  const upcomingHigh = evs.filter(e => e.t > now - 3 * 3600e3 && (prefs.calAll || e.impact === 'high'));
+  const list = upcomingHigh.slice(0, prefs.calAll ? 40 : 6);
+  const rows = list.map(e => {
+    const d = new Date(e.t);
+    const nums = [e.actual ? `Actual ${e.actual}` : '', e.forecast ? `Fcst ${e.forecast}` : '', e.previous ? `Prev ${e.previous}` : ''].filter(Boolean).join(' · ');
+    const dirChip = e.dir ? ` <span class="chip ${e.dir}">${esc(e.currency)} ${arrow(e.dir)}</span>` : '';
+    return `<div class="ev ${e.t < now ? 'past' : ''}">
+      <span class="when">${dayFmt.format(d)}<br>${timeFmt.format(d)}</span>
+      <span class="cur">${esc(e.currency)}</span>
+      <span class="name">${esc(e.title)}${dirChip}${nums ? `<span class="nums">${esc(nums)}</span>` : ''}</span>
+      <span class="imp ${e.impact}" title="${e.impact} impact"></span>
+    </div>`;
+  }).join('');
+  box.innerHTML = `<section class="cal">
+    <h2>This week's events <small>${prefs.calAll ? 'high + medium' : 'high impact'}</small></h2>
+    ${rows || '<div class="ev"><span class="name muted" style="grid-column:1/-1">No more big events this week.</span></div>'}
+    <button class="more" id="calToggle">${prefs.calAll ? 'Show high impact only' : 'Show medium impact too'}</button>
+  </section>
+  <p class="note">Ratings come from simple rules and calendar data, not advice. Read the story before acting on it.</p>`;
+}
+
+function render() {
+  renderTabs();
+  renderUpdated();
+  renderBreaking();
+  renderCalendar();
+  $('fImportant').setAttribute('aria-pressed', prefs.important);
+  $('fAll').setAttribute('aria-pressed', !prefs.important);
+  const feed = $('feed');
+  if (!data) {
+    $('filters').hidden = true;
+    feed.innerHTML = `<div class="empty"><h2>First update is on its way</h2><p>Briefly collects fresh news about every 10 minutes. Check back in a few minutes.</p><button class="btn primary" data-act="reload">Try again</button></div>`;
+    $('more').hidden = true; $('footer').textContent = '';
+    return;
+  }
+  $('filters').hidden = false;
+  const list = storiesFor(prefs.tab, prefs.important);
+  $('count').textContent = `${list.length} ${list.length === 1 ? 'story' : 'stories'}`;
+  if (!list.length) {
+    feed.innerHTML = `<div class="empty"><h2>Nothing important right now</h2><p>Switch to All to see every story in this section.</p></div>`;
+  } else {
+    feed.innerHTML = list.slice(0, shown).map(s => card(s, prefs.tab)).join('');
+  }
+  $('more').hidden = list.length <= shown;
+  $('footer').textContent = `${data.stats.working} of ${data.stats.sources} sources working · ${data.stats.stories} stories in the last 36 hours`;
+}
+
+/* ---------- Sheets ---------- */
+function openSheet(html) {
+  $('sheetBody').innerHTML = `<div class="grab"></div>${html}`;
+  $('scrim').hidden = false;
+  requestAnimationFrame(() => { $('scrim').classList.add('open'); $('sheet').classList.add('open'); });
+}
+function closeSheet() {
+  $('scrim').classList.remove('open'); $('sheet').classList.remove('open');
+  setTimeout(() => { $('scrim').hidden = true; }, 250);
+}
+const ICONS = {
+  hide: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7a11.6 11.6 0 0 1-3 4.2M6.6 6.6C4.3 8 2.7 10.2 2 12c1 2.5 5 7 10 7 1.6 0 3.1-.4 4.4-1.1"/></svg>',
+  mute: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
+  boost: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  open: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
+};
+
+function storyMenu(id) {
+  const s = data.stories.find(x => x.id === id); if (!s) return;
+  const boosted = prefs.boosted.includes(s.outlet);
+  openSheet(`<h2 style="font-size:17px;line-height:1.3">${esc(s.title)}</h2>
+    <p class="muted">${esc(s.outlet)} · ${ago(s.published)}${s.why?.length ? ` · ranked for: ${esc(s.why.join(', '))}` : ''}</p>
+    <a class="item" href="${esc(s.link)}" target="_blank" rel="noopener">${ICONS.open}Open full story</a>
+    <button class="item" data-act="hide" data-id="${s.id}">${ICONS.hide}Hide this story</button>
+    <button class="item" data-act="boost" data-outlet="${esc(s.outlet)}">${ICONS.boost}${boosted ? `Stop prioritizing ${esc(s.outlet)}` : `Prioritize ${esc(s.outlet)}`}</button>
+    <button class="item" data-act="mute" data-outlet="${esc(s.outlet)}">${ICONS.mute}Mute ${esc(s.outlet)}</button>`);
+}
+
+function settingsSheet() {
+  const pills = (arr, act) => arr.length ? `<div class="pill-list">${arr.map(o => `<button data-act="${act}" data-outlet="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : '<p class="muted">None.</p>';
+  const srcs = data ? data.sources.map(s => `<div class="src-row"><span>${esc(s.name)}${s.query ? ` <span class="muted">(${esc(s.query)})</span>` : ''} · <span class="muted">${esc(s.category)}</span></span>${s.ok ? `<span class="ok">${s.count} new</span>` : `<span class="bad">failing</span>`}</div>`).join('') : '<p class="muted">Loads after the first update.</p>';
+  const cal = data?.calendar;
+  openSheet(`<h2>Settings</h2>
+    <p class="muted">These settings are saved on this phone. Use backup to keep a copy.</p>
+    <h4>Prioritized outlets</h4>${pills(prefs.boosted, 'unboost')}
+    <h4>Muted outlets</h4>${pills(prefs.muted, 'unmute')}
+    <h4>Hidden stories</h4>
+    <p class="muted">${prefs.hidden.length} hidden. ${prefs.hidden.length ? '<button class="btn" data-act="unhide" style="margin-left:8px;padding:6px 10px;font-size:13px">Show them again</button>' : ''}</p>
+    <h4>Backup</h4>
+    <p class="muted">Copy your settings and keep them somewhere safe, like a note. Paste them back to restore.</p>
+    <textarea id="backupText" aria-label="Backup text">${esc(JSON.stringify({ boosted: prefs.boosted, muted: prefs.muted, hidden: prefs.hidden }))}</textarea>
+    <div class="row"><button class="btn" data-act="copyBackup">${ICONS.copy.replace('<svg', '<svg width="16" height="16"')}Copy backup</button><button class="btn" data-act="restore">Restore from text</button></div>
+    <h4>How stories are ranked</h4>
+    <p class="muted">Stories rise when many outlets cover them, when an outlet puts them in its top stories, when they're marked breaking, and when they contain big-event words. Opinion pieces, reviews and deals sink. Forex ratings come from central bank and data language, currency moves in the headline, and the week's economic calendar.</p>
+    <h4>Sources</h4>${srcs}
+    ${cal ? `<p class="muted" style="margin-top:10px">Economic calendar: ${cal.ok === false ? 'last update failed, showing saved copy' : 'working'}.</p>` : ''}`);
+}
+
+/* ---------- Events ---------- */
+document.addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (tab) { prefs.tab = tab.dataset.tab; shown = PAGE; save(); render(); window.scrollTo({ top: 0 }); return; }
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const act = el.dataset.act, id = el.closest('.story')?.dataset.id, outlet = el.dataset.outlet;
+  if (act === 'toggle') { expanded.has(id) ? expanded.delete(id) : expanded.add(id); render(); }
+  else if (act === 'menu') storyMenu(id);
+  else if (act === 'reload') load(true);
+  else if (act === 'hide') { prefs.hidden = [...prefs.hidden, el.dataset.id].slice(-500); save(); closeSheet(); render(); toast('Story hidden'); }
+  else if (act === 'mute') { if (!prefs.muted.includes(outlet)) prefs.muted.push(outlet); prefs.boosted = prefs.boosted.filter(o => o !== outlet); save(); closeSheet(); render(); toast(`${outlet} muted`); }
+  else if (act === 'boost') { prefs.boosted = prefs.boosted.includes(outlet) ? prefs.boosted.filter(o => o !== outlet) : [...prefs.boosted, outlet]; save(); closeSheet(); render(); toast(prefs.boosted.includes(outlet) ? `${outlet} prioritized` : `${outlet} back to normal`); }
+  else if (act === 'unmute') { prefs.muted = prefs.muted.filter(o => o !== outlet); save(); render(); settingsSheet(); }
+  else if (act === 'unboost') { prefs.boosted = prefs.boosted.filter(o => o !== outlet); save(); render(); settingsSheet(); }
+  else if (act === 'unhide') { prefs.hidden = []; save(); render(); settingsSheet(); toast('Hidden stories are back'); }
+  else if (act === 'copyBackup') {
+    const ta = $('backupText');
+    navigator.clipboard?.writeText(ta.value).then(() => toast('Backup copied'), () => { ta.select(); toast('Select all and copy'); }) ?? (ta.select(), toast('Select all and copy'));
+  }
+  else if (act === 'restore') {
+    try {
+      const b = JSON.parse($('backupText').value);
+      prefs.boosted = Array.isArray(b.boosted) ? b.boosted : []; prefs.muted = Array.isArray(b.muted) ? b.muted : []; prefs.hidden = Array.isArray(b.hidden) ? b.hidden : [];
+      save(); render(); settingsSheet(); toast('Settings restored');
+    } catch { toast("That text isn't a Briefly backup"); }
+  }
+});
+$('calendar').addEventListener('click', e => { if (e.target.id === 'calToggle') { prefs.calAll = !prefs.calAll; save(); renderCalendar(); } });
+$('fImportant').onclick = () => { prefs.important = true; shown = PAGE; save(); render(); };
+$('fAll').onclick = () => { prefs.important = false; shown = PAGE; save(); render(); };
+$('more').onclick = () => { shown += PAGE; render(); };
+$('refresh').onclick = () => load(true);
+$('openSettings').onclick = settingsSheet;
+$('scrim').onclick = closeSheet;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+let toastTimer;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200); }
+
+// Refresh while open, and whenever you come back to the app
+setInterval(() => { if (!document.hidden) load(); }, 2 * 60e3);
+setInterval(renderUpdated, 30e3);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+load();
+</script>
+</body>
+</html>
