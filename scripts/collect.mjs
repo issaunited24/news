@@ -49,6 +49,17 @@ const decode = s => s.replace(/&(#x?[0-9a-f]+|\w+);/gi, (m, e) => {
 });
 const clean = s => decode(decode(String(s || '')).replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
 
+// Same outlet, different spellings ("The New York Times" / "New York Times", "Bloomberg.com")
+function normOutlet(o) {
+  let n = String(o || '').trim();
+  if (n.includes(' | ')) n = n.split(' | ').pop();
+  n = n.replace(/\.com$/i, '').replace(/^www\./i, '');
+  if (/^the new york times$/i.test(n)) n = 'New York Times';
+  if (/^yahoo!?\s.*finance/i.test(n)) n = 'Yahoo Finance';
+  if (/^the daily wire$/i.test(n)) n = 'Daily Wire';
+  return n;
+}
+
 function imageOf(x) {
   for (const t of ['media:thumbnail', 'media:content']) for (const m of all(x, t)) {
     const u = m.attrs.url; if (u && !/\.(mp4|mp3|m3u8)(\?|$)/i.test(u) && !/^(video|audio)/i.test(m.attrs.medium || m.attrs.type || '')) return decode(u);
@@ -76,6 +87,7 @@ function parseFeed(xmlText, src) {
       if (s) { outlet = s; if (title.endsWith(` - ${s}`)) title = title.slice(0, -(s.length + 3)); }
       else { const m = title.match(/^(.*) - ([^-]{2,40})$/); if (m) { title = m[1]; outlet = m[2]; } }
     }
+    outlet = normOutlet(outlet);
     if (isJunkOutlet(outlet)) continue;
     const date = textOf(x, 'pubDate', 'published', 'updated', 'dc:date');
     const time = Date.parse(date) || now;
@@ -111,7 +123,7 @@ const fresh = (await pool(config.sources, 8, async (src, i) => {
 
 // 2. Merge with what we saw before (keeps stories around after they drop off a feed, and remembers when we first saw them)
 const byId = new Map();
-for (const it of prevState.items) if (now - it.time <= WINDOW_H * 3600e3 && !isJunkOutlet(it.outlet) && !notEnglish(it.title)) byId.set(it.id, it);
+for (const it of prevState.items) if (now - it.time <= WINDOW_H * 3600e3 && !isJunkOutlet(it.outlet) && !notEnglish(it.title)) byId.set(it.id, { ...it, outlet: normOutlet(it.outlet) });
 for (const it of fresh) {
   const old = byId.get(it.id);
   byId.set(it.id, { ...it, seen: old?.seen ?? now, cats: [...new Set([...(old?.cats || []), it.category])] });
