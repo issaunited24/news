@@ -92,8 +92,8 @@ const NAME_TO_CODE = {
   dollar: 'USD', greenback: 'USD', euro: 'EUR', pound: 'GBP', sterling: 'GBP', yen: 'JPY', franc: 'CHF',
   loonie: 'CAD', aussie: 'AUD', kiwi: 'NZD', yuan: 'CNY', gold: 'XAU',
 };
-const UP_WORDS = 'rises|rose|gains|gained|jumps|jumped|climbs|climbed|rallies|rallied|strengthens|strengthened|firms|firmed|surges|surged|soars|soared|advances|extends gains|hits (?:a )?(?:\\S+ )?high';
-const DOWN_WORDS = 'falls|fell|slides|slid|slips|slipped|drops|dropped|weakens|weakened|tumbles|tumbled|sinks|sank|slumps|slumped|plunges|plunged|retreats|eases|eased|extends losses|hits (?:a )?(?:\\S+ )?low';
+const UP_WORDS = 'rebounds|rebounded|recovers|recovered|edges higher|ticks up|rises|rose|gains|gained|jumps|jumped|climbs|climbed|rallies|rallied|strengthens|strengthened|firms|firmed|surges|surged|soars|soared|advances|extends gains|hits (?:a )?(?:\\S+ )?high';
+const DOWN_WORDS = 'dips|dipped|edges lower|ticks down|falls|fell|slides|slid|slips|slipped|drops|dropped|weakens|weakened|tumbles|tumbled|sinks|sank|slumps|slumped|plunges|plunged|retreats|eases|eased|extends losses|hits (?:a )?(?:\\S+ )?low';
 const MOVE_RE = new RegExp(`\\b(dollar|greenback|euro|pound|sterling|yen|franc|loonie|aussie|kiwi|yuan|gold)\\b(?:\\s+\\S+){0,2}?\\s+(${UP_WORDS}|${DOWN_WORDS})\\b`, 'gi');
 const PAIR_RE = new RegExp(`\\b(USD|EUR|GBP|JPY|CHF|CAD|AUD|NZD|XAU)\\s?\\/\\s?(USD|EUR|GBP|JPY|CHF|CAD|AUD|NZD)\\b(?:\\s+\\S+){0,2}?\\s+(${UP_WORDS}|${DOWN_WORDS})\\b`, 'gi');
 const isUp = w => new RegExp(`^(${UP_WORDS})$`, 'i').test(w);
@@ -101,8 +101,8 @@ const isUp = w => new RegExp(`^(${UP_WORDS})$`, 'i').test(w);
 const NO_MORE_HIKES_RE = /\b(no (more|further) (rate )?(hikes?|increases?)|done (hiking|raising)|end of (rate )?hikes)\b/i;
 const NO_MORE_CUTS_RE = /\b(no (more|further) (rate )?cuts?|done (cutting|easing)|end of (rate )?cuts)\b/i;
 const HOLD_RE = /\b(holds? (interest )?rates|keeps? rates (unchanged|steady|on hold)|leaves? rates unchanged|on hold|pause[sd]?)\b/i;
-const DOVISH_RE = /\b(cuts? (interest )?rates?|cutting rates|lowers? (interest )?rates?|rate cuts?|dovish|easing|stimulus|cooler[- ]than[- ]expected|weaker[- ]than[- ]expected|misses (estimates|forecasts?)|slowdown|contraction|recession|unemployment (rises|jumps|climbs)|inflation (cools|eases|slows|falls))\b/i;
-const HAWKISH_RE = /\b(raises? (interest )?rates?|hikes? (interest )?rates?|rate hikes?|lifts? rates|hawkish|tightening|hotter[- ]than[- ]expected|stronger[- ]than[- ]expected|beats? (estimates|forecasts?)|sticky inflation|inflation (rises|jumps|surges|accelerates|quickens))\b/i;
+const DOVISH_RE = /\b((to|will|could|may|expected to|set to|likely to) (cut|lower rates)|cuts? (interest )?rates?|cutting rates|lowers? (interest )?rates?|rate cuts?|dovish|easing|stimulus|cooler[- ]than[- ]expected|weaker[- ]than[- ]expected|misses (estimates|forecasts?)|slowdown|contraction|recession|unemployment (rises|jumps|climbs)|inflation (cools|eases|slows|falls))\b/i;
+const HAWKISH_RE = /\b((to|will|could|may|expected to|set to|likely to) (hike|raise rates)|rate rises?|raises? (interest )?rates?|hikes? (interest )?rates?|rate hikes?|lifts? rates|hawkish|tightening|hotter[- ]than[- ]expected|stronger[- ]than[- ]expected|beats? (estimates|forecasts?)|sticky inflation|hot (uk |us |u\.s\. )?(cpi|inflation)|inflation (rises?|jumps|surges|accelerates|quickens|hits \S+ high))\b/i;
 const OIL_UP_RE = /\b(oil|crude|brent|wti)\b(?:\s+\S+){0,2}?\s+(rises|rose|jumps|surges|climbs|rallies|gains|soars)\b|opec\+? (cuts?|curbs?) (output|production)/i;
 const OIL_DOWN_RE = /\b(oil|crude|brent|wti)\b(?:\s+\S+){0,2}?\s+(falls|fell|drops|slides|slumps|plunges|tumbles|sinks)\b|opec\+? (raises?|boosts?|hikes?) (output|production)/i;
 

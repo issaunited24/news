@@ -7,7 +7,7 @@ import { cluster, scoreStory, analyzeFx, calendarEvent } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
 const WINDOW_H = 36;           // keep stories from the last 36 hours
-const MAX_ITEMS = 1500;
+const MAX_ITEMS = 2500;
 const CAL_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 const FIXTURES = process.env.FIXTURES; // local testing: folder of saved feeds
 
@@ -122,13 +122,15 @@ const PREFERRED = ['Reuters', 'AP News', 'BBC', 'Bloomberg', 'The Economist', 'N
 const rank = o => { const i = PREFERRED.findIndex(p => o.toLowerCase().includes(p.toLowerCase())); return i < 0 ? 99 : i; };
 const stories = cluster(items).map(group => {
   group.sort((a, b) => a.time - b.time);
-  const withSummary = group.filter(g => g.summary || g.image);
-  const lead = [...(withSummary.length ? withSummary : group)].sort((a, b) => rank(a.outlet) - rank(b.outlet) || a.time - b.time)[0];
+  const rich = g => (g.summary || g.image ? 0 : 1);
+  const lead = [...group].sort((a, b) => rank(a.outlet) - rank(b.outlet) || rich(a) - rich(b) || a.time - b.time)[0];
   const s = scoreStory([lead, ...group.filter(g => g !== lead)], keywords, now);
   const cats = new Set(group.flatMap(g => g.cats));
+  cats.delete('forex'); // forex is only kept when the rules find a real currency angle (below)
   const allText = group.map(g => g.title).join(' . ');
   const fx = analyzeFx(`${lead.title} ${lead.summary}`, s.tier) || null;
-  if (fx && fx.strong) cats.add('forex');
+  const fromFxFeed = group.some(g => g.cats.includes('forex'));
+  if (fx && (fx.strong || fromFxFeed)) cats.add('forex');
   if (fx && cats.has('forex') && fx.impact === 'high' && s.tier === 'minor') s.tier = 'notable';
   const firstSeen = Math.min(...group.map(g => g.seen ?? now));
   const published = group[0].time;
