@@ -47,6 +47,27 @@ export function cluster(items) {
 
 const BREAKING_RE = /^(breaking|live|urgent|just in|developing)\b|\bbreaking\b/i;
 
+export const tierOf = score => (score >= 50 ? 'major' : score >= 28 ? 'notable' : 'minor');
+
+/* ---------- Source quality ---------- */
+// Trusted outlets, best first. Used to pick which outlet leads a story and to judge single-source stories.
+const TRUSTED = ['reuters', 'ap news', 'associated press', 'bloomberg', 'bbc', 'financial times', 'the economist', 'wsj', 'wall street journal', 'new york times', 'washington post', 'the guardian', 'al jazeera', 'cnbc', 'fox news', 'fox business', 'daily wire', 'nbc news', 'cbs news', 'abc news', 'sky news', 'axios', 'politico', 'barron', 'marketwatch', 'fortune', 'business insider', 'forbes', 'the verge', 'techcrunch', 'wired', 'ars technica', 'the register', 'venturebeat', 'fxstreet', 'investinglive', 'forexlive', 'forex factory', 'middle east eye', 'kurdistan24', 'rudaw', 'arab news', 'asharq al-awsat', 'the new arab', 'jerusalem post', 'times of israel', 'dw.com', 'deutsche welle', 'france 24', 'the national', 'anadolu', 'openai', 'anthropic', 'yahoo finance'];
+export const trustRank = outlet => { const o = String(outlet).toLowerCase(); const i = TRUSTED.findIndex(t => o.includes(t)); return i < 0 ? 99 : i; };
+// Press-release wires, broker marketing and content farms: dropped entirely.
+const JUNK_RE = /newswire|presswire|press release|globenewswire|business wire|accesswire|newsfile|openpr|prweb|einpresswire|stock titan|tech-insider|indexbox|devdiscourse|quantum zeitgeist|tokenpost|tmgm|vt markets|litefinance|forextraders|tradingkey|moomoo|metrobank|biggo|idnfinancials|newsroom|nvidia blog|nvidia developer|google cloud|trendingtopics/i;
+export const isJunkOutlet = outlet => JUNK_RE.test(outlet);
+// Mostly non-Latin headline = not English
+export const notEnglish = title => { const letters = title.replace(/[^\p{L}]/gu, ''); if (!letters.length) return false; const latin = letters.replace(/[^\p{Script=Latin}]/gu, '').length; return latin / letters.length < 0.7; };
+const PR_RE = /™|®|\b(unveils|announces|introduces|partners with|teams up with|powered by|now available)\b/i;
+export function qualityAdjust(score, lead, outletCount) {
+  let adj = 0; const why = [];
+  const known = trustRank(lead.outlet) < 99;
+  if (!known && outletCount === 1) { adj -= 10; why.push('single unknown source'); }
+  if (!known && PR_RE.test(lead.title)) { adj -= 15; why.push('press-release style'); }
+  const next = Math.max(0, Math.min(100, score + adj));
+  return { score: next, tier: tierOf(next), why };
+}
+
 export function scoreStory(items, keywords, now) {
   const outlets = new Set(items.map(i => i.outlet.toLowerCase()));
   const titles = items.map(i => i.title.toLowerCase());
@@ -55,7 +76,7 @@ export function scoreStory(items, keywords, now) {
   let score = 0;
 
   const n = outlets.size;
-  const coverage = Math.min(45, 18 * Math.log2(n));
+  const coverage = Math.min(45, 15 * Math.log2(n));
   if (n > 1) reasons.push(`${n} outlets`);
   score += coverage;
 
@@ -68,8 +89,7 @@ export function scoreStory(items, keywords, now) {
   if (keywords.low.some(k => lead.includes(k))) { score -= 30; reasons.push('feature/opinion'); }
 
   score = Math.max(0, Math.min(100, Math.round(score)));
-  const tier = score >= 50 ? 'major' : score >= 28 ? 'notable' : 'minor';
-  return { score, tier, breakingTag, reasons };
+  return { score, tier: tierOf(score), breakingTag, reasons };
 }
 
 /* ---------- Forex ---------- */

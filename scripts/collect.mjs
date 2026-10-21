@@ -3,7 +3,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { entries, all, first, textOf } from './xml.mjs';
-import { cluster, scoreStory, analyzeFx, calendarEvent } from './rules.mjs';
+import { cluster, scoreStory, analyzeFx, calendarEvent, trustRank, isJunkOutlet, notEnglish, qualityAdjust } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
 const WINDOW_H = 36;           // keep stories from the last 36 hours
@@ -69,12 +69,14 @@ function parseFeed(xmlText, src) {
     else link = textOf(x, 'link') || (first(x, 'link')?.attrs.href ?? '') || textOf(x, 'guid');
     link = decode(link.trim());
     if (!title || !/^https?:/.test(link)) continue;
+    if (notEnglish(title)) continue;
     let outlet = src.name;
     if (src.google) {
       const s = clean(textOf(x, 'source'));
       if (s) { outlet = s; if (title.endsWith(` - ${s}`)) title = title.slice(0, -(s.length + 3)); }
       else { const m = title.match(/^(.*) - ([^-]{2,40})$/); if (m) { title = m[1]; outlet = m[2]; } }
     }
+    if (isJunkOutlet(outlet)) continue;
     const date = textOf(x, 'pubDate', 'published', 'updated', 'dc:date');
     const time = Date.parse(date) || now;
     if (now - time > WINDOW_H * 3600e3 || time - now > 3600e3) continue;
@@ -109,7 +111,7 @@ const fresh = (await pool(config.sources, 8, async (src, i) => {
 
 // 2. Merge with what we saw before (keeps stories around after they drop off a feed, and remembers when we first saw them)
 const byId = new Map();
-for (const it of prevState.items) if (now - it.time <= WINDOW_H * 3600e3) byId.set(it.id, it);
+for (const it of prevState.items) if (now - it.time <= WINDOW_H * 3600e3 && !isJunkOutlet(it.outlet) && !notEnglish(it.title)) byId.set(it.id, it);
 for (const it of fresh) {
   const old = byId.get(it.id);
   byId.set(it.id, { ...it, seen: old?.seen ?? now, cats: [...new Set([...(old?.cats || []), it.category])] });
@@ -118,13 +120,14 @@ const items = [...byId.values()].sort((a, b) => b.time - a.time).slice(0, MAX_IT
 for (const it of items) it.cats ||= [it.category];
 
 // 3. Group into stories and rank them
-const PREFERRED = ['Reuters', 'AP News', 'BBC', 'Bloomberg', 'The Economist', 'New York Times', 'The Guardian', 'Al Jazeera', 'Fox News', 'CNBC'];
-const rank = o => { const i = PREFERRED.findIndex(p => o.toLowerCase().includes(p.toLowerCase())); return i < 0 ? 99 : i; };
+const rank = trustRank;
 const stories = cluster(items).map(group => {
   group.sort((a, b) => a.time - b.time);
   const rich = g => (g.summary || g.image ? 0 : 1);
   const lead = [...group].sort((a, b) => rank(a.outlet) - rank(b.outlet) || rich(a) - rich(b) || a.time - b.time)[0];
   const s = scoreStory([lead, ...group.filter(g => g !== lead)], keywords, now);
+  const q = qualityAdjust(s.score, lead, new Set(group.map(g => g.outlet.toLowerCase())).size);
+  s.score = q.score; s.tier = q.tier; s.reasons.push(...q.why);
   const cats = new Set(group.flatMap(g => g.cats));
   cats.delete('forex'); // forex is only kept when the rules find a real currency angle (below)
   const allText = group.map(g => g.title).join(' . ');
