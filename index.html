@@ -122,6 +122,31 @@ header.top { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-i
 .others a { font-size: 13px; color: var(--muted); line-height: 1.35; }
 .others a b { font: 600 12px var(--label); letter-spacing: .06em; color: var(--ink-2); margin-right: 6px; text-transform: uppercase; }
 .feed.settled .mw { animation: none; }
+/* Story preview sheet */
+button.title { text-align: left; width: 100%; cursor: pointer; }
+.pv .led { }
+.pv.pulse .led { animation: blink 1.6s steps(2, start) infinite; }
+.pv-frame { position: relative; border-radius: 13px; margin-bottom: 18px; box-shadow: 0 0 18px -2px rgba(var(--rgb), .55), 0 0 44px -10px rgba(var(--rgb), .5); }
+.pv-frame .glow { position: absolute; left: 8%; right: 8%; bottom: -14px; height: 30px; border-radius: 50%; background: radial-gradient(closest-side, rgba(var(--rgb), .75), rgba(var(--rgb), 0)); }
+.pv.pulse .pv-frame .glow { animation: breathe 3.6s ease-in-out infinite; }
+.pv-photo { position: relative; height: 200px; border-radius: 12px; overflow: hidden; background: #16131f; }
+.pv-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pv-photo .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background: linear-gradient(180deg, rgba(22,19,32,0), rgba(22,19,32,.85)); }
+.pv-photo .bleed { position: absolute; inset: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(var(--rgb), .55), inset 0 0 26px rgba(var(--rgb), .5), inset 0 -40px 50px -20px rgba(var(--rgb), .32); }
+.pv-title { font: 600 22px/1.2 var(--head); margin: 10px 0 0; text-wrap: pretty; }
+.pv-sum { font-size: 14.5px; line-height: 1.5; color: #b3acc8; margin: 8px 0 0; }
+.pv-sum small { color: var(--faint); font-size: 12.5px; }
+.pv-k { font: 700 12px var(--label); letter-spacing: .14em; color: var(--muted); margin: 16px 0 8px; text-transform: uppercase; }
+.pv-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.pv-chips a, .pv-chips span { font: 600 13px var(--label); letter-spacing: .06em; text-transform: uppercase; padding: 6px 10px; border-radius: 7px; background: rgba(0,0,0,.35); box-shadow: inset 0 1px 2px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.05); }
+.pv-chips span { color: var(--muted); }
+.pv .lcd.wide { flex-direction: row; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.pv-why { font-size: 13px; color: #8f89a3; margin: 8px 0 0; }
+.pv-actions { display: grid; grid-template-columns: 50px 50px minmax(0, 1fr); gap: 10px; margin-top: 20px; }
+.pv-actions .sq { height: 50px; border-radius: 12px; background: rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); color: var(--ink-2); display: grid; place-items: center; }
+.pv-actions .sq svg { width: 18px; height: 18px; }
+.pv-actions .sq.saved { color: var(--violet); box-shadow: inset 0 0 0 1px rgba(167,139,250,.55), 0 0 14px rgba(167,139,250,.3); }
+.pv-actions .go { height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; color: #fff; background: rgba(167,139,250,.22); box-shadow: inset 0 0 0 1px rgba(167,139,250,.6), 0 0 18px rgba(167,139,250,.35); padding: 0 12px; text-align: center; }
 .divider { display: flex; align-items: center; gap: 10px; font: 500 10.5px var(--mono); color: #a99bf0; margin: -4px 2px; }
 .divider::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(167,139,250,.4), transparent); }
 
@@ -418,7 +443,7 @@ function card(s, tab, i) {
         <div class="lcd">${chartsFor(s.fx)}</div>
         <div class="fx-body">
           ${head(s, lv)}
-          <a class="title" href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a>
+          <button class="title" data-act="preview">${esc(s.title)}</button>
           ${curs ? `<div class="curs">${curs}</div>` : ''}
           <div class="why">${esc(s.fx.why)}</div>
           ${foot(s, 'Forex')}
@@ -428,7 +453,7 @@ function card(s, tab, i) {
   return `<div class="mw ${lv.pulse ? 'pulse' : ''}" style="${vars}" data-id="${s.id}"><span class="under"></span>
     <article class="mc"><span class="bleed"></span><span class="seam"></span>
       ${head(s, lv)}
-      <a class="title" href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.title)}</a>
+      <button class="title" data-act="preview">${esc(s.title)}</button>
       ${s.summary ? `<p class="sum">${esc(s.summary)}</p>` : ''}
       ${foot(s, catName(s))}
     </article></div>`;
@@ -590,6 +615,28 @@ function storyMenu(id) {
     <button class="item" data-act="boost" data-outlet="${esc(s.outlet)}">${SI.boost}${boosted ? `Stop prioritizing ${esc(s.outlet)}` : `Prioritize ${esc(s.outlet)}`}</button>
     <button class="item" data-act="mute" data-outlet="${esc(s.outlet)}">${SI.mute}Mute ${esc(s.outlet)}</button>`);
 }
+function previewSheet(id) {
+  const s = findStory(id); if (!s) return;
+  const tab = view === 'feed' ? prefs.tab : (s.fx && s.categories?.includes('forex') ? 'forex' : 'top');
+  const lv = level(s, tab);
+  const others = (s.sources || []).filter(o => !prefs.muted.includes(o.outlet));
+  const sv = isSaved(s.id);
+  chartId = 900;
+  const chips = others.slice(0, 6).map(o => `<a href="${esc(o.link)}" target="_blank" rel="noopener">${esc(o.outlet)} ↗</a>`).join('') + (others.length > 6 ? `<span>+${others.length - 6} more</span>` : '');
+  openSheet(`<div class="pv ${lv.pulse ? 'pulse' : ''}" style="--rgb: var(--${lv.k}); --t: var(--${lv.k}-t)">
+    ${s.image ? `<div class="pv-frame" id="pvFrame"><span class="glow"></span><div class="pv-photo"><img src="${esc(s.image)}" alt="" referrerpolicy="no-referrer" onerror="document.getElementById('pvFrame').remove()"><span class="fade"></span><span class="bleed"></span></div></div>` : ''}
+    ${head(s, lv)}
+    <h2 class="pv-title">${esc(s.title)}</h2>
+    ${s.summary ? `<p class="pv-sum">${esc(s.summary)}${s.summaryFrom ? ` <small>Summary via ${esc(s.summaryFrom)}</small>` : ''}</p>` : ''}
+    ${s.fx && tab === 'forex' ? `<div class="lcd wide">${chartsFor(s.fx)}</div><p class="pv-why">${esc(s.fx.why)}</p>` : ''}
+    ${others.length ? `<div class="pv-k">Also covering · ${others.length}</div><div class="pv-chips">${chips}</div>` : ''}
+    <div class="pv-actions">
+      <button class="sq ${sv ? 'saved' : ''}" data-act="pvsave" data-id="${s.id}" aria-label="${sv ? 'Remove from saved' : 'Save story'}">${sv ? ICON.saved : ICON.save}</button>
+      <button class="sq" data-act="share" data-id="${s.id}" aria-label="Share story"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg></button>
+      <a class="go" href="${esc(s.link)}" target="_blank" rel="noopener">Read on ${esc(s.outlet)} <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+    </div>
+  </div>`);
+}
 function settingsSheet() {
   const pills = (arr, act) => arr.length ? `<div class="pills">${arr.map(o => `<button data-act="${act}" data-outlet="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : '<p class="muted">None.</p>';
   const srcs = data ? data.sources.map(s => `<div class="srcrow"><span>${esc(s.name)}${s.query ? ` <span class="muted">(${esc(s.query)})</span>` : ''} · <span class="muted">${esc(s.category)}</span></span>${s.ok ? `<span class="ok">${s.count} new</span>` : '<span class="bad">failing</span>'}</div>`).join('') : '<p class="muted">Loads after the first update.</p>';
@@ -631,6 +678,13 @@ document.addEventListener('click', e => {
   const act = el.dataset.act, id = el.dataset.id || el.closest('[data-id]')?.dataset.id, outlet = el.dataset.outlet;
   if (act === 'toggle') { expanded.has(id) ? expanded.delete(id) : expanded.add(id); render(); }
   else if (act === 'menu') storyMenu(id);
+  else if (act === 'preview') previewSheet(id);
+  else if (act === 'pvsave') { toggleSave(id); previewSheet(id); }
+  else if (act === 'share') {
+    const st = findStory(id); if (!st) return;
+    if (navigator.share) navigator.share({ title: st.title, url: st.link }).catch(() => {});
+    else if (navigator.clipboard?.writeText) navigator.clipboard.writeText(st.link).then(() => toast('Link copied'), () => toast("Couldn't copy the link"));
+  }
   else if (act === 'save') { toggleSave(id); if (el.closest('.sheet')) closeSheet(); }
   else if (act === 'reload') load(true);
   else if (act === 'hide') { prefs.hidden = [...prefs.hidden, id].slice(-500); save(); closeSheet(); render(); toast('Story hidden'); }

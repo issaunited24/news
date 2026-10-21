@@ -95,7 +95,7 @@ export function scoreStory(items, keywords, now) {
 /* ---------- Forex ---------- */
 
 const CURRENCIES = [
-  ['USD', /\b(fed|fomc|federal reserve|powell|greenback|dollar index|dxy|nonfarm|non-farm|payrolls|treasury yields?|u\.?s\.? (dollar|inflation|jobs|economy|cpi|gdp|retail sales|yields?))\b/i],
+  ['USD', /\b(fed|fomc|federal reserve|powell|greenback|dollar index|dxy|nonfarm|non-farm|(?:jobs|payrolls) (?:report|data)|treasury yields?|u\.?s\.? (dollar|inflation|jobs|economy|cpi|gdp|retail sales|yields?))\b/i],
   ['EUR', /\b(ecb|european central bank|lagarde|euro ?zone|euro area|euro)\b/i],
   ['GBP', /\b(bank of england|boe|sterling|the pound|pound sterling|uk (inflation|economy|gdp|jobs|wages))\b/i],
   ['JPY', /\b(bank of japan|boj|ueda|yen|japan'?s? (inflation|economy|gdp))\b/i],
@@ -126,7 +126,7 @@ const HAWKISH_RE = /\b((to|will|could|may|expected to|set to|likely to) (hike|ra
 const OIL_UP_RE = /\b(oil|crude|brent|wti)\b(?:\s+\S+){0,2}?\s+(rises|rose|jumps|surges|climbs|rallies|gains|soars)\b|opec\+? (cuts?|curbs?) (output|production)/i;
 const OIL_DOWN_RE = /\b(oil|crude|brent|wti)\b(?:\s+\S+){0,2}?\s+(falls|fell|drops|slides|slumps|plunges|tumbles|sinks)\b|opec\+? (raises?|boosts?|hikes?) (output|production)/i;
 
-const HIGH_IMPACT_RE = /\b(rate decision|(raises?|cuts?|hikes?|lowers?|holds?|keeps?) (interest )?rates|rates? (hike|cut)s?|intervention|intervene|nonfarm|non-farm|payrolls|cpi|consumer prices|inflation (data|report|rate)|gdp|emergency meeting)\b/i;
+const HIGH_IMPACT_RE = /\b(rate decision|(raises?|cuts?|hikes?|lowers?|holds?|keeps?) (interest )?rates|rates? (hike|cut)s?|intervention|intervene|nonfarm|non-farm|(?:jobs|payrolls) (?:report|data)|cpi|consumer prices|inflation (data|report|rate)|gdp|emergency meeting)\b/i;
 const MED_IMPACT_RE = /\b(fed|fomc|federal reserve|ecb|european central bank|boe|bank of england|boj|bank of japan|snb|swiss national bank|rba|reserve bank of australia|rbnz|pboc|bank of canada|no (more|further) (rate )?(hikes?|cuts?)|powell|lagarde|bailey|ueda|minutes|pmi|retail sales|jobs|unemployment|jobless|yields?|tariffs?|trade war|opec)\b/i;
 
 export function analyzeFx(text, tier, outlets = 1) {
@@ -185,7 +185,7 @@ export function analyzeFx(text, tier, outlets = 1) {
 
 const STOCK_MOVE_RE = new RegExp(`\\b(stocks?|shares|wall street|nasdaq|s&p 500|s&p|equities|tech stocks|dow)\\b(?:\\s+\\S+){0,3}?\\s+(${UP_WORDS}|${DOWN_WORDS}|rise|rally|jump|surge|climb|fall|drop|slide|tumble|sink|slump|plunge|sell off|sell-off)\\b`, 'i');
 const RISK_OFF_RE = /\b(war|attacks?|missiles?|airstrikes?|strikes? on|invasion|escalat\w*|crisis|conflict|killed|explosions?|sanctions|coup|safe[- ]haven)\b/i;
-const US_RE = /\b(fed|fomc|federal reserve|powell|warsh|u\.?s\.? (cpi|inflation|jobs|payrolls|economy|gdp)|nonfarm|payrolls|treasury yields?)\b/i;
+const US_RE = /\b(fed|fomc|federal reserve|powell|warsh|u\.?s\.? (cpi|inflation|jobs|payrolls|economy|gdp)|nonfarm|treasury yields?)\b/i;
 const MAJORS = ['EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CHF', 'CAD'];
 
 function forecastAssets(text, found, policy, impact, outlets) {

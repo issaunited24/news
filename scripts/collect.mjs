@@ -137,6 +137,11 @@ const stories = cluster(items).map(group => {
   group.sort((a, b) => a.time - b.time);
   const rich = g => (g.summary || g.image ? 0 : 1);
   const lead = [...group].sort((a, b) => rank(a.outlet) - rank(b.outlet) || rich(a) - rich(b) || a.time - b.time)[0];
+  // Best summary and photo from any outlet covering the story (trusted outlets first)
+  const byTrust = [...group].sort((a, b) => rank(a.outlet) - rank(b.outlet));
+  const sumItem = lead.summary ? lead : byTrust.find(g => g.summary);
+  const imgItem = lead.image ? lead : byTrust.find(g => g.image);
+  const best = { summary: sumItem?.summary || '', from: sumItem && sumItem !== lead ? sumItem.outlet : null, image: imgItem?.image || null };
   const s = scoreStory([lead, ...group.filter(g => g !== lead)], keywords, now);
   const q = qualityAdjust(s.score, lead, new Set(group.map(g => g.outlet.toLowerCase())).size);
   s.score = q.score; s.tier = q.tier; s.reasons.push(...q.why);
@@ -154,7 +159,7 @@ const stories = cluster(items).map(group => {
   const seenOutlets = new Set([lead.outlet]);
   const others = group.filter(g => g !== lead && !seenOutlets.has(g.outlet) && seenOutlets.add(g.outlet)).map(g => ({ outlet: g.outlet, link: g.link, title: g.title }));
   return {
-    id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: lead.summary, image: lead.image,
+    id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: best.summary, summaryFrom: best.from, image: best.image,
     published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats],
     score: s.score, tier: s.tier, breaking, why: s.reasons, sources: others,
     fx: cats.has('forex') && fx ? { impact: fx.impact, currencies: fx.currencies, why: fx.why, assets: fx.assets } : null,
