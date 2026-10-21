@@ -1,0 +1,66 @@
+{
+  "_help": "Each source has a name, a category and either a 'url' (a normal RSS feed) or a 'google' search (pulled from Google News). 'top': true means it's the outlet's editors' picks feed, which counts as a sign of importance.",
+  "categories": [
+    { "id": "world", "name": "World & Middle East" },
+    { "id": "forex", "name": "Forex" },
+    { "id": "tech", "name": "Tech & AI" },
+    { "id": "business", "name": "Business" }
+  ],
+  "sources": [
+    { "name": "BBC", "category": "world", "top": true, "url": "https://feeds.bbci.co.uk/news/world/rss.xml" },
+    { "name": "BBC", "category": "world", "url": "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml" },
+    { "name": "Al Jazeera", "category": "world", "url": "https://www.aljazeera.com/xml/rss/all.xml" },
+    { "name": "The Guardian", "category": "world", "url": "https://www.theguardian.com/world/rss" },
+    { "name": "The Guardian", "category": "world", "url": "https://www.theguardian.com/world/middleeast/rss" },
+    { "name": "New York Times", "category": "world", "top": true, "url": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml" },
+    { "name": "New York Times", "category": "world", "url": "https://rss.nytimes.com/services/xml/rss/nyt/MiddleEast.xml" },
+    { "name": "Fox News", "category": "world", "url": "https://moxie.foxnews.com/google-publisher/world.xml" },
+    { "name": "Fox News", "category": "world", "top": true, "url": "https://moxie.foxnews.com/google-publisher/latest.xml" },
+    { "name": "Daily Wire", "category": "world", "google": "site:dailywire.com" },
+    { "name": "Reuters", "category": "world", "google": "site:reuters.com world" },
+    { "name": "AP News", "category": "world", "google": "site:apnews.com world" },
+    { "name": "The Economist", "category": "world", "url": "https://www.economist.com/international/rss.xml" },
+    { "name": "Google News", "category": "world", "google": "Iraq OR Baghdad OR Kurdistan" },
+    { "name": "Google News", "category": "world", "google": "Middle East" },
+
+    { "name": "FXStreet", "category": "forex", "google": "site:fxstreet.com" },
+    { "name": "investingLive", "category": "forex", "google": "site:investinglive.com OR site:forexlive.com" },
+    { "name": "Reuters", "category": "forex", "google": "site:reuters.com currencies OR dollar OR forex" },
+    { "name": "Bloomberg", "category": "forex", "google": "site:bloomberg.com currency OR dollar OR yen OR euro" },
+    { "name": "Google News", "category": "forex", "google": "Fed OR ECB OR \"Bank of Japan\" OR \"Bank of England\" interest rates" },
+    { "name": "Google News", "category": "forex", "google": "forex OR \"currency markets\" OR \"dollar index\"" },
+    { "name": "CNBC", "category": "forex", "url": "https://www.cnbc.com/id/20910258/device/rss/rss.html" },
+
+    { "name": "The Verge", "category": "tech", "url": "https://www.theverge.com/rss/index.xml" },
+    { "name": "Ars Technica", "category": "tech", "url": "https://feeds.arstechnica.com/arstechnica/index" },
+    { "name": "TechCrunch", "category": "tech", "url": "https://techcrunch.com/feed/" },
+    { "name": "Wired", "category": "tech", "url": "https://www.wired.com/feed/rss" },
+    { "name": "BBC", "category": "tech", "url": "https://feeds.bbci.co.uk/news/technology/rss.xml" },
+    { "name": "New York Times", "category": "tech", "url": "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml" },
+    { "name": "Fox News", "category": "tech", "url": "https://moxie.foxnews.com/google-publisher/tech.xml" },
+    { "name": "Google News", "category": "tech", "google": "OpenAI OR Anthropic OR \"Google DeepMind\" OR Nvidia AI" },
+
+    { "name": "BBC", "category": "business", "url": "https://feeds.bbci.co.uk/news/business/rss.xml" },
+    { "name": "The Guardian", "category": "business", "url": "https://www.theguardian.com/business/rss" },
+    { "name": "New York Times", "category": "business", "url": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml" },
+    { "name": "CNBC", "category": "business", "top": true, "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html" },
+    { "name": "The Economist", "category": "business", "url": "https://www.economist.com/finance-and-economics/rss.xml" },
+    { "name": "Reuters", "category": "business", "google": "site:reuters.com business OR markets" },
+    { "name": "Bloomberg", "category": "business", "google": "site:bloomberg.com markets OR economy" },
+    { "name": "Google News", "category": "business", "google": "oil prices OR OPEC" }
+  ],
+  "keywords": {
+    "_help": "Words that push a story up (high) or down (low). Add your own any time.",
+    "high": [
+      "breaking", "killed", "war", "ceasefire", "invasion", "airstrike", "missile", "attack", "explosion", "earthquake",
+      "election", "resigns", "coup", "sanctions", "emergency", "dies", "assassinat",
+      "rate decision", "raises rates", "cuts rates", "rate hike", "rate cut", "interest rate", "inflation", "cpi", "nonfarm", "payrolls", "gdp", "recession", "intervention",
+      "opec", "tariff", "default", "bankruptcy", "crash", "plunge", "surge", "record high",
+      "acquire", "acquisition", "merger", "layoffs", "antitrust", "launches", "openai", "anthropic", "nvidia"
+    ],
+    "low": [
+      "opinion", "review:", "review |", "hands-on", "quiz", "crossword", "recipe", "podcast", "newsletter", "horoscope",
+      "deal of the day", "best deals", "% off", "how to watch", "how to ", "gift guide", "the best ", "sponsored", "photos:", "in pictures", "watch:", "video:"
+    ]
+  }
+}
