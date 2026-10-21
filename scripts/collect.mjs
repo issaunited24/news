@@ -128,7 +128,7 @@ const stories = cluster(items).map(group => {
   const cats = new Set(group.flatMap(g => g.cats));
   cats.delete('forex'); // forex is only kept when the rules find a real currency angle (below)
   const allText = group.map(g => g.title).join(' . ');
-  const fx = analyzeFx(`${lead.title} ${lead.summary}`, s.tier) || null;
+  const fx = analyzeFx(`${lead.title} ${lead.summary}`, s.tier, new Set(group.map(g => g.outlet)).size) || null;
   const fromFxFeed = group.some(g => g.cats.includes('forex'));
   if (fx && (fx.strong || fromFxFeed)) cats.add('forex');
   if (fx && cats.has('forex') && fx.impact === 'high' && s.tier === 'minor') s.tier = 'notable';
@@ -142,7 +142,7 @@ const stories = cluster(items).map(group => {
     id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: lead.summary, image: lead.image,
     published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats],
     score: s.score, tier: s.tier, breaking, why: s.reasons, sources: others,
-    fx: cats.has('forex') && fx ? { impact: fx.impact, currencies: fx.currencies, why: fx.why } : null,
+    fx: cats.has('forex') && fx ? { impact: fx.impact, currencies: fx.currencies, why: fx.why, assets: fx.assets } : null,
     _all: allText.length,
   };
 }).map(({ _all, ...s }) => s)
@@ -161,7 +161,50 @@ if (!FIXTURES && (!calendar || now - calendar.fetched > 55 * 60e3)) {
   }
 }
 
-// 5. Save
+// 5. Gold, US dollar and Nasdaq prices for the mini charts (every ~30 min)
+const MARKETS = [
+  { key: 'gold', name: 'Gold', yahoo: 'GC=F', stooq: 'xauusd' },
+  { key: 'usd', name: 'US Dollar Index', yahoo: 'DX-Y.NYB', stooq: 'dx.f' },
+  { key: 'ndq', name: 'Nasdaq Composite', yahoo: '%5EIXIC', stooq: '%5Endq' },
+];
+async function getText(url) {
+  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; personal-news-reader/1.0)' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } finally { clearTimeout(t); }
+}
+async function marketSeries(m) {
+  try {
+    const j = JSON.parse(await getText(`https://query1.finance.yahoo.com/v8/finance/chart/${m.yahoo}?range=5d&interval=60m`));
+    const r = j.chart.result[0];
+    const pts = r.timestamp.map((ts, i) => [ts * 1000, r.indicators.quote[0].close[i]]).filter(p => p[1] != null);
+    if (pts.length > 5) return { source: 'Yahoo Finance', span: '5 days, hourly', points: pts.slice(-40) };
+  } catch {}
+  const csv = await getText(`https://stooq.com/q/d/l/?s=${m.stooq}&i=d`);
+  const rows = csv.trim().split('\n').slice(1).map(l => l.split(',')).filter(r => r.length >= 5 && !isNaN(parseFloat(r[4])));
+  const pts = rows.slice(-30).map(r => [Date.parse(r[0]), parseFloat(r[4])]);
+  if (pts.length < 5) throw new Error('no data');
+  return { source: 'Stooq', span: '30 days, daily', points: pts };
+}
+let markets = prevState.markets || null;
+if (!FIXTURES && (!markets || now - markets.fetched > 25 * 60e3)) {
+  const out = { fetched: now, items: {} };
+  for (const m of MARKETS) {
+    try {
+      const s = await marketSeries(m);
+      const first = s.points[0][1], last = s.points[s.points.length - 1][1];
+      out.items[m.key] = { name: m.name, ...s, last, change: (last - first) / first * 100, asOf: s.points[s.points.length - 1][0] };
+    } catch (e) {
+      if (markets?.items?.[m.key]) out.items[m.key] = { ...markets.items[m.key], stale: true };
+      else out.items[m.key] = { name: m.name, error: String(e.message || e).slice(0, 80) };
+    }
+  }
+  markets = out;
+}
+
+// 6. Save
 await mkdir(new URL('data/', ROOT), { recursive: true });
 const okCount = status.filter(s => s.ok).length;
 const out = {
@@ -170,9 +213,10 @@ const out = {
   categories: config.categories,
   stories,
   calendar,
+  markets,
   sources: status.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)),
 };
 await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);

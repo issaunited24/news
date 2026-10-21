@@ -109,19 +109,19 @@ const OIL_DOWN_RE = /\b(oil|crude|brent|wti)\b(?:\s+\S+){0,2}?\s+(falls|fell|dro
 const HIGH_IMPACT_RE = /\b(rate decision|(raises?|cuts?|hikes?|lowers?|holds?|keeps?) (interest )?rates|rates? (hike|cut)s?|intervention|intervene|nonfarm|non-farm|payrolls|cpi|consumer prices|inflation (data|report|rate)|gdp|emergency meeting)\b/i;
 const MED_IMPACT_RE = /\b(fed|fomc|federal reserve|ecb|european central bank|boe|bank of england|boj|bank of japan|snb|swiss national bank|rba|reserve bank of australia|rbnz|pboc|bank of canada|no (more|further) (rate )?(hikes?|cuts?)|powell|lagarde|bailey|ueda|minutes|pmi|retail sales|jobs|unemployment|jobless|yields?|tariffs?|trade war|opec)\b/i;
 
-export function analyzeFx(text, tier) {
+export function analyzeFx(text, tier, outlets = 1) {
   const found = new Map(); // code -> { dir, why }
   for (const [code, re] of CURRENCIES) if (re.test(text)) found.set(code, { dir: null, why: null });
 
   // 1. Explicit moves in the headline ("yen weakens", "EUR/USD rises")
   for (const m of text.matchAll(PAIR_RE)) {
     const [, base, quote, w] = m; const up = isUp(w);
-    found.set(base.toUpperCase(), { dir: up ? 'up' : 'down', why: `${base.toUpperCase()}/${quote.toUpperCase()} ${up ? 'rising' : 'falling'}` });
-    found.set(quote.toUpperCase(), { dir: up ? 'down' : 'up', why: `${base.toUpperCase()}/${quote.toUpperCase()} ${up ? 'rising' : 'falling'}` });
+    found.set(base.toUpperCase(), { src: 'move', dir: up ? 'up' : 'down', why: `${base.toUpperCase()}/${quote.toUpperCase()} ${up ? 'rising' : 'falling'}` });
+    found.set(quote.toUpperCase(), { src: 'move', dir: up ? 'down' : 'up', why: `${base.toUpperCase()}/${quote.toUpperCase()} ${up ? 'rising' : 'falling'}` });
   }
   for (const m of text.matchAll(MOVE_RE)) {
     const code = NAME_TO_CODE[m[1].toLowerCase()]; const up = isUp(m[2]);
-    if (code && !found.get(code)?.dir) found.set(code, { dir: up ? 'up' : 'down', why: `${m[1]} ${up ? 'rising' : 'falling'} in the headline` });
+    if (code && !found.get(code)?.dir) found.set(code, { src: 'move', dir: up ? 'up' : 'down', why: `${m[1]} ${up ? 'rising' : 'falling'} in the headline` });
   }
 
   // 2. Central bank / data language, applied to the first currency mentioned without a move
@@ -136,10 +136,10 @@ export function analyzeFx(text, tier) {
   const target = [...found.entries()].find(([c, v]) => !v.dir && c !== 'XAU');
   if (target && policy) {
     const [c] = target;
-    if (policy === 'hawkish') found.set(c, { dir: 'up', why: `Hawkish or strong-data language, which usually supports ${c}` });
-    else if (policy === 'dovish') found.set(c, { dir: 'down', why: `Rate-cut or weak-data language, which usually weighs on ${c}` });
-    else if (policy === 'hold') found.set(c, { dir: 'flat', why: `Rates on hold, so the reaction depends on the guidance` });
-    else found.set(c, { dir: 'mixed', why: `Mixed signals for ${c}` });
+    if (policy === 'hawkish') found.set(c, { src: 'policy', dir: 'up', why: `Hawkish or strong-data language, which usually supports ${c}` });
+    else if (policy === 'dovish') found.set(c, { src: 'policy', dir: 'down', why: `Rate-cut or weak-data language, which usually weighs on ${c}` });
+    else if (policy === 'hold') found.set(c, { src: 'policy', dir: 'flat', why: `Rates on hold, so the reaction depends on the guidance` });
+    else found.set(c, { src: 'policy', dir: 'mixed', why: `Mixed signals for ${c}` });
   }
 
   // 3. Oil moves tend to drag the Canadian dollar along
@@ -157,7 +157,53 @@ export function analyzeFx(text, tier) {
   const currencies = [...found.entries()].map(([code, v]) => ({ code, dir: v.dir || 'unclear' }));
   const why = [...found.values()].map(v => v.why).filter(Boolean)[0] || 'Mentions these currencies; direction unclear from the headline';
   const strong = [...found.values()].some(v => v.dir) || impact !== 'low';
-  return { impact, currencies, why, strong };
+  const assets = forecastAssets(text, found, policy, impact, outlets);
+  return { impact, currencies, why, strong, assets };
+}
+
+/* ---------- Gold / USD / Nasdaq forecast with a 1-10 confidence ---------- */
+
+const STOCK_MOVE_RE = new RegExp(`\\b(stocks?|shares|wall street|nasdaq|s&p 500|s&p|equities|tech stocks|dow)\\b(?:\\s+\\S+){0,3}?\\s+(${UP_WORDS}|${DOWN_WORDS}|rise|rally|jump|surge|climb|fall|drop|slide|tumble|sink|slump|plunge|sell off|sell-off)\\b`, 'i');
+const RISK_OFF_RE = /\b(war|attacks?|missiles?|airstrikes?|strikes? on|invasion|escalat\w*|crisis|conflict|killed|explosions?|sanctions|coup|safe[- ]haven)\b/i;
+const US_RE = /\b(fed|fomc|federal reserve|powell|warsh|u\.?s\.? (cpi|inflation|jobs|payrolls|economy|gdp)|nonfarm|payrolls|treasury yields?)\b/i;
+const MAJORS = ['EUR', 'GBP', 'JPY', 'AUD', 'NZD', 'CHF', 'CAD'];
+
+function forecastAssets(text, found, policy, impact, outlets) {
+  const bump = (impact === 'high' ? 1 : 0) + (outlets >= 3 ? 1 : 0);
+  const cap = n => Math.max(1, Math.min(9, Math.round(n)));
+  const flat = { dir: 'flat', conf: null };
+  const opp = d => (d === 'up' ? 'down' : 'up');
+  const isUS = US_RE.test(text);
+  const hawk = policy === 'hawkish', dove = policy === 'dovish';
+
+  // USD
+  let usd = flat;
+  const u = found.get('USD');
+  if (u && (u.dir === 'up' || u.dir === 'down')) {
+    usd = { dir: u.dir, conf: cap((u.src === 'move' ? 7 : isUS ? 6 : 5) + bump) };
+  } else {
+    const other = MAJORS.map(c => found.get(c)).find(v => v && v.src === 'move' && (v.dir === 'up' || v.dir === 'down'));
+    if (other) usd = { dir: opp(other.dir), conf: cap(4 + bump) };
+    else if (isUS && (hawk || dove)) usd = { dir: hawk ? 'up' : 'down', conf: cap(6 + bump) };
+  }
+
+  // Gold
+  let gold = flat;
+  const g = found.get('XAU');
+  if (g && (g.dir === 'up' || g.dir === 'down')) gold = { dir: g.dir, conf: cap(7 + bump) };
+  else if (RISK_OFF_RE.test(text)) gold = { dir: 'up', conf: cap(5 + bump) };
+  else if (usd.dir !== 'flat') gold = { dir: opp(usd.dir), conf: cap(Math.max(3, usd.conf - 2)) };
+  else if (hawk || dove) gold = { dir: hawk ? 'down' : 'up', conf: cap((isUS ? 5 : 3) + (isUS ? bump : 0)) };
+
+  // Nasdaq
+  let ndq = flat;
+  const sm = text.match(STOCK_MOVE_RE);
+  if (sm) ndq = { dir: (isUp(sm[2]) || /^(rise|rally|jump|surge|climb)$/i.test(sm[2])) ? 'up' : 'down', conf: cap(7 + bump) };
+  else if (hawk || dove) ndq = { dir: hawk ? 'down' : 'up', conf: cap((isUS ? 5 : 3) + (isUS ? bump : 0)) };
+  else if (RISK_OFF_RE.test(text)) ndq = { dir: 'down', conf: cap(4 + bump) };
+  else if (usd.dir !== 'flat') ndq = { dir: opp(usd.dir), conf: cap(3) };
+
+  return { gold, usd, ndq };
 }
 
 /* ---------- Economic calendar ---------- */
