@@ -156,7 +156,7 @@ export function analyzeFx(text, tier, outlets = 1) {
 
   const currencies = [...found.entries()].map(([code, v]) => ({ code, dir: v.dir || 'unclear' }));
   const why = [...found.values()].map(v => v.why).filter(Boolean)[0] || 'Mentions these currencies; direction unclear from the headline';
-  const strong = [...found.values()].some(v => v.dir) || impact !== 'low';
+  const strong = [...found.values()].some(v => v.dir) || HIGH_IMPACT_RE.test(text) || MED_IMPACT_RE.test(text);
   const assets = forecastAssets(text, found, policy, impact, outlets);
   return { impact, currencies, why, strong, assets };
 }

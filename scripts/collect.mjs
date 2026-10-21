@@ -130,7 +130,7 @@ const stories = cluster(items).map(group => {
   const allText = group.map(g => g.title).join(' . ');
   const fx = analyzeFx(`${lead.title} ${lead.summary}`, s.tier, new Set(group.map(g => g.outlet)).size) || null;
   const fromFxFeed = group.some(g => g.cats.includes('forex'));
-  if (fx && (fx.strong || fromFxFeed)) cats.add('forex');
+  if (fx && fx.strong) cats.add('forex');
   if (fx && cats.has('forex') && fx.impact === 'high' && s.tier === 'minor') s.tier = 'notable';
   const firstSeen = Math.min(...group.map(g => g.seen ?? now));
   const published = group[0].time;
