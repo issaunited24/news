@@ -103,7 +103,7 @@ function parseFeed(xmlText, src) {
     const summary = src.google ? '' : clean(textOf(x, 'description', 'summary', 'content:encoded', 'content')).slice(0, 900);
     out.push({
       id: hash(link), title, link, outlet, summary, image: src.google ? null : imageOf(x), biz: !!src.business,
-      time, category: src.category, top: !!src.top,
+      time, category: src.category, top: !!src.top, kind: src.kind || undefined,
     });
   }
   return out;
@@ -232,7 +232,7 @@ const stories = cluster(items).map(group => {
   return {
     id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: best.summary, summaryFrom: best.from, image: best.image || undefined, more: more.length ? more : undefined,
     _cand: byTrust.filter(g => !/news\.google\.com/.test(g.link)).slice(0, 2).map(g => ({ id: g.id, link: g.link, outlet: g.outlet })),
-    published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats], top: top || undefined, justIn: justIn || undefined, trusted: trust < 99 || undefined, flags: cls.flags.length ? cls.flags : undefined,
+    published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats], top: top || undefined, justIn: justIn || undefined, trusted: trust < 99 || undefined, sport: cats.has('sports') ? (group.find(g => g.kind)?.kind || cls.sport || 'other') : undefined, flags: cls.flags.length ? cls.flags : undefined,
     score: s.score, tier: s.tier, breaking, why: s.reasons, sources: others,
     fx: fx ? { impact: fx.impact, why: fx.why, assets: fx.assets, driver: fx.driver } : null,
     _all: 0,
@@ -335,7 +335,7 @@ if (!FIXTURES && (!markets || now - markets.fetched > 25 * 60e3)) {
 }
 
 // 5a. Chart data (OHLC) for the chart panel: 1D, 1W, 1M, 3M, 1Y, 5Y
-const RANGES = { '1D': ['1d', '5m', 0], '1W': ['5d', '30m', 0], '1M': ['1mo', '1h', 50], '3M': ['3mo', '1d', 50], '1Y': ['1y', '1d', 170], '5Y': ['5y', '1wk', 170] };
+const RANGES = { '1H': ['1d', '1m', 0], '1D': ['1d', '5m', 0], '1W': ['5d', '30m', 0], '1M': ['1mo', '1h', 50], '3M': ['3mo', '1d', 50], '1Y': ['1y', '1d', 170], '5Y': ['5y', '1wk', 170], 'ALL': ['max', '1mo', 600] };
 const prevCharts = await readJson('data/charts.json', { assets: {} });
 const charts = { updated: now, assets: {} };
 if (!FIXTURES) {

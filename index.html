@@ -321,8 +321,8 @@ textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: va
 .ch-box { height: 234px; margin: 12px -4px 10px; }
 .ch-msg { display: grid; place-items: center; height: 100%; color: var(--mute); font-size: 13px; text-align: center; padding: 0 20px; }
 .ch-foot { display: flex; gap: 8px; align-items: center; }
-.ch-ranges { flex: 1; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.ch-ranges button { height: 36px; border-radius: 10px; font: 600 12px var(--mono); color: var(--mute); transition: .2s; }
+.ch-ranges { flex: 1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.ch-ranges button { height: 36px; border-radius: 10px; font: 600 11px var(--mono); color: var(--mute); transition: .2s; }
 .ch-ranges button[aria-pressed="true"] { color: var(--ink); background: rgba(255,255,255,.1); }
 .ch-types { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,.05); }
 .ch-types button { width: 36px; height: 32px; border-radius: 9px; display: grid; place-items: center; color: var(--mute); transition: .2s; }
@@ -385,7 +385,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-22.15';
+const APP_VERSION = '2026-10-22.16';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -571,7 +571,13 @@ function important(s, tab) {
   if (tab === 'forex') return !!s.fx && (s.fx.impact !== 'low' || s.breaking);
   const f = s.flags || [];
   // Sports: NBA, NFL and UFC from known outlets; any other sport only when it's a big moment
-  if (tab === 'sports') return (f.includes('big3') && (s.trusted || s.tier !== 'minor')) || f.includes('bigsport') || s.tier === 'major' || prefs.boosted.includes(s.outlet);
+  if (tab === 'sports') {
+    if (f.includes('sportfluff')) return false;
+    const k = s.sport || 'other';
+    if (k === 'soccer' || k === 'ufc') return true;
+    if (k === 'nba' || k === 'nfl') return (f.includes('big3') && (s.trusted || s.tier !== 'minor')) || f.includes('bigsport');
+    return !!s.trusted || f.includes('bigsport') || s.tier !== 'minor' || prefs.boosted.includes(s.outlet);
+  }
   if (tab === 'ent' || tab === 'sci') return s.tier !== 'minor' || !!s.trusted || prefs.boosted.includes(s.outlet);
   if (s.tier !== 'minor') return true;
   return prefs.boosted.includes(s.outlet);
@@ -586,7 +592,16 @@ function storiesFor(tab, impOnly) {
   else if (tab === 'forex') list = list.filter(s => s.fx); // only news that can move gold, the dollar or the Nasdaq
   else list = list.filter(s => s.categories.includes(tab));
   if (impOnly) list = list.filter(s => important(s, tab));
+  if (tab === 'sports') return mixSports(list);
   return tab === 'top' ? [...list].sort((a, b) => rankScore(b) - rankScore(a)) : [...list].sort((a, b) => b.updatedAt - a.updatedAt);
+}
+// Takes turns between sports so no single league fills the tab: soccer, UFC, NBA, NFL, everything else
+function mixSports(list) {
+  const order = ['soccer', 'ufc', 'nba', 'nfl', 'other'], q = {};
+  for (const s of [...list].sort((a, b) => b.updatedAt - a.updatedAt)) (q[s.sport || 'other'] ||= []).push(s);
+  const out = [];
+  for (let more = true; more;) { more = false; for (const k of order) { const s = q[k]?.shift(); if (s) { out.push(s); more = true; } } }
+  return out;
 }
 function searchResults(q) {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -1099,7 +1114,11 @@ function settingsSheet() {
 }
 
 /* ---------- The chart ---------- */
-const RANGES = ['1D', '1W', '1M', '3M', '1Y', '5Y'];
+const RANGES = ['1H', '4H', '1D', '1W', '1M', '1Y', 'ALL'];
+const RANGE_LABEL = { ALL: 'All' };
+// which stored chart data each range uses, and how many of its newest bars
+const RANGE_SRC = { '1H': ['1H', 60], '4H': ['1D', 48], '1D': ['1D', 0], '1W': ['1W', 0], '1M': ['1M', 0], '1Y': ['1Y', 0], ALL: ['ALL', 0] };
+const INTRADAY = ['1H', '4H', '1D'];
 const TYPES = [['candles', 'Candles'], ['line', 'Line'], ['area', 'Area'], ['bars', 'Bars']];
 const TICON = {
   candles: '<svg viewBox="0 0 18 18" fill="currentColor"><rect x="3" y="5" width="3" height="7" rx="1"/><rect x="4" y="2" width="1" height="14"/><rect x="11" y="7" width="3" height="6" rx="1"/><rect x="12" y="4" width="1" height="12"/></svg>',
@@ -1119,7 +1138,7 @@ function openChart(key, from) {
     <div class="ch-price" id="chPrice"></div><div class="ch-chg" id="chChg"></div>
     <div class="ch-assets">${Object.keys(MK).map(k => `<button data-asset="${k}">${MK[k].short === 'Dollar' ? 'US Dollar' : MK[k].short}</button>`).join('')}</div>
     <div class="ch-box" id="chBox"></div>
-    <div class="ch-foot"><div class="ch-ranges">${RANGES.map(r => `<button data-range="${r}">${r}</button>`).join('')}</div>
+    <div class="ch-foot"><div class="ch-ranges">${RANGES.map(r => `<button data-range="${r}">${RANGE_LABEL[r] || r}</button>`).join('')}</div>
     <div class="ch-types">${TYPES.map(([k, n]) => `<button data-type="${k}" aria-label="${n}">${TICON[k]}</button>`).join('')}</div></div></div></section>`;
   root.hidden = false;
   void root.offsetWidth;
@@ -1146,13 +1165,15 @@ $('chartPanel').addEventListener('click', e => {
 let chScrub = false;
 function drawChart(tick) {
   const c = prefs.chart, root = $('chartPanel'); if (root.hidden) return;
-  const r = charts?.assets?.[c.asset]?.ranges?.[c.range], L = live[c.asset];
+  const [srcKey, keep] = RANGE_SRC[c.range] || ['1D', 0];
+  const r0 = charts?.assets?.[c.asset]?.ranges?.[srcKey], L = live[c.asset];
+  const r = r0 && keep ? { ...r0, bars: r0.bars.slice(-keep) } : r0;
   // shift the history onto the live price, then let the newest bar follow the live price
   const off = basis(c.asset, r?.bars);
   const bars = (r?.bars || []).map(b => [b[0], b[1] + off, b[2] + off, b[3] + off, b[4] + off]);
   if (L && bars.length) {
     const step = bars.length > 1 ? bars[bars.length - 1][0] - bars[bars.length - 2][0] : 300, now = Date.now() / 1000;
-    if (c.range === '1D' && now - bars[bars.length - 1][0] >= step && now - bars[bars.length - 1][0] < step * 6) bars.push([bars[bars.length - 1][0] + step, L.p, L.p, L.p, L.p]);
+    if (INTRADAY.includes(c.range) && now - bars[bars.length - 1][0] >= step && now - bars[bars.length - 1][0] < step * 6) bars.push([bars[bars.length - 1][0] + step, L.p, L.p, L.p, L.p]);
     const lb = bars[bars.length - 1]; lb[4] = L.p; lb[2] = Math.max(lb[2], L.p); lb[3] = Math.min(lb[3], L.p);
   }
   const last = bars[bars.length - 1]?.[4];
@@ -1162,7 +1183,7 @@ function drawChart(tick) {
   const priceEl = $('chPrice'), chgEl = $('chChg');
   const show = (v, t) => {
     priceEl.textContent = fmtPrice(c.asset, v);
-    if (t != null) { chgEl.className = 'ch-chg'; chgEl.innerHTML = `<span class="ch-time">${new Intl.DateTimeFormat(undefined, ['1D', '1W'].includes(c.range) ? { weekday: 'short', hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', year: ['1Y', '5Y'].includes(c.range) ? 'numeric' : undefined }).format(t * 1000)}</span>`; }
+    if (t != null) { chgEl.className = 'ch-chg'; chgEl.innerHTML = `<span class="ch-time">${new Intl.DateTimeFormat(undefined, [...INTRADAY, '1W'].includes(c.range) ? { weekday: 'short', hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', year: ['1Y', 'ALL'].includes(c.range) ? 'numeric' : undefined }).format(t * 1000)}</span>`; }
     else { chgEl.className = `ch-chg ${up ? '' : 'dn'}`; chgEl.innerHTML = chg != null ? `${up ? '+' : ''}${fmtPrice(c.asset, chg)} (${up ? '+' : ''}${pct.toFixed(2)}%) <span>${c.range}</span>` : 'No chart data yet'; }
   };
   show(last, null);
@@ -1192,7 +1213,7 @@ function canvasChart(box, raw, o) {
   const X = i => PL + (n === 1 ? (W - PL - PR) / 2 : i * (W - PL - PR) / (n - 1));
   const Y = v => PT + (1 - (v - min) / (max - min)) * (H - PT - PB);
   const fmt = v => (Math.abs(v) >= 1000 ? v.toLocaleString(undefined, { maximumFractionDigits: 0 }) : v.toFixed(2));
-  const tfmt = t => new Intl.DateTimeFormat(undefined, o.range === '1D' ? { hour: '2-digit', minute: '2-digit' } : ['1W', '1M'].includes(o.range) ? { day: 'numeric', month: 'short' } : o.range === '5Y' ? { year: 'numeric' } : { month: 'short' }).format(t * 1000);
+  const tfmt = t => new Intl.DateTimeFormat(undefined, INTRADAY.includes(o.range) ? { hour: '2-digit', minute: '2-digit' } : ['1W', '1M'].includes(o.range) ? { day: 'numeric', month: 'short' } : o.range === 'ALL' ? { year: 'numeric' } : { month: 'short' }).format(t * 1000);
   const smooth = pts => { let d = `M${pts[0][0]},${pts[0][1]}`; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2, t = 0.18; d += ` C${p1[0] + (p2[0] - p0[0]) * t},${p1[1] + (p2[1] - p0[1]) * t} ${p2[0] - (p3[0] - p1[0]) * t},${p2[1] - (p3[1] - p1[1]) * t} ${p2[0]},${p2[1]}`; } return d; };
   const pts = bars.map((b, i) => [X(i), Y(b[4])]), path = new Path2D(smooth(pts));
   const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); };

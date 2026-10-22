@@ -17,6 +17,11 @@ const TECH_RE = /\b(ai|a\.i\.|artificial intelligence|openai|anthropic|deepmind|
 // Sports. NBA, NFL and UFC always count; other sports only when it's a big moment.
 const SPORTS_RE = /\b(nba|nfl|ufc|mma|wnba|mlb|nhl|ncaa|super bowl|world series|stanley cup|playoffs?|quarterback|touchdown|wide receiver|running back|point guard|slam dunk|free agen(cy|t)|draft pick|head coach|coach(es|ed)?\b|knockout|title fight|octagon|soccer|football club|premier league|champions league|la liga|serie a|bundesliga|fifa|world cup|grand prix|formula (1|one)|\bf1\b|nascar|tennis|wimbledon|us open|french open|australian open|golf|pga|masters tournament|ryder cup|olympic\w*|boxing|cricket|innings|test series|rugby|marathon|athlete|striker|midfielder|goalkeeper|transfer window|hat-?trick|tournament|championship game|semifinal|quarterfinal|(first|second|third|fourth|fifth) test)\b/i;
 const NBA_NFL_UFC_RE = /\b(nba|nfl|ufc|mma|super bowl|quarterback|touchdown|wide receiver|running back|point guard|octagon|title fight|dana white|lakers|celtics|warriors|knicks|nets|bulls|bucks|suns|mavericks|mavs|nuggets|clippers|76ers|sixers|raptors|cavaliers|cavs|pistons|pacers|hawks|hornets|orlando magic|miami heat|utah jazz|wizards|oklahoma city thunder|okc thunder|rockets|spurs|grizzlies|pelicans|timberwolves|trail blazers|sacramento kings|chiefs|eagles|cowboys|patriots|packers|49ers|niners|buffalo bills|ravens|bengals|steelers|browns|new york jets|ny jets|new york giants|ny giants|dolphins|detroit lions|chicago bears|vikings|la rams|los angeles rams|seahawks|arizona cardinals|falcons|saints|buccaneers|carolina panthers|commanders|texans|colts|jaguars|tennessee titans|broncos|raiders|chargers|lebron|steph curry|stephen curry|mahomes|jokic|wembanyama|giannis|luka don[cč]i[cć]|shai gilgeous|anthony edwards|jayson tatum|kevin durant|josh allen|lamar jackson|joe burrow|travis kelce|jalen hurts|conor mcgregor|jon jones|islam makhachev|alex pereira|khabib)\b/i;
+// Which sport a story is about (used to mix sports evenly in the Sports tab)
+const SOCCER_RE = /\b(soccer|football club|premier league|champions league|europa league|la liga|serie a|bundesliga|ligue 1|mls|fifa|uefa|world cup|fa cup|carabao|ballon d'or|transfer window|arsenal|chelsea|liverpool|tottenham|spurs boss|man(chester)? (united|city|utd)|newcastle united|aston villa|real madrid|barcelona|atletico|bayern|dortmund|psg|paris saint-germain|juventus|inter milan|ac milan|napoli|messi|ronaldo|haaland|mbapp[eé]|salah|bellingham|vinicius|yamal|kane|pep guardiola|arteta|ancelotti|mourinho|goalkeeper|striker|midfielder|penalty shootout|hat-?trick|clean sheet)\b/i;
+const UFC_RE = /\b(ufc|mma|octagon|dana white|title fight|bellator|pfl|conor mcgregor|jon jones|islam makhachev|alex pereira|khabib|tom aspinall|ilia topuria|sean o'malley|belal muhammad|dricus du plessis|khamzat|merab|paddy pimblett|boxing|knockout|undisputed|heavyweight champion)\b/i;
+const NBA_RE = /\b(nba|wnba|basketball|lakers|celtics|warriors|knicks|nets|bulls|bucks|nuggets|clippers|76ers|sixers|raptors|cavaliers|cavs|pistons|pacers|timberwolves|grizzlies|pelicans|trail blazers|lebron|steph curry|stephen curry|jokic|wembanyama|giannis|luka don[cč]i[cć]|shai gilgeous|anthony edwards|jayson tatum|kevin durant|point guard|slam dunk)\b/i;
+const NFL_RE = /\b(nfl|super bowl|quarterback|touchdown|wide receiver|running back|chiefs|eagles|cowboys|patriots|packers|49ers|niners|buffalo bills|ravens|bengals|steelers|browns|jets|giants|dolphins|lions|bears|vikings|rams|seahawks|falcons|saints|buccaneers|commanders|texans|colts|jaguars|titans|broncos|raiders|chargers|mahomes|josh allen|lamar jackson|joe burrow|travis kelce|jalen hurts)\b/i;
 const BIG_SPORTS_RE = /\b(wins? (the )?(title|championship|world cup|final|gold|grand slam|masters|series)|world cup (final|winner)|olympic\w* (gold|record)|world record|champions league final|grand slam|retires?|retirement|dies|dead at|died|banned|suspended|scandal|arrested|record-breaking|historic)\b/i;
 
 // Entertainment: movies, TV, music, celebrities, streamers
@@ -79,10 +84,12 @@ export function classify(title, summary, feedCats, score, tier, outletCount, bre
   if (has(DISASTER_RE, t)) flags.push('disaster');
   if (big3) flags.push('big3');
   if (sportsHit && has(BIG_SPORTS_RE, t)) flags.push('bigsport');
+  const sport = !sportsHit ? null : has(SOCCER_RE, t) ? 'soccer' : has(UFC_RE, t) ? 'ufc' : has(NBA_RE, t) ? 'nba' : has(NFL_RE, t) ? 'nfl' : has(SOCCER_RE, ts) ? 'soccer' : has(UFC_RE, ts) ? 'ufc' : 'other';
+  if (sportsHit && SPORTS_FLUFF.test(t)) flags.push('sportfluff');
 
   // Top: only genuinely massive stories
   const massive = has(MASSIVE_RE, t);
   const top = (score >= 55 && outletCount >= 3) || (score >= 50 && outletCount >= 5) || (breaking && outletCount >= 2) || (massive && score >= 40 && outletCount >= 2);
 
-  return { cats, flags, top, massive, urgent: has(URGENT_RE, t) };
+  return { cats, flags, top, massive, urgent: has(URGENT_RE, t), sport };
 }
