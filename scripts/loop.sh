@@ -21,7 +21,8 @@ fi
 publish_live() {
   export GIT_INDEX_FILE="$RUNNER_TEMP/live-index"
   rm -f "$GIT_INDEX_FILE"
-  for f in news.json charts.json state.json; do
+  for f in news.json older.json charts.json state.json; do
+    [ -f "data/$f" ] || continue
     git update-index --add --cacheinfo "100644,$(git hash-object -w "data/$f"),$f"
   done
   local tree commit

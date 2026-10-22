@@ -454,18 +454,24 @@ const scorecard = {
 await mkdir(new URL('data/', ROOT), { recursive: true });
 const okCount = status.filter(s => s.ok).length;
 // Older small stories (one outlet, minor, not market-moving) are left out after 12 hours to keep the app's download light
-const keep = stories.filter(st => now - st.updatedAt < 12 * 3600e3 || st.fx || st.top || st.tier !== 'minor' || st.sources.length >= 1 || st.likes);
+const keep = stories.filter(st => now - st.updatedAt < 12 * 3600e3 || st.fx || st.top || st.tier !== 'minor' || st.sources.length >= 1 || st.likes)
+  .map(st => {
+    const old = now - st.updatedAt > 8 * 3600e3;
+    return { ...st, sources: st.sources.slice(0, 8), summary: old && st.summary ? st.summary.slice(0, 260) : st.summary, more: old ? undefined : st.more };
+  });
 const out = {
   updated: now,
   stats: { sources: status.length, working: okCount, items: items.length, stories: stories.length, justIn: stories.filter(s => s.justIn).length },
   categories: config.categories,
-  stories: keep,
+  stories: keep.filter(st => now - st.updatedAt < 12 * 3600e3),
   calendar,
   markets,
   scorecard,
   sources: status.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)),
 };
 await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
+// 12 to 36 hours ago, in its own file so the app's regular check stays light
+await writeFile(new URL('data/older.json', ROOT), JSON.stringify({ updated: now, stories: keep.filter(st => now - st.updatedAt >= 12 * 3600e3) }));
 await writeFile(new URL('data/charts.json', ROOT), JSON.stringify(charts));
 await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], lastFetch }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
