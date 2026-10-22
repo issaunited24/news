@@ -122,6 +122,32 @@ header.top { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-i
 .others a { font-size: 13px; color: var(--muted); line-height: 1.35; }
 .others a b { font: 600 12px var(--label); letter-spacing: .06em; color: var(--ink-2); margin-right: 6px; text-transform: uppercase; }
 .feed.settled .mw { animation: none; }
+/* Floating story view */
+.sheet.float { left: 50%; right: auto; width: min(calc(100vw - 48px), 360px); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); max-height: min(76vh, 680px); border-radius: 22px; padding-bottom: 0; transform: translate(-50%, 115%); overflow-y: auto; overscroll-behavior: contain;
+  background: linear-gradient(180deg, rgba(32,30,40,.98), rgba(20,19,25,.99)); border: 1px solid #2d2b35;
+  box-shadow: 0 0 0 1px rgba(var(--rgb, 167,139,250), .2), 0 24px 60px -18px rgba(0,0,0,.9), 0 0 50px -14px rgba(124,58,237,.55), inset 0 1px 0 rgba(255,255,255,.08); }
+.sheet.float.open { transform: translate(-50%, 0); }
+.sheet.float .in { padding: 14px 16px 16px; }
+#sheetBody { transition: transform .16s ease, opacity .16s ease; }
+#sheetBody.out-l { transform: translateX(-36px); opacity: 0; }
+#sheetBody.out-r { transform: translateX(36px); opacity: 0; }
+#sheetBody.in-r { transform: translateX(36px); opacity: 0; transition: none; }
+#sheetBody.in-l { transform: translateX(-36px); opacity: 0; transition: none; }
+#sheetBody.bump-l { transform: translateX(-10px); }
+#sheetBody.bump-r { transform: translateX(10px); }
+.feed { transition: transform .14s ease, opacity .14s ease; }
+.feed.out-l { transform: translateX(-28px); opacity: 0; }
+.feed.out-r { transform: translateX(28px); opacity: 0; }
+.pv { position: relative; }
+.pv-glow { position: absolute; left: 10%; right: 10%; top: -16px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgba(var(--rgb), 0), rgba(var(--rgb), 1), rgba(var(--rgb), 0)); box-shadow: 0 0 12px rgba(var(--rgb), .9), 0 0 30px rgba(var(--rgb), .5); }
+.pv.pulse .pv-glow { animation: breathe 3.6s ease-in-out infinite; }
+.pv-top { display: flex; align-items: center; gap: 10px; margin: -2px -6px 10px 0; }
+.pv-pos { font: 500 10.5px var(--mono); color: var(--faint); }
+.pv-hint { font: 500 10.5px var(--mono); color: #6f6a80; margin-right: auto; }
+.pv-x { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--muted); background: rgba(255,255,255,.05); }
+.pv-x svg { width: 15px; height: 15px; }
+.pv-take { font-size: 13.5px; line-height: 1.5; color: #a7a0bb; margin: 0 0 8px; padding-left: 10px; border-left: 1px solid rgba(var(--rgb), .45); }
+.pv-take b { display: block; font: 600 11.5px var(--label); letter-spacing: .08em; color: var(--ink-2); text-transform: uppercase; margin-bottom: 1px; }
 /* Story preview sheet */
 button.title { text-align: left; width: 100%; cursor: pointer; }
 .pv .led { }
@@ -133,8 +159,8 @@ button.title { text-align: left; width: 100%; cursor: pointer; }
 .pv-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pv-photo .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background: linear-gradient(180deg, rgba(22,19,32,0), rgba(22,19,32,.85)); }
 .pv-photo .bleed { position: absolute; inset: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(var(--rgb), .55), inset 0 0 26px rgba(var(--rgb), .5), inset 0 -40px 50px -20px rgba(var(--rgb), .32); }
-.pv-title { font: 600 22px/1.2 var(--head); margin: 10px 0 0; text-wrap: pretty; }
-.pv-sum { font-size: 14.5px; line-height: 1.5; color: #b3acc8; margin: 8px 0 0; }
+.pv-title { font: 600 20px/1.22 var(--head); margin: 8px 0 0; text-wrap: pretty; }
+.pv-sum { font-size: 14.5px; line-height: 1.55; color: #c2bcd4; margin: 10px 0 0; }
 .pv-sum small { color: var(--faint); font-size: 12.5px; }
 .pv-k { font: 700 12px var(--label); letter-spacing: .14em; color: var(--muted); margin: 16px 0 8px; text-transform: uppercase; }
 .pv-chips { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -277,9 +303,8 @@ textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: va
 const TABS = [
   { id: 'top', name: 'Top' },
   { id: 'world', name: 'World' },
-  { id: 'forex', name: 'Forex' },
+  { id: 'forex', name: 'Forex & Markets' },
   { id: 'tech', name: 'Tech & AI' },
-  { id: 'business', name: 'Business' },
 ];
 const PAGE = 30;
 const $ = id => document.getElementById(id);
@@ -291,12 +316,13 @@ const defaults = { tab: 'top', important: true, hidden: [], muted: [], boosted: 
 let prefs = { ...defaults };
 try { prefs = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch {} };
+if (!['top', 'world', 'forex', 'tech'].includes(prefs.tab)) prefs.tab = 'forex';
 const prevVisit = prefs.lastVisit || 0;            // used for the "new since your last visit" marker
 const markVisit = () => { prefs.lastVisit = Date.now(); save(); };
 document.addEventListener('visibilitychange', () => { if (document.hidden) markVisit(); });
 window.addEventListener('pagehide', markVisit);
 
-let animateNext = true;
+let animateNext = true, currentList = [];
 let data = null, shown = PAGE, expanded = new Set(), view = 'feed', query = '', countdownTimer = null;
 
 /* ---------- Time ---------- */
@@ -578,6 +604,7 @@ function render() {
     });
     feed.innerHTML = cards.join('');
   }
+  currentList = list.slice(0, shown).map(x => x.id);
   feed.classList.toggle('settled', !animateNext);
   animateNext = false;
   $('more').hidden = list.length <= shown;
@@ -588,8 +615,9 @@ function render() {
 }
 
 /* ---------- Sheets ---------- */
-function openSheet(html) {
-  $('sheetBody').innerHTML = `<div class="grab"></div>${html}`;
+function openSheet(html, float) {
+  $('sheet').classList.toggle('float', !!float);
+  $('sheetBody').innerHTML = float ? html : `<div class="grab"></div>${html}`;
   $('scrim').hidden = false;
   requestAnimationFrame(() => { $('scrim').classList.add('open'); $('sheet').classList.add('open'); });
 }
@@ -616,27 +644,58 @@ function storyMenu(id) {
     <button class="item" data-act="boost" data-outlet="${esc(s.outlet)}">${SI.boost}${boosted ? `Stop prioritizing ${esc(s.outlet)}` : `Prioritize ${esc(s.outlet)}`}</button>
     <button class="item" data-act="mute" data-outlet="${esc(s.outlet)}">${SI.mute}Mute ${esc(s.outlet)}</button>`);
 }
-function previewSheet(id) {
-  const s = findStory(id); if (!s) return;
+let pvId = null;
+function previewHTML(s) {
   const tab = view === 'feed' ? prefs.tab : (s.fx && s.categories?.includes('forex') ? 'forex' : 'top');
   const lv = level(s, tab);
   const others = (s.sources || []).filter(o => !prefs.muted.includes(o.outlet));
   const sv = isSaved(s.id);
+  const pos = currentList.indexOf(s.id);
   chartId = 900;
   const chips = others.slice(0, 6).map(o => `<a href="${esc(o.link)}" target="_blank" rel="noopener">${esc(o.outlet)} ↗</a>`).join('') + (others.length > 6 ? `<span>+${others.length - 6} more</span>` : '');
-  openSheet(`<div class="pv ${lv.pulse ? 'pulse' : ''}" style="--rgb: var(--${lv.k}); --t: var(--${lv.k}-t)">
-    ${s.image ? `<div class="pv-frame" id="pvFrame"><span class="glow"></span><div class="pv-photo"><img src="${esc(s.image)}" alt="" referrerpolicy="no-referrer" onerror="document.getElementById('pvFrame').remove()"><span class="fade"></span><span class="bleed"></span></div></div>` : ''}
+  const takes = (s.more || []).filter(m => !prefs.muted.includes(m.outlet)).map(m => `<p class="pv-take"><b>${esc(m.outlet)}</b>${esc(m.text)}</p>`).join('');
+  return `<div class="pv ${lv.pulse ? 'pulse' : ''}" style="--rgb: var(--${lv.k}); --t: var(--${lv.k}-t)">
+    <span class="pv-glow"></span>
+    <div class="pv-top">
+      <span class="pv-pos">${pos >= 0 ? `${pos + 1} / ${currentList.length}` : ''}</span>
+      <span class="pv-hint">${pos >= 0 && currentList.length > 1 ? 'swipe for next' : ''}</span>
+      <button class="pv-x" data-act="close" aria-label="Close">${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'}</button>
+    </div>
     ${head(s, lv)}
     <h2 class="pv-title">${esc(s.title)}</h2>
-    ${s.summary ? `<p class="pv-sum">${esc(s.summary)}${s.summaryFrom ? ` <small>Summary via ${esc(s.summaryFrom)}</small>` : ''}</p>` : ''}
-    ${s.fx && tab === 'forex' ? `<div class="lcd wide">${chartsFor(s.fx)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>` : ''}
-    ${others.length ? `<div class="pv-k">Also covering · ${others.length}</div><div class="pv-chips">${chips}</div>` : ''}
+    ${s.summary ? `<p class="pv-sum">${esc(s.summary)}${s.summaryFrom ? ` <small>· ${esc(s.summaryFrom)}</small>` : ''}</p>` : '<p class="pv-sum muted">No summary from the outlets yet. Open the full story below.</p>'}
+    ${takes ? `<div class="pv-k">Also reported</div>${takes}` : ''}
+    ${s.fx ? `<div class="lcd wide">${chartsFor(s.fx)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>` : ''}
+    ${others.length ? `<div class="pv-k">Covering · ${others.length}</div><div class="pv-chips">${chips}</div>` : ''}
     <div class="pv-actions">
       <button class="sq ${sv ? 'saved' : ''}" data-act="pvsave" data-id="${s.id}" aria-label="${sv ? 'Remove from saved' : 'Save story'}">${sv ? ICON.saved : ICON.save}</button>
       <button class="sq" data-act="share" data-id="${s.id}" aria-label="Share story"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg></button>
       <a class="go" href="${esc(s.link)}" target="_blank" rel="noopener">Read on ${esc(s.outlet)} <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
     </div>
-  </div>`);
+  </div>`;
+}
+function previewSheet(id, dir) {
+  const s = findStory(id); if (!s) return;
+  pvId = id;
+  const sheet = $('sheet');
+  if (dir && sheet.classList.contains('open')) {
+    const body = $('sheetBody');
+    body.classList.add(dir === 'next' ? 'out-l' : 'out-r');
+    setTimeout(() => {
+      body.innerHTML = previewHTML(s); sheet.scrollTop = 0;
+      body.classList.remove('out-l', 'out-r'); body.classList.add(dir === 'next' ? 'in-r' : 'in-l');
+      requestAnimationFrame(() => requestAnimationFrame(() => body.classList.remove('in-r', 'in-l')));
+    }, 160);
+    return;
+  }
+  openSheet(previewHTML(s), true);
+}
+function stepPreview(d) {
+  const i = currentList.indexOf(pvId);
+  if (i < 0) return;
+  const j = i + d;
+  if (j < 0 || j >= currentList.length) { const b = $('sheetBody'); b.classList.add(d > 0 ? 'bump-l' : 'bump-r'); setTimeout(() => b.classList.remove('bump-l', 'bump-r'), 220); return; }
+  previewSheet(currentList[j], d > 0 ? 'next' : 'prev');
 }
 function settingsSheet() {
   const pills = (arr, act) => arr.length ? `<div class="pills">${arr.map(o => `<button data-act="${act}" data-outlet="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : '<p class="muted">None.</p>';
@@ -680,7 +739,8 @@ document.addEventListener('click', e => {
   if (act === 'toggle') { expanded.has(id) ? expanded.delete(id) : expanded.add(id); render(); }
   else if (act === 'menu') storyMenu(id);
   else if (act === 'preview') previewSheet(id);
-  else if (act === 'pvsave') { toggleSave(id); previewSheet(id); }
+  else if (act === 'pvsave') { toggleSave(id); $('sheetBody').innerHTML = previewHTML(findStory(id)); }
+  else if (act === 'close') closeSheet();
   else if (act === 'share') {
     const st = findStory(id); if (!st) return;
     if (navigator.share) navigator.share({ title: st.title, url: st.link }).catch(() => {});
@@ -723,6 +783,33 @@ $('q').addEventListener('input', e => { clearTimeout(qTimer); qTimer = setTimeou
 $('live').addEventListener('click', () => load(true));
 $('scrim').onclick = closeSheet;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+/* ---------- Swipes: change tabs on the feed, change stories in the story view ---------- */
+function swipe(el, onLeft, onRight, allow) {
+  let x0 = 0, y0 = 0, t0 = 0, on = false;
+  el.addEventListener('touchstart', e => { if (e.touches.length !== 1 || (allow && !allow(e))) { on = false; return; } on = true; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (!on) return; on = false;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+    if (Date.now() - t0 > 700 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    dx < 0 ? onLeft() : onRight();
+  }, { passive: true });
+}
+function goTab(d) {
+  if (view !== 'feed') return;
+  const i = TABS.findIndex(t => t.id === prefs.tab), j = i + d;
+  if (j < 0 || j >= TABS.length) return;
+  const feed = $('feed');
+  feed.classList.add(d > 0 ? 'out-l' : 'out-r');
+  setTimeout(() => {
+    animateNext = true; prefs.tab = TABS[j].id; shown = PAGE; save(); render(); window.scrollTo({ top: 0 });
+    feed.classList.remove('out-l', 'out-r');
+    document.querySelector('.tab[aria-selected="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }, 140);
+}
+swipe(document.querySelector('main'), () => goTab(1), () => goTab(-1), e => !e.target.closest('.lcd, .others, textarea, input'));
+swipe($('sheet'), () => { if ($('sheet').classList.contains('float')) stepPreview(1); }, () => { if ($('sheet').classList.contains('float')) stepPreview(-1); });
+document.addEventListener('keydown', e => { if (!$('sheet').classList.contains('float') || !$('sheet').classList.contains('open')) return; if (e.key === 'ArrowRight') stepPreview(1); if (e.key === 'ArrowLeft') stepPreview(-1); });
 
 let toastTimer;
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200); }

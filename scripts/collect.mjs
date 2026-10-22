@@ -93,13 +93,22 @@ function parseFeed(xmlText, src) {
     const date = textOf(x, 'pubDate', 'published', 'updated', 'dc:date');
     const time = Date.parse(date) || now;
     if (now - time > WINDOW_H * 3600e3 || time - now > 3600e3) continue;
-    const summary = src.google ? '' : clean(textOf(x, 'description', 'summary', 'content:encoded', 'content')).slice(0, 280);
+    const summary = src.google ? '' : clean(textOf(x, 'description', 'summary', 'content:encoded', 'content')).slice(0, 900);
     out.push({
-      id: hash(link), title, link, outlet, summary, image: src.google ? null : imageOf(x),
+      id: hash(link), title, link, outlet, summary, biz: !!src.business,
       time, category: src.category, top: !!src.top,
     });
   }
   return out;
+}
+
+async function getPage(url) {
+  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Mobile Safari/537.36', Accept: 'text/html' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.text()).slice(0, 400000);
+  } finally { clearTimeout(t); }
 }
 
 async function pool(list, n, fn) {
@@ -124,7 +133,7 @@ const fresh = (await pool(config.sources, 8, async (src, i) => {
 
 // 2. Merge with what we saw before (keeps stories around after they drop off a feed, and remembers when we first saw them)
 const byId = new Map();
-for (const it of prevState.items) if (now - it.time <= WINDOW_H * 3600e3 && !isJunkOutlet(it.outlet) && !notEnglish(it.title)) byId.set(it.id, { ...it, outlet: normOutlet(it.outlet) });
+for (const it of prevState.items) if (now - it.time <= WINDOW_H * 3600e3 && !isJunkOutlet(it.outlet) && !notEnglish(it.title)) byId.set(it.id, { ...it, image: undefined, outlet: normOutlet(it.outlet), biz: it.biz || (it.cats || []).includes('business') || it.category === 'business', cats: (it.cats || [it.category]).map(c => (c === 'business' ? 'forex' : c)) });
 for (const it of fresh) {
   const old = byId.get(it.id);
   byId.set(it.id, { ...it, seen: old?.seen ?? now, cats: [...new Set([...(old?.cats || []), it.category])] });
@@ -141,18 +150,29 @@ const stories = cluster(items).map(group => {
   // Best summary and photo from any outlet covering the story (trusted outlets first)
   const byTrust = [...group].sort((a, b) => rank(a.outlet) - rank(b.outlet));
   const sumItem = lead.summary ? lead : byTrust.find(g => g.summary);
-  const imgItem = lead.image ? lead : byTrust.find(g => g.image);
-  const best = { summary: sumItem?.summary || '', from: sumItem && sumItem !== lead ? sumItem.outlet : null, image: imgItem?.image || null };
+  const best = { summary: sumItem?.summary || '', from: sumItem && sumItem !== lead ? sumItem.outlet : null };
+  // A second and third take from other outlets, for a fuller summary in the story view
+  const more = [];
+  for (const g of byTrust) {
+    if (more.length >= 2 || !g.summary || g === sumItem || g.outlet === sumItem?.outlet) continue;
+    const head = g.summary.slice(0, 60).toLowerCase();
+    if (best.summary.toLowerCase().startsWith(head) || more.some(m => m.text.toLowerCase().startsWith(head))) continue;
+    if (more.some(m => m.outlet === g.outlet)) continue;
+    more.push({ outlet: g.outlet, text: g.summary.slice(0, 450) });
+  }
   const s = scoreStory([lead, ...group.filter(g => g !== lead)], keywords, now);
   const q = qualityAdjust(s.score, lead, new Set(group.map(g => g.outlet.toLowerCase())).size);
   s.score = q.score; s.tier = q.tier; s.reasons.push(...q.why);
   const cats = new Set(group.flatMap(g => g.cats));
   const fromFxFeed = cats.has('forex');
+  const fromBiz = group.some(g => g.biz);
+  cats.delete('business');
   cats.delete('forex'); // the Forex tab only gets stories likely to MOVE gold, the dollar or the Nasdaq
   const outletCount = new Set(group.map(g => g.outlet)).size;
   const text = `${lead.title} ${lead.summary}`;
   const fx = marketCatalyst(lead.title, text, { policy: policyOf(text) }, s.tier, outletCount);
   if (fx) cats.add('forex');
+  if (!fx && fromBiz && !isPriceRecap(lead.title)) cats.add('forex'); // business news lives in Forex & Markets too
   if (fx && fx.impact === 'high' && s.tier === 'minor') s.tier = 'notable';
   // Price recaps and chart pieces from forex sites ("Gold rises...", "EUR/USD forecast") are dropped entirely
   if (!fx && fromFxFeed && !cats.size && isPriceRecap(lead.title)) return null;
@@ -164,7 +184,8 @@ const stories = cluster(items).map(group => {
   const seenOutlets = new Set([lead.outlet]);
   const others = group.filter(g => g !== lead && !seenOutlets.has(g.outlet) && seenOutlets.add(g.outlet)).map(g => ({ outlet: g.outlet, link: g.link, title: g.title }));
   return {
-    id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: best.summary, summaryFrom: best.from, image: best.image,
+    id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: best.summary, summaryFrom: best.from, more: more.length ? more : undefined,
+    _cand: byTrust.filter(g => !/news\.google\.com/.test(g.link)).slice(0, 2).map(g => ({ id: g.id, link: g.link, outlet: g.outlet })),
     published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats],
     score: s.score, tier: s.tier, breaking, why: s.reasons, sources: others,
     fx: fx ? { impact: fx.impact, why: fx.why, assets: fx.assets, driver: fx.driver } : null,
@@ -172,6 +193,37 @@ const stories = cluster(items).map(group => {
   };
 }).filter(Boolean).map(({ _all, ...s }) => s)
   .sort((a, b) => b.updatedAt - a.updatedAt);
+
+// 3b. Fuller summaries: for important stories with a thin summary, read the opening of the article
+//     (its description and first paragraphs) from an outlet that links directly. Cached between runs.
+const extracts = new Map((prevState.extracts || []).filter(e => now - e.at < WINDOW_H * 3600e3).map(e => [e.id, e]));
+function articleText(html) {
+  const meta = (html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description|twitter:description)["'][^>]*content=["']([^"']{40,})["']/i) || html.match(/<meta[^>]+content=["']([^"']{40,})["'][^>]*(?:property|name)=["'](?:og:description|description)["']/i) || [])[1] || '';
+  const body = html.replace(/<(script|style|noscript|figure|figcaption|aside|nav|header|footer)[\s\S]*?<\/\1>/gi, ' ');
+  const paras = [...body.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)].map(m => clean(m[1])).filter(t => t.length > 80 && !/cookie|subscribe|sign up|newsletter|advertis|all rights reserved|©/i.test(t));
+  let text = clean(meta);
+  for (const p of paras) { if (text.length > 520) break; if (!text.toLowerCase().includes(p.slice(0, 40).toLowerCase())) text += (text ? ' ' : '') + p; }
+  if (text.length > 700) text = text.slice(0, 700).replace(/\s+\S*$/, '') + '…';
+  return text;
+}
+if (!FIXTURES) {
+  const want = stories.filter(st => (st.tier !== 'minor' || st.fx) && (st.summary || '').length < 220 && st._cand?.length).slice(0, 120);
+  const todo = want.filter(st => !st._cand.some(c => extracts.has(c.id))).slice(0, 40);
+  await pool(todo, 6, async st => {
+    for (const c of st._cand) {
+      try {
+        const html = await getPage(c.link);
+        const text = articleText(html);
+        if (text.length > 120) { extracts.set(c.id, { id: c.id, at: now, outlet: c.outlet, text }); return; }
+      } catch {}
+    }
+  });
+}
+for (const st of stories) {
+  const e = st._cand?.map(c => extracts.get(c.id)).find(Boolean);
+  if (e && e.text.length > (st.summary || '').length) { st.summary = e.text; st.summaryFrom = e.outlet === st.outlet ? null : e.outlet; }
+  delete st._cand;
+}
 
 // 4. Economic calendar (at most once an hour; that site asks for gentle use)
 let calendar = prevState.calendar;
@@ -242,6 +294,6 @@ const out = {
   sources: status.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)),
 };
 await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()] }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);
