@@ -405,7 +405,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-22.20';
+const APP_VERSION = '2026-10-22.21';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -993,9 +993,9 @@ const FOCUS = {"1689732888407-310424e3a372":[0.45,0.5],"1624365168056-daf44387e2
 function frame(im, focus, W, H) {
   const w = im.naturalWidth, h = im.naturalHeight;
   if (!w || !h || !focus) { im.style.cssText = ''; return; }
-  const [fx, fy] = focus, tx = W / 2, ty = H * 0.17;
+  const [fx, fy] = focus, tx = W / 2, ty = H * 0.2;
   const need = bottom => Math.max(W / w, tx / (fx * w), (W - tx) / ((1 - fx) * w), ty / (fy * h), (bottom - ty) / ((1 - fy) * h));
-  const cap = 1.8 * Math.max(W / w, H / h);
+  const cap = 1.2 * Math.max(W / w, H / h);
   const sc = Math.max(need(H * 0.62), Math.min(need(H), cap));
   const iw = w * sc, ih = h * sc;
   const ox = Math.min(0, Math.max(W - iw, tx - fx * iw)), oy = Math.min(0, Math.max(H * 0.62 - ih, ty - fy * ih));
