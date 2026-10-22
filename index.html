@@ -341,7 +341,7 @@ textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: va
 .ch-box { height: 234px; margin: 12px -4px 10px; }
 .ch-msg { display: grid; place-items: center; height: 100%; color: var(--mute); font-size: 13px; text-align: center; padding: 0 20px; }
 .ch-foot { display: flex; gap: 8px; align-items: center; }
-.ch-ranges { flex: 1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.ch-ranges { flex: 1; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); }
 .ch-ranges button { height: 36px; border-radius: 10px; font: 600 11px var(--mono); color: var(--mute); transition: .2s; }
 .ch-ranges button[aria-pressed="true"] { color: var(--ink); background: rgba(255,255,255,.1); }
 .ch-types { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,.05); }
@@ -405,7 +405,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-23.3';
+const APP_VERSION = '2026-10-23.4';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1226,12 +1226,12 @@ function settingsSheet() {
 }
 
 /* ---------- The chart ---------- */
-const RANGES = ['1H', '4H', '1D', '1W', '1M', '1Y', 'ALL'];
+const RANGES = ['1H', '4H', '1D', '1W', '1M', '1Y', '5Y', 'ALL'];
 const RANGE_LABEL = { ALL: 'All' };
 // which stored chart data each range uses, and how many of its newest bars
-const RANGE_SRC = { '1H': ['1H', 60], '4H': ['1D', 48], '1D': ['1D', 0], '1W': ['1W', 0], '1M': ['1M', 0], '1Y': ['1Y', 0], ALL: ['ALL', 0] };
+const RANGE_SRC = { '1H': ['1H', 60], '4H': ['1D', 48], '1D': ['1D', 0], '1W': ['1W', 0], '1M': ['1M', 0], '1Y': ['1Y', 0], '5Y': ['5Y', 0], ALL: ['ALL', 0] };
 const INTRADAY = ['1H', '4H', '1D'];
-const TYPES = [['candles', 'Candles'], ['line', 'Line'], ['area', 'Area'], ['bars', 'Bars']];
+const TYPES = [['candles', 'Candles'], ['line', 'Line'], ['area', 'Area']];
 const TICON = {
   candles: '<svg viewBox="0 0 18 18" fill="currentColor"><rect x="3" y="5" width="3" height="7" rx="1"/><rect x="4" y="2" width="1" height="14"/><rect x="11" y="7" width="3" height="6" rx="1"/><rect x="12" y="4" width="1" height="12"/></svg>',
   line: '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13l4-4 3 2 7-7"/></svg>',
@@ -1295,7 +1295,7 @@ function drawChart(tick) {
   const priceEl = $('chPrice'), chgEl = $('chChg');
   const show = (v, t) => {
     priceEl.textContent = fmtPrice(c.asset, v);
-    if (t != null) { chgEl.className = 'ch-chg'; chgEl.innerHTML = `<span class="ch-time">${new Intl.DateTimeFormat(undefined, [...INTRADAY, '1W'].includes(c.range) ? { weekday: 'short', hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', year: ['1Y', 'ALL'].includes(c.range) ? 'numeric' : undefined }).format(t * 1000)}</span>`; }
+    if (t != null) { chgEl.className = 'ch-chg'; chgEl.innerHTML = `<span class="ch-time">${new Intl.DateTimeFormat(undefined, [...INTRADAY, '1W'].includes(c.range) ? { weekday: 'short', hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', year: ['1Y', '5Y', 'ALL'].includes(c.range) ? 'numeric' : undefined }).format(t * 1000)}</span>`; }
     else { chgEl.className = `ch-chg ${up ? '' : 'dn'}`; chgEl.innerHTML = chg != null ? `${up ? '+' : ''}${fmtPrice(c.asset, chg)} (${up ? '+' : ''}${pct.toFixed(2)}%) <span>${c.range}</span>` : 'No chart data yet'; }
   };
   show(last, null);
@@ -1325,7 +1325,7 @@ function canvasChart(box, raw, o) {
   const X = i => PL + (n === 1 ? (W - PL - PR) / 2 : i * (W - PL - PR) / (n - 1));
   const Y = v => PT + (1 - (v - min) / (max - min)) * (H - PT - PB);
   const fmt = v => (Math.abs(v) >= 1000 ? v.toLocaleString(undefined, { maximumFractionDigits: 0 }) : v.toFixed(2));
-  const tfmt = t => new Intl.DateTimeFormat(undefined, INTRADAY.includes(o.range) ? { hour: '2-digit', minute: '2-digit' } : ['1W', '1M'].includes(o.range) ? { day: 'numeric', month: 'short' } : o.range === 'ALL' ? { year: 'numeric' } : { month: 'short' }).format(t * 1000);
+  const tfmt = t => new Intl.DateTimeFormat(undefined, INTRADAY.includes(o.range) ? { hour: '2-digit', minute: '2-digit' } : ['1W', '1M'].includes(o.range) ? { day: 'numeric', month: 'short' } : o.range === 'ALL' || o.range === '5Y' ? { year: 'numeric' } : { month: 'short' }).format(t * 1000);
   const smooth = pts => { let d = `M${pts[0][0]},${pts[0][1]}`; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2, t = 0.18; d += ` C${p1[0] + (p2[0] - p0[0]) * t},${p1[1] + (p2[1] - p0[1]) * t} ${p2[0] - (p3[0] - p1[0]) * t},${p2[1] - (p3[1] - p1[1]) * t} ${p2[0]},${p2[1]}`; } return d; };
   const pts = bars.map((b, i) => [X(i), Y(b[4])]), path = new Path2D(smooth(pts));
   const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); };
