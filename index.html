@@ -558,7 +558,7 @@ async function getJSON(name) {
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
-// news.json holds the last 12 hours (small, checked every 2 minutes); older.json holds 12 to 36 hours ago
+// news.json holds the latest and important stories (checked every 2 minutes); older.json holds the rest of the last 36 hours
 // (bigger, fetched in the background and refreshed every 30 minutes). Together they're the full list.
 let base = null, older = null, olderAt = 0;
 function compose() {
