@@ -26,6 +26,7 @@
 }
 body[data-view=top] { --tint: 255,196,120; } body[data-view=justin] { --tint: 255,96,120; } body[data-view=world] { --tint: 255,150,90; }
 body[data-view=us] { --tint: 120,160,255; } body[data-view=forex] { --tint: 60,230,200; } body[data-view=tech] { --tint: 160,120,255; }
+body[data-view=sports] { --tint: 255,130,60; } body[data-view=ent] { --tint: 255,90,190; } body[data-view=sci] { --tint: 90,220,255; }
 body[data-view=saved], body[data-view=search] { --tint: 200,190,255; }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
@@ -370,9 +371,12 @@ const TABS = [
   { id: 'us', name: 'U.S.' },
   { id: 'forex', name: 'Forex' },
   { id: 'tech', name: 'Tech & AI' },
+  { id: 'sports', name: 'Sports' },
+  { id: 'ent', name: 'Entertainment' },
+  { id: 'sci', name: 'Science' },
 ];
 const PAGE = 30;
-const APP_VERSION = '2026-10-22.10';
+const APP_VERSION = '2026-10-22.11';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -446,14 +450,20 @@ const P = {
   hlt1: '1519494026892-80bbd2d6fd0d', hlt2: '1576091160550-2173dba999ef',
   rus1: '1513326738677-b964603b136d', rus2: '1547448415-e9f5b28e570d', chn1: '1535356795203-50b2eb73f96c',
   dip1: '1590274853856-f22d5ee3d228', dip2: '1722073650943-fbebd9d244e1',
+  bb1: '1765924705648-9a0731ac5202', bb2: '1767016697775-001518392206', bb3: '1533923156502-be31530547c4', ufc1: '1545191050-96042d612b1f', nfl1: '1626003573503-2e088d82c647', nfl2: '1566577739112-5180d4bf9390',
+  hol1: '1609924211018-5526c55bad5b', hol2: '1506184106046-1e6e90c0222d', cur1: '1514306191717-452ec28c7814',
+  neb1: '1462332420958-a05d1e002413', neb2: '1504333638930-c8787321eee0', gal1: '1610296669228-602fa827fc1f', dna1: '1633167606207-d840b5070fc2', dna2: '1637929476734-bd7f5f78e40a', lab1: '1630959305606-3123a081dada',
   flag1: '1562884328-39da45501a9c', spt1: '1706675780107-7c43cc487928', spt2: '1676746424139-77f8bd8922a8',
 };
 const HERO = { // backdrop, title fill
   top: ['top1', 'top4'], justin: ['jin1', 'jin2'], world: ['wor4', 'wor1'], us: ['us2', 'flag1'],
-  forex: ['fx1', 'gold1'], tech: ['tec2', 'tec3'], saved: ['top2', 'top1'], search: ['top3', 'top1'],
+  forex: ['fx1', 'gold1'], tech: ['tec2', 'tec3'], sports: ['bb1', 'bb2'], ent: ['mus2', 'hol1'], sci: ['neb1', 'neb2'], saved: ['top2', 'top1'], search: ['top3', 'top1'],
 };
 // When a story has no photo of its own, pick one that matches what it's about
 const TOPICS = [
+  [/\bnba\b|basketball|lakers|celtics|warriors|knicks|lebron|curry|jokic|wembanyama|giannis|wnba/i, ['bb1', 'bb2', 'bb3']],
+  [/\bnfl\b|super bowl|quarterback|touchdown|chiefs|eagles|cowboys|patriots|packers|49ers|steelers|ravens|bills\b|mahomes/i, ['nfl1', 'nfl2']],
+  [/\bufc\b|\bmma\b|octagon|title fight|knockout|boxing|dana white/i, ['ufc1']],
   [/cricket|innings|test series|football|soccer|\bnba\b|\bnfl\b|\bmlb\b|nhl|grand prix|formula (1|one)|\bf1\b|tennis|golf|olympic|world cup|premier league|champions league|super bowl|playoffs?|quarterback|striker|coach\b|match\b|tournament/i, ['spt1', 'spt2']],
   [/earthquake|quake|tsunami|aftershock/i, ['qk1', 'qk2', 'qk3']],
   [/hurricane|typhoon|cyclone|tropical storm|\bstorms?\b|flood|tornado/i, ['stm1', 'stm2', 'stm3']],
@@ -485,7 +495,7 @@ const TOPICS = [
   [/congress|senate|house (republicans|democrats|speaker|vote)|capitol|lawmaker|speaker johnson|shutdown/i, ['us1', 'us2', 'us4']],
   [/white house|trump|president|vance|biden|oval office|executive order/i, ['us6', 'wh1', 'jin3']],
 ];
-const CAT_PHOTOS = { top: ['top1', 'top2', 'top3', 'top4'], justin: ['jin1', 'jin2', 'jin3', 'jin4'], world: ['wor1', 'wor2', 'wor3', 'wor4', 'wor5', 'wor6'], us: ['us1', 'us2', 'us4', 'us5', 'us6', 'wh1'], forex: ['fx1', 'fx2', 'fx3', 'fx4', 'fx5', 'fx6'], tech: ['tec1', 'tec2', 'tec3', 'tec4', 'tec5', 'tec6'] };
+const CAT_PHOTOS = { top: ['top1', 'top2', 'top3', 'top4'], justin: ['jin1', 'jin2', 'jin3', 'jin4'], world: ['wor1', 'wor2', 'wor3', 'wor4', 'wor5', 'wor6'], us: ['us1', 'us2', 'us4', 'us5', 'us6', 'wh1'], forex: ['fx1', 'fx2', 'fx3', 'fx4', 'fx5', 'fx6'], tech: ['tec1', 'tec2', 'tec3', 'tec4', 'tec5', 'tec6'], sports: ['bb1', 'bb2', 'spt1', 'spt2', 'nfl1'], ent: ['mus1', 'mus2', 'mov1', 'hol1', 'cur1'], sci: ['neb1', 'neb2', 'gal1', 'dna1', 'dna2', 'lab1'] };
 const pic = (key, w) => U(P[key]) + w;
 const heroPic = (view, which, w) => pic((HERO[view] || HERO.top)[which], w);
 const catOf = s => (s.categories || []).find(c => c !== 'forex') || (s.categories || [])[0] || 'world';
@@ -542,6 +552,10 @@ function important(s, tab) {
   if (tab === 'us' && s.flags?.some(f => f === 'viral' || f === 'culture' || f === 'crime' || f === 'stream')) return true;
   if (tab === 'world' && s.flags?.includes('disaster') && (s.sources.length >= 1 || s.score >= 25)) return true;
   if (tab === 'forex') return !!s.fx && s.fx.impact !== 'low' || s.tier === 'major';
+  const f = s.flags || [];
+  // Sports: NBA, NFL and UFC from known outlets; any other sport only when it's a big moment
+  if (tab === 'sports') return (f.includes('big3') && (s.trusted || s.tier !== 'minor')) || f.includes('bigsport') || s.tier === 'major' || prefs.boosted.includes(s.outlet);
+  if (tab === 'ent' || tab === 'sci') return s.tier !== 'minor' || !!s.trusted || prefs.boosted.includes(s.outlet);
   if (s.tier !== 'minor') return true;
   return prefs.boosted.includes(s.outlet);
 }
@@ -817,6 +831,9 @@ const COPY = {
   us: ['At home', 'Politics first, then the culture everyone is arguing about.'],
   forex: ['Markets', 'What moves gold, the dollar and the Nasdaq, and which way.'],
   tech: ['Frontier', 'Models, chips and the companies building the future.'],
+  sports: ['Game day', 'NBA, NFL and UFC, plus the biggest moments in every other sport.'],
+  ent: ['Showtime', 'Movies, TV, music, celebrities and streamers.'],
+  sci: ['Discovery', 'Space, health and medicine, and new discoveries.'],
   saved: ['Kept for later', 'Stories you saved on this phone.'],
   search: ['Search', 'Every story from the last 36 hours.'],
 };

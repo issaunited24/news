@@ -1,4 +1,5 @@
-// Which tab(s) a story belongs in: Top (massive only), World (outside the US), U.S., Tech & AI.
+// Which tab(s) a story belongs in: Top (massive only), World (outside the US), U.S., Tech & AI,
+// Sports (NBA, NFL and UFC, plus only the biggest moments in other sports), Entertainment, Science.
 
 const US_RE = /\b(u\.s\.|us (house|senate|army|navy|military|troops|economy|government|election|court)|united states|america'?s?|americans?|washington|white house|congress\w*|senate|senators?|house (republicans|democrats|speaker|vote|passes|committee)|speaker johnson|supreme court|scotus|trump\w*|vance|biden|harris|obama|gop|republicans?|democrats?|maga|governor|gov\.|fbi|doj|justice department|ice agents?|immigration (raid|agents|crackdown)|deportation|irs|fda|cdc|fema|pentagon|hegseth|rubio|bondi|patel|rfk|kennedy jr|ocasio-cortez|aoc|schumer|ilhan omar|pelosi|newsom|desantis|mamdani|elon musk|musk|midterms?|electoral|super pac|wall street|federal (judge|court|government|agents?)|national guard|new york|nyc|california|texas|florida|chicago|los angeles|l\.a\.|san francisco|seattle|boston|atlanta|miami|philadelphia|washington, d\.c\.|d\.c\.|alabama|alaska|arizona|arkansas|colorado|connecticut|delaware|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|utah|vermont|virginia|wisconsin|wyoming)\b/i;
 
@@ -13,6 +14,17 @@ const STREAM_RE = /\b(streamer|twitch|kick|youtuber|tiktok(er)?|influencer|podca
 
 const TECH_RE = /\b(ai|a\.i\.|artificial intelligence|openai|anthropic|deepmind|chatgpt|claude|gemini|grok|xai|llama|mistral|llms?|chatbots?|machine learning|nvidia|tsmc|semiconductors?|chipmakers?|chips? (export|ban|maker|plant|shortage)|gpus?|data cent(er|re)s?|apple|iphone|ipad|google|alphabet|microsoft|windows|meta|instagram|whatsapp|amazon|aws|tesla|spacex|starlink|neuralink|robot\w*|humanoid|quantum|cyber\w*|hack(ed|ers?|ing)?|ransomware|data breach|smartphones?|android|samsung|startup|unicorn|app store|antitrust|big tech|silicon valley|software|cloud|crypto exchange|deepfakes?|autonomous|self-driving|waymo|drones? maker)\b/i;
 
+// Sports. NBA, NFL and UFC always count; other sports only when it's a big moment.
+const SPORTS_RE = /\b(nba|nfl|ufc|mma|wnba|mlb|nhl|ncaa|super bowl|world series|stanley cup|playoffs?|quarterback|touchdown|wide receiver|running back|point guard|slam dunk|free agen(cy|t)|draft pick|head coach|coach(es|ed)?\b|knockout|title fight|octagon|soccer|football club|premier league|champions league|la liga|serie a|bundesliga|fifa|world cup|grand prix|formula (1|one)|\bf1\b|nascar|tennis|wimbledon|us open|french open|australian open|golf|pga|masters tournament|ryder cup|olympic\w*|boxing|cricket|innings|test series|rugby|marathon|athlete|striker|midfielder|goalkeeper|transfer window|hat-?trick|tournament|championship game|semifinal|quarterfinal|(first|second|third|fourth|fifth) test)\b/i;
+const NBA_NFL_UFC_RE = /\b(nba|nfl|ufc|mma|super bowl|quarterback|touchdown|wide receiver|running back|point guard|octagon|title fight|dana white|lakers|celtics|warriors|knicks|nets|bulls|bucks|suns|mavericks|mavs|nuggets|clippers|76ers|sixers|raptors|cavaliers|cavs|pistons|pacers|hawks|hornets|orlando magic|miami heat|utah jazz|wizards|oklahoma city thunder|okc thunder|rockets|spurs|grizzlies|pelicans|timberwolves|trail blazers|sacramento kings|chiefs|eagles|cowboys|patriots|packers|49ers|niners|buffalo bills|ravens|bengals|steelers|browns|new york jets|ny jets|new york giants|ny giants|dolphins|detroit lions|chicago bears|vikings|la rams|los angeles rams|seahawks|arizona cardinals|falcons|saints|buccaneers|carolina panthers|commanders|texans|colts|jaguars|tennessee titans|broncos|raiders|chargers|lebron|steph curry|stephen curry|mahomes|jokic|wembanyama|giannis|luka don[cč]i[cć]|shai gilgeous|anthony edwards|jayson tatum|kevin durant|josh allen|lamar jackson|joe burrow|travis kelce|jalen hurts|conor mcgregor|jon jones|islam makhachev|alex pereira|khabib)\b/i;
+const BIG_SPORTS_RE = /\b(wins? (the )?(title|championship|world cup|final|gold|grand slam|masters|series)|world cup (final|winner)|olympic\w* (gold|record)|world record|champions league final|grand slam|retires?|retirement|dies|dead at|died|banned|suspended|scandal|arrested|record-breaking|historic)\b/i;
+
+// Entertainment: movies, TV, music, celebrities, streamers
+const ENT_RE = /\b(box office|opening weekend|movie|film|trailer|sequel|hollywood|netflix|hbo|disney\+?|marvel|pixar|streaming|tv series|season \d|showrunner|sitcom|late-night|talk show|snl|oscars?|emmys?|grammys?|golden globes|tony awards|met gala|red carpet|album|single|music video|concert|(world|stadium|arena|reunion|farewell|north american|u\.?s\.?|european|summer|fall|spring|winter) tour|rapper|singer|pop star|actor|actress|director|comedian|stand-up|celebrit\w*|kardashian|taylor swift|beyonc[eé]|drake|kanye|rihanna|billie eilish|bad bunny|streamer|twitch|youtuber|influencer|tiktok star|reality (tv|show)|documentary)\b/i;
+
+// Science: space, health and medicine, discoveries
+const SCI_RE = /\b(nasa|esa\b|spacex launch|starship|rocket launch|astronaut|space station|\biss\b|moon landing|lunar|mars (rover|mission|lander|sample)|on mars|to mars|asteroid|comet|meteor|black hole|milky way|distant galax\w*|nebula|telescope|james webb|hubble|exoplanet|astronom\w*|cosmic|universe|scientists? (find|found|discover\w*|say|warn|reveal\w*)|researchers (find|found|discover\w*)|study (finds|shows|suggests)|new study|clinical trial|breakthrough|vaccine|cancer (treatment|drug|cure)|alzheimer|dementia|gene therapy|crispr|dna|genome|stem cells?|fossil|dinosaur|archaeolog\w*|ancient (tomb|city|remains)|species|physicists?|quantum physics|particle|neuroscien\w*|brain study|medical breakthrough|outbreak|pandemic|ebola|measles|bird flu|bacteria|antibiotic|fda approv\w*)\b/i;
+
 // Truly massive: shown in Top
 const MASSIVE_RE = /\b(declares? war|war (breaks out|erupts)|invasion|invades?|launches? (attack|strikes|offensive|invasion)|nuclear|coup|assassinat\w*|killed (dozens|hundreds|scores)|dozens (killed|dead)|hundreds (killed|dead)|\d{2,} (killed|dead)|death toll|massacre|explosion|blast|earthquake|tsunami|hurricane|typhoon|cyclone|wildfires?|landfall|plane crash|crash kills|terror(ist)? attack|mass shooting|state of emergency|martial law|pandemic|outbreak|elected|wins? (election|presidency|vote)|election (results?|victory)|landslide|resigns|ousted|impeach\w*|dies|dead at|died|ceasefire|peace (deal|agreement)|market crash|stocks plunge|rate (cut|hike)|default|collapse|historic|unprecedented|record)\b/i;
 
@@ -24,7 +36,7 @@ const DISASTER_RE = /\b(earthquake|quake|tsunami|volcan\w*|eruption|hurricane|ty
 const has = (re, t) => re.test(t);
 
 export function classify(title, summary, feedCats, score, tier, outletCount, breaking) {
-  const t = title;
+  const t = title, ts = `${title} ${summary || ''}`.slice(0, 500);
   const usHit = has(US_RE, t), foreignHit = has(FOREIGN_RE, t);
   const cats = new Set();
   const fromUS = feedCats.has('us'), fromWorld = feedCats.has('world'), fromTech = feedCats.has('tech');
@@ -42,6 +54,18 @@ export function classify(title, summary, feedCats, score, tier, outletCount, bre
   // Disasters and genuinely big breaking news show in World too, wherever they happen
   if (has(DISASTER_RE, t) || (breaking && has(MASSIVE_RE, t))) cats.add('world');
 
+  // Sports: sports feeds, or clearly a sports story. It leaves World and U.S. unless it's huge or viral.
+  const sportsHit = feedCats.has('sports') || (has(SPORTS_RE, t) && !/\b(golf|tennis|baseball|softball)[- ]ball|hail\b/i.test(t));
+  const big3 = sportsHit && (has(NBA_NFL_UFC_RE, t) || (feedCats.has('sports') && has(NBA_NFL_UFC_RE, ts)));
+  if (sportsHit) {
+    cats.add('sports');
+    if (!has(MASSIVE_RE, t) && !has(VIRAL_RE, t)) { cats.delete('world'); if (!has(FIGURE_RE, t)) cats.delete('us'); }
+  }
+  // Entertainment: entertainment feeds or clearly entertainment (pop culture also stays in U.S.)
+  if (feedCats.has('ent') || has(ENT_RE, t) || has(STREAM_RE, t)) cats.add('ent');
+  // Science: science feeds or clearly a science, space or health discovery
+  if (feedCats.has('sci') || has(SCI_RE, t)) cats.add('sci');
+
   // Tech & AI: tech feeds, plus tech stories from anywhere else
   if (fromTech || has(TECH_RE, t)) cats.add('tech');
 
@@ -51,6 +75,8 @@ export function classify(title, summary, feedCats, score, tier, outletCount, bre
   if (has(SERIOUS_CRIME_RE, t)) flags.push('crime');
   if (has(STREAM_RE, t)) flags.push('stream');
   if (has(DISASTER_RE, t)) flags.push('disaster');
+  if (big3) flags.push('big3');
+  if (sportsHit && has(BIG_SPORTS_RE, t)) flags.push('bigsport');
 
   // Top: only genuinely massive stories
   const massive = has(MASSIVE_RE, t);
