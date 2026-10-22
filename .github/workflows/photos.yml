@@ -1,0 +1,36 @@
+name: Check photos
+
+# Downloads the candidate photos in tools/photos.txt and makes labelled contact sheets on the "photo-check" branch.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tools/photos.txt"]
+
+permissions:
+  contents: write
+
+jobs:
+  sheets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and make contact sheets
+        run: |
+          command -v montage || (sudo apt-get update -q && sudo apt-get install -y -q imagemagick)
+          mkdir -p out img
+          grep -v '^#' tools/photos.txt | while read -r label id; do
+            [ -z "$id" ] && continue
+            if curl -sfL "https://images.unsplash.com/photo-$id?auto=format&fit=crop&q=60&w=420&h=300&fm=jpg" -o "img/$label.jpg"; then echo "ok $label"; else echo "MISSING $label $id" | tee -a out/missing.txt; fi
+          done
+          ls img/*.jpg | split -l 20 - list_
+          n=0; for f in list_*; do n=$((n+1)); montage $(cat $f) -tile 4x -geometry 300x214+6+6 -background '#111' -fill white -pointsize 18 -set label '%t' "out/sheet$n.jpg"; done
+          touch out/missing.txt
+      - name: Publish sheets
+        run: |
+          cd out
+          git init -q && git checkout -q -b photo-check
+          git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add . && git commit -qm "Photo contact sheets"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" photo-check
