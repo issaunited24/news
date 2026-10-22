@@ -282,6 +282,28 @@ if (!FIXTURES && (!markets || now - markets.fetched > 25 * 60e3)) {
   markets = out;
 }
 
+// 5a. Chart data (OHLC) for the chart panel: 1D, 1W, 1M, 3M, 1Y, 5Y
+const RANGES = { '1D': ['1d', '5m', 0], '1W': ['5d', '30m', 0], '1M': ['1mo', '1h', 50], '3M': ['3mo', '1d', 50], '1Y': ['1y', '1d', 170], '5Y': ['5y', '1wk', 170] };
+const prevCharts = await readJson('data/charts.json', { assets: {} });
+const charts = { updated: now, assets: {} };
+if (!FIXTURES) {
+  for (const m of MARKETS) {
+    charts.assets[m.key] = { name: m.name, ranges: {} };
+    for (const [rk, [range, interval, maxAgeMin]] of Object.entries(RANGES)) {
+      const old = prevCharts.assets?.[m.key]?.ranges?.[rk];
+      if (old && maxAgeMin && now - old.at < maxAgeMin * 60e3) { charts.assets[m.key].ranges[rk] = old; continue; }
+      try {
+        const j = JSON.parse(await getText(`https://query1.finance.yahoo.com/v8/finance/chart/${m.yahoo}?range=${range}&interval=${interval}`));
+        const r = j.chart.result[0], q = r.indicators.quote[0];
+        const rnd = v => (v == null ? null : Math.round(v * 100) / 100);
+        const bars = r.timestamp.map((ts, i) => [ts, rnd(q.open[i]), rnd(q.high[i]), rnd(q.low[i]), rnd(q.close[i])]).filter(b => b.slice(1).every(v => v != null));
+        if (bars.length > 3) charts.assets[m.key].ranges[rk] = { at: now, interval, bars, prevClose: rnd(r.meta.chartPreviousClose ?? r.meta.previousClose) };
+        else if (old) charts.assets[m.key].ranges[rk] = old;
+      } catch { if (old) charts.assets[m.key].ranges[rk] = old; }
+    }
+  }
+} else charts.assets = prevCharts.assets || {};
+
 // 5b. Forecast scorecard: record each gold / USD / Nasdaq call with the price at the time,
 //     then check the price 4 hours later. Kept for 7 days.
 const HORIZON = 4 * 3600e3, KEEP = 7 * 24 * 3600e3;
@@ -334,6 +356,7 @@ const out = {
   sources: status.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)),
 };
 await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
+await writeFile(new URL('data/charts.json', ROOT), JSON.stringify(charts));
 await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()] }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);
