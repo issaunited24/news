@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070b1a">
+<title>Briefly · Aurora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Aurora: layered navy, frosted glass, cinematic hero per tab, luminous market cards */
+:root {
+  --bg: #070b1a; --bg2: #0c1430; --ink: #eef2ff; --ink2: #c6cdea; --mute: #8d97bd; --faint: #5d6790;
+  --glass: rgba(255,255,255,.045); --edge: rgba(255,255,255,.08);
+  --gold: #ffc857; --cyan: #4de1ff; --mag: #ff5cc8; --teal: #38f5c3;
+  --red: 255,77,120; --amb: 255,190,70; --sky: 77,225,255;
+  --up: #38f5b0; --down: #ff5c8a;
+  --display: Sora, system-ui, sans-serif; --ui: Manrope, system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; } html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 15px/1.45 var(--ui); -webkit-font-smoothing: antialiased; overflow-x: hidden; min-height: 100vh; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; } a { color: inherit; text-decoration: none; }
+[hidden] { display: none !important; }
+.amb { position: fixed; inset: 0; pointer-events: none; z-index: 0; background:
+  radial-gradient(60% 40% at 85% 10%, rgba(77,225,255,.10), transparent 70%),
+  radial-gradient(50% 35% at 0% 60%, rgba(255,92,200,.08), transparent 70%),
+  radial-gradient(80% 60% at 50% 100%, rgba(30,60,160,.25), transparent 70%),
+  linear-gradient(180deg, #070b1a, #0a1028 60%, #070b1a); }
+.wrap { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; }
+/* top bar */
+.bar { position: sticky; top: 0; z-index: 10; padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 8px; background: linear-gradient(180deg, rgba(7,11,26,.88), rgba(7,11,26,.55) 70%, rgba(7,11,26,0)); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo { font: 700 22px var(--display); letter-spacing: -.03em; }
+.logo i { font-style: normal; background: linear-gradient(90deg, var(--cyan), var(--mag)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.live { margin-left: auto; font: 500 10px var(--mono); color: var(--ink2); display: flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--edge); }
+.live b { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+.tabs { display: flex; gap: 4px; margin-top: 10px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px var(--edge); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: 1 0 auto; padding: 8px 12px; border-radius: 10px; font-weight: 700; font-size: 13px; color: var(--mute); white-space: nowrap; transition: color .2s, background .25s; }
+.tab[aria-selected="true"] { color: var(--ink); background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.05)); box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 6px 18px -8px rgba(77,225,255,.5); }
+/* hero */
+#feedArea { will-change: transform; touch-action: pan-y; }
+.hero { position: relative; height: 230px; margin: -64px 0 0; overflow: hidden; }
+.hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.06); animation: drift 18s ease-in-out infinite alternate; }
+.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,11,26,.55) 0%, rgba(7,11,26,.15) 35%, rgba(7,11,26,.75) 75%, var(--bg) 100%), radial-gradient(70% 60% at 50% 110%, rgba(77,225,255,.18), transparent 70%); }
+.hero-t { position: absolute; left: 18px; right: 18px; bottom: 16px; z-index: 1; }
+.hero-t h1 { margin: 0; font: 700 34px/1 var(--display); letter-spacing: -.035em; text-shadow: 0 2px 30px rgba(0,0,0,.6); }
+.hero-t p { margin: 6px 0 0; font: 500 11px var(--mono); color: var(--ink2); letter-spacing: .04em; }
+@keyframes drift { to { transform: scale(1.14) translate3d(-2%, -2%, 0); } }
+/* story cards */
+.list { display: flex; flex-direction: column; gap: 10px; padding: 6px 14px 40px; }
+.card { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; padding: 10px; border-radius: 20px; background: linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); box-shadow: inset 0 0 0 1px var(--edge), 0 10px 30px -18px rgba(0,0,0,.8); animation: rise .5s cubic-bezier(.2,.8,.2,1) both; }
+.thumb { width: 92px; height: 92px; border-radius: 14px; object-fit: cover; background: var(--bg2); box-shadow: 0 6px 18px -6px rgba(0,0,0,.7); }
+.meta { display: flex; align-items: center; gap: 6px; font: 600 10.5px var(--mono); color: var(--mute); letter-spacing: .03em; min-width: 0; }
+.meta .o { color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--faint); flex: none; }
+.h { margin: 5px 0 0; font: 600 15.5px/1.28 var(--display); letter-spacing: -.012em; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.sum { margin: 4px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--mute); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.badge { font: 700 9px var(--mono); letter-spacing: .1em; padding: 2px 6px; border-radius: 5px; color: #071022; background: var(--cyan); }
+.badge.brk { background: #ff4d78; color: #fff; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+/* lead story on Top */
+.lead { position: relative; display: block; margin: 0 14px 4px; height: 260px; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 50px -25px rgba(0,0,0,.9), inset 0 0 0 1px var(--edge); animation: rise .5s both; }
+.lead img { width: 100%; height: 100%; object-fit: cover; }
+.lead::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgba(7,11,26,.92)); }
+.lead .in { position: absolute; left: 16px; right: 16px; bottom: 14px; z-index: 1; }
+.lead .h { font-size: 20px; -webkit-line-clamp: 3; }
+/* Forex: market cards */
+.mk { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 14px; padding: 4px 14px 14px; scrollbar-width: none; }
+.mk::-webkit-scrollbar { display: none; }
+.mcard { position: relative; flex: 0 0 74%; scroll-snap-align: center; padding: 14px 14px 10px; border-radius: 22px; text-align: left; overflow: hidden;
+  background: radial-gradient(120% 90% at 100% 0%, rgba(var(--c),.22), transparent 55%), linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.02)), #0b1230;
+  box-shadow: inset 0 0 0 1px rgba(var(--c),.35), inset 0 1px 0 rgba(255,255,255,.12), 0 0 28px -6px rgba(var(--c),.45), 0 24px 40px -24px rgba(0,0,0,.9); }
+.mcard::before { content: ""; position: absolute; left: 12%; right: 12%; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(var(--c),1), transparent); box-shadow: 0 0 12px rgba(var(--c),1); }
+.mk-top { display: flex; align-items: center; gap: 8px; }
+.mk-ico { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font: 700 12px var(--display); color: #071022; background: rgb(var(--c)); box-shadow: 0 0 14px rgba(var(--c),.8); }
+.mk-n { font: 600 13px var(--display); } .mk-s { font: 500 10px var(--mono); color: var(--mute); }
+.mk-p { margin-top: 10px; font: 600 26px var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.mk-c { font: 600 12px var(--mono); color: var(--up); } .mk-c.dn { color: var(--down); }
+.mk svg.big { display: block; width: 100%; height: 64px; margin-top: 6px; }
+.mk-hint { position: absolute; right: 12px; top: 14px; font: 500 9.5px var(--mono); color: var(--mute); }
+.strip { display: flex; gap: 8px; padding: 0 14px 12px; }
+.pill { flex: 1; padding: 10px 12px; border-radius: 16px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--edge); font-size: 12px; color: var(--ink2); }
+.pill b { display: block; font: 600 10px var(--mono); letter-spacing: .1em; color: var(--mute); margin-bottom: 3px; }
+.ss { display: flex; gap: 4px; } .ss i { flex: 1; font: 700 9.5px var(--mono); font-style: normal; text-align: center; padding: 3px 0; border-radius: 5px; background: rgba(255,255,255,.05); color: var(--faint); }
+.ss i.on { background: var(--teal); color: #04121a; box-shadow: 0 0 10px rgba(56,245,195,.6); }
+/* Forex news card: importance neon only here */
+.fxc { position: relative; display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 12px; padding: 10px 12px 10px 10px; border-radius: 20px; background: linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.02)), #0b1230;
+  box-shadow: inset 0 0 0 1px rgba(var(--g),.38), 0 0 22px -6px rgba(var(--g),.55), 0 0 60px -20px rgba(var(--g),.45); animation: rise .5s both; }
+.fxc::after { content: ""; position: absolute; inset: 0; border-radius: 20px; pointer-events: none; background: radial-gradient(90% 60% at 0% 0%, rgba(var(--g),.16), transparent 60%); }
+.fxc.pulse { animation: rise .5s both, halo 3.4s ease-in-out infinite; }
+@keyframes halo { 50% { box-shadow: inset 0 0 0 1px rgba(var(--g),.6), 0 0 30px -4px rgba(var(--g),.8), 0 0 80px -16px rgba(var(--g),.6); } }
+.well { display: flex; flex-direction: column; gap: 6px; padding: 7px; border-radius: 13px; background: rgba(3,6,18,.7); box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); align-self: start; }
+.fc-t { display: flex; justify-content: space-between; font: 600 8.5px var(--mono); color: var(--mute); letter-spacing: .04em; }
+.well svg { display: block; width: 100%; height: 18px; }
+.imp { font: 700 9.5px var(--mono); letter-spacing: .12em; color: rgb(var(--g)); text-shadow: 0 0 10px rgba(var(--g),.8); text-transform: uppercase; }
+.why { margin: 4px 0 0; font-size: 12px; line-height: 1.38; color: var(--mute); }
+/* chart panel: glass bottom sheet */
+#chartPanel { position: fixed; inset: 0; z-index: 40; }
+.ch-scrim { position: absolute; inset: 0; background: rgba(3,6,18,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); opacity: 0; transition: opacity .3s; }
+.ch { position: absolute; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); max-width: 540px; margin: 0 auto; border-radius: 28px; padding: 16px 16px 14px; transform: translateY(110%); transition: transform .42s cubic-bezier(.2,.9,.25,1);
+  background: radial-gradient(120% 80% at 100% 0%, rgba(77,225,255,.14), transparent 55%), linear-gradient(180deg, rgba(20,30,66,.96), rgba(10,15,36,.98)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1), inset 0 1px 0 rgba(255,255,255,.14), 0 -20px 60px -20px rgba(77,225,255,.35), 0 30px 60px rgba(0,0,0,.6); }
+#chartPanel.open .ch-scrim { opacity: 1; } #chartPanel.open .ch { transform: none; }
+.ch-grab { width: 38px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); margin: -6px auto 10px; }
+.ch-head { display: flex; align-items: flex-start; gap: 10px; }
+.ch-name { font: 600 15px var(--display); } .ch-sym { font: 500 10.5px var(--mono); color: var(--mute); }
+.ch-x { margin-left: auto; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: rgba(255,255,255,.07); color: var(--ink2); }
+.ch-price { margin-top: 8px; font: 600 32px var(--display); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.ch-chg { font: 600 12.5px var(--mono); color: var(--up); } .ch-chg.dn { color: var(--down); } .ch-chg span { color: var(--mute); margin-left: 4px; }
+.ch-assets { display: flex; gap: 6px; margin-top: 12px; }
+.ch-assets button, .ch-ranges button, .ch-types button { min-height: 34px; padding: 0 12px; border-radius: 11px; font: 600 12px var(--ui); color: var(--mute); background: rgba(255,255,255,.04); transition: .2s; }
+.ch-assets button[aria-pressed="true"], .ch-types button[aria-pressed="true"] { color: var(--ink); background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+[data-k=chart] { position: relative; height: 230px; margin: 12px -4px 8px; }
+.ch-msg { display: grid; place-items: center; height: 100%; color: var(--mute); font-size: 13px; }
+.ch-ranges { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,.04); }
+.ch-ranges button { padding: 0; }
+.ch-ranges button[aria-pressed="true"] { color: #04121a; background: var(--cyan); box-shadow: 0 0 14px rgba(77,225,255,.55); }
+.ch-types { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="amb" aria-hidden="true"></div>
+<div class="wrap" id="app"></div>
+<div id="chartPanel" hidden></div>
+<script src="kit.js"></script>
+<script>
+const { esc, ago } = Kit;
+const GLOW = { red: 'var(--red)', gold: 'var(--amb)', cyan: 'var(--sky)' };
+const MK = { gold: ['255,200,87', 'Au', 'XAU/USD'], usd: ['77,225,255', '$', 'DXY'], ndq: ['255,92,200', 'N', 'NASDAQ'] };
+const SUB = { top: 'The biggest stories in the world right now', world: 'Beyond the United States', us: 'Politics, culture and everything trending', forex: 'What moves gold, the dollar and the Nasdaq', tech: 'AI, chips, companies and breakthroughs' };
+
+function card(s, i) {
+  const cat = Kit.catOf(s), t = Kit.thumb(s, cat, 240);
+  const badge = s.breaking ? '<span class="badge brk">LIVE</span>' : (s.flags || []).includes('viral') ? '<span class="badge">VIRAL</span>' : '';
+  return `<a class="card" href="${esc(s.link)}" target="_blank" rel="noopener" style="animation-delay:${Math.min(i, 8) * 40}ms">
+    ${Kit.img(t, 'thumb')}
+    <div style="min-width:0">
+      <div class="meta">${badge}<span class="o">${esc(s.outlet)}</span><span class="dot"></span><span>${ago(s.published)}</span></div>
+      <h3 class="h">${esc(s.title)}</h3>
+      ${s.summary ? `<p class="sum">${esc(s.summary)}</p>` : ''}
+    </div></a>`;
+}
+function fxCard(s, i) {
+  const lv = Kit.level(s);
+  const fc = Kit.forecasts(s.fx, { w: 70, h: 18 });
+  return `<a class="fxc ${s.breaking ? 'pulse' : ''}" href="${esc(s.link)}" target="_blank" rel="noopener" style="--g:${GLOW[lv.k]};animation-delay:${Math.min(i, 8) * 40}ms">
+    <div class="well">${fc.map(f => `<div><div class="fc-t"><span>${f.label} <span style="color:${f.color}">${f.dir === 'up' ? '▲' : f.dir === 'down' ? '▼' : '–'}</span></span><span style="color:${f.conf >= 7 ? '#fff' : 'var(--mute)'}">${f.conf ? f.conf + '/10' : '—'}</span></div>${f.svg}</div>`).join('')}</div>
+    <div style="min-width:0">
+      <div class="meta"><span class="imp">${lv.tag}</span><span class="dot"></span><span class="o">${esc(s.outlet)}</span><span class="dot"></span><span>${ago(s.published)}</span></div>
+      <h3 class="h">${esc(s.title)}</h3>
+      ${s.fx?.why ? `<p class="why">${esc(s.fx.why)}</p>` : ''}
+    </div></a>`;
+}
+function markets() {
+  return `<div class="mk">${['gold', 'usd', 'ndq'].map(k => {
+    const m = Kit.series(k, '1W'), [c, ico, sym] = MK[k], up = (m.chg ?? 0) >= 0;
+    return `<button class="mcard" data-chart="${k}" style="--c:${c}" aria-label="Open ${esc(Kit.ASSETS[k].name)} chart">
+      <span class="mk-hint">TAP FOR CHART</span>
+      <div class="mk-top"><span class="mk-ico">${ico}</span><div><div class="mk-n">${esc(Kit.ASSETS[k].name)}</div><div class="mk-s">${sym}</div></div></div>
+      <div class="mk-p">${Kit.price(k, m.last)}</div>
+      <div class="mk-c ${up ? '' : 'dn'}">${m.chg == null ? '—' : `${up ? '▲ +' : '▼ '}${m.chg.toFixed(2)}%`} <span style="color:var(--mute)">· 1W</span></div>
+      ${Kit.spark(m.pts, { w: 260, h: 64, color: `rgb(${c})`, n: 80, stroke: 2, glow: 2.4, fillOpacity: .45, cls: 'big' })}
+    </button>`;
+  }).join('')}</div>`;
+}
+function forexExtras() {
+  const now = new Date();
+  const ses = [['SYD', 'Australia/Sydney', 7, 16], ['TOK', 'Asia/Tokyo', 9, 18], ['LON', 'Europe/London', 8, 17], ['NY', 'America/New_York', 8, 17]];
+  const on = ses.map(([, tz, o, c]) => { const h = +new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(now); return h >= o && h < c; });
+  const ev = (Kit.data?.calendar?.events || []).map(e => ({ ...e, t: Date.parse(e.time) })).filter(e => e.impact === 'high' && e.t > Date.now()).sort((a, b) => a.t - b.t)[0];
+  return `<div class="strip"><div class="pill"><b>SESSIONS</b><div class="ss">${ses.map(([k], i) => `<i class="${on[i] ? 'on' : ''}">${k}</i>`).join('')}</div></div>
+    <div class="pill"><b>NEXT EVENT</b>${ev ? `${esc(ev.title)} · ${new Intl.DateTimeFormat(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(ev.t)}` : 'No big US events left this week'}</div></div>`;
+}
+Kit.start({
+  shell: () => `<header class="bar"><div class="brand"><span class="logo">Brief<i>ly</i></span><span class="live"><b></b>LIVE</span></div>
+    <nav class="tabs">${Kit.TABS.map(t => `<button class="tab" data-tab="${t.id}">${t.name}</button>`).join('')}</nav></header>
+    <main id="feedArea"></main>`,
+  renderTab(tab, list) {
+    const area = document.getElementById('feedArea');
+    const hero = `<section class="hero"><img src="${Kit.photo(tab, 1200)}" alt=""><div class="hero-t"><h1>${Kit.catName(tab)}</h1><p>${SUB[tab]} · ${list.length} stories</p></div></section>`;
+    if (tab === 'forex') { area.innerHTML = hero + markets() + forexExtras() + `<div class="list">${list.map((s, i) => s.fx ? fxCard(s, i) : card(s, i)).join('')}</div>`; return; }
+    if (tab === 'top' && list.length) {
+      const [first, ...rest] = list, t = Kit.thumb(first, Kit.catOf(first), 1000);
+      area.innerHTML = hero + `<a class="lead" href="${esc(first.link)}" target="_blank" rel="noopener">${Kit.img(t, '')}<div class="in"><div class="meta">${first.breaking ? '<span class="badge brk">LIVE</span>' : ''}<span class="o">${esc(first.outlet)}</span><span class="dot"></span><span>${ago(first.published)}</span></div><h3 class="h">${esc(first.title)}</h3></div></a><div class="list">${rest.map(card).join('')}</div>`;
+      return;
+    }
+    area.innerHTML = hero + `<div class="list">${list.map(card).join('')}</div>`;
+  },
+  chartShell: () => `<div class="ch-scrim"></div><section class="ch" role="dialog" aria-label="Chart"><div class="ch-grab"></div>
+    <div class="ch-head"><div><div class="ch-name" data-k="name"></div><div class="ch-sym" data-k="sym"></div></div><button class="ch-x" data-close aria-label="Close">✕</button></div>
+    <div class="ch-price" data-k="price"></div><div class="ch-chg" data-k="chg"></div>
+    <div class="ch-assets">${Object.entries(Kit.ASSETS).map(([k, a]) => `<button data-asset="${k}">${a.sym}</button>`).join('')}</div>
+    <div data-k="chart"></div>
+    <div class="ch-ranges">${Kit.RANGES.map(r => `<button data-range="${r}">${r}</button>`).join('')}</div>
+    <div class="ch-types">${Kit.TYPES.map(([k, n]) => `<button data-type="${k}">${n}</button>`).join('')}</div></section>`,
+  chartColors: up => ({ text: '#8d97bd', grid: 'rgba(255,255,255,.05)', cross: 'rgba(255,255,255,.35)', label: '#1b2550', labelText: '#fff', up: '#38f5b0', down: '#ff5c8a', main: up ? '#4de1ff' : '#ff5c8a', areaTop: up ? 'rgba(77,225,255,.35)' : 'rgba(255,92,138,.35)', areaBottom: 'rgba(77,225,255,0)', font: 'Manrope' }),
+});
+</script>
+</body>
+</html>
