@@ -258,8 +258,9 @@ function articleText(html) {
   return text;
 }
 if (!FIXTURES) {
-  const want = stories.filter(st => (st.tier !== 'minor' || st.fx || st.top) && ((st.summary || '').length < 220 || !st.image) && st._cand?.length).slice(0, 160);
-  const todo = want.filter(st => !st._cand.some(c => extracts.has(c.id))).slice(0, 50);
+  // Important and "Just in" stories first; missing photos count too, since every card shows one
+const want = stories.filter(st => (st.tier !== 'minor' || st.fx || st.top || st.justIn) && ((st.summary || '').length < 220 || !st.image) && st._cand?.length).slice(0, 200);
+  const todo = want.filter(st => !st._cand.some(c => extracts.has(c.id))).slice(0, 60);
   await pool(todo, 6, async st => {
     for (const c of st._cand) {
       try {
