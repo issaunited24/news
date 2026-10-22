@@ -405,7 +405,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-23.1';
+const APP_VERSION = '2026-10-23.2';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -990,7 +990,7 @@ const COPY = {
 let bdFlip = false, bdKey = '';
 // Each cover photo has a focus point (where its subject is, as fractions of the photo's width and height).
 // The photo is sized and moved so that point sits in the open space above the tab name on any screen.
-const FOCUS = {"1689732888407-310424e3a372":[0.45,0.5],"1624365168056-daf44387e2ae":[0.5,0.45],"1611974789855-9c2a0a7236a3":[0.4,0.5],"1649003515353-c58a239cf662":[0.45,0.45],"1590283603385-17ffb3a7f29f":[0.6,0.45],"1610375461369-d613b564f4c4":[0.5,0.45],"1691404801714-07dab9c4dbce":[0.5,0.5],"1778452419724-1f605dc17c46":[0.5,0.5],"1614730321146-b6fa6a46bcb4":[0.5,0.5],"1446776811953-b23d57bd21aa":[0.5,0.4],"1634176866089-b633f4aec882":[0.6,0.5],"1643330683233-ff2ac89b002c":[0.5,0.45],"1540198163009-7afda7da2945":[0.5,0.48],"1446776653964-20c1d3a81b06":[0.55,0.5],"1624280433509-b01afeaf68e5":[0.5,0.5],"1742805382149-3c2f0cd0f300":[0.5,0.35],"1498644035638-2c3357894b10":[0.6,0.45],"1575507479993-7bb702d5e966":[0.4,0.5],"1659869508385-434ef2d98177":[0.55,0.35],"1627484986972-e544190b8abb":[0.45,0.45],"1663427929917-333d88949f7a":[0.35,0.5],"1451187580459-43490279c0fa":[0.35,0.65],"1589519160732-57fc498494f8":[0.7,0.3],"1521295121783-8a321d551ad2":[0.7,0.5],"1782743549468-97ead60055f9":[0.5,0.75],"1524661135-423995f22d0b":[0.5,0.5],"1701690544250-f7cb95c934aa":[0.5,0.4],"1520525003249-2b9cdda513bc":[0.5,0.35],"1543372654-b45dd90eeee5":[0.54,0.45],"1594581979864-36977b15d0dc":[0.65,0.42],"1675721554936-2628b714081e":[0.48,0.38],"1500632907344-a073709b2448":[0.65,0.4],"1767342007060-694d6a7db73f":[0.47,0.45],"1504333638930-c8787321eee0":[0.45,0.5],"1608178398319-48f814d0750c":[0.5,0.55],"1717705422478-0b42e89e06b7":[0.45,0.55],"1462331940025-496dfbfc7564":[0.45,0.5],"1677357623576-7c8aab08da22":[0.5,0.5],"1457364887197-9150188c107b":[0.65,0.4],"1454789548928-9efd52dc4031":[0.5,0.38],"1677442135703-1787eea5ce01":[0.68,0.5],"1697577418970-95d99b5a55cf":[0.5,0.35],"1782170932323-8f03eb41cc96":[0.55,0.5],"1674027444485-cec3da58eef4":[0.48,0.4],"1757466762489-52fea38071ad":[0.6,0.6],"1644088379091-d574269d422f":[0.5,0.55],"1609924211018-5526c55bad5b":[0.47,0.57],"1746288864555-5e8e09c420aa":[0.53,0.5],"1501103777042-0aeb4df8ff8f":[0.7,0.45],"1581390114939-946f9a890a7f":[0.52,0.5],"1705547914719-9358fe34c483":[0.5,0.47],"1536440136628-849c177e76a1":[0.55,0.4],"1459749411175-04bf5292ceea":[0.4,0.65],"1626003573503-2e088d82c647":[0.48,0.42],"1522778119026-d647f0596c20":[0.5,0.55],"1489944440615-453fc2b6a9a9":[0.45,0.6],"1679391029864-d46f366a456b":[0.45,0.6],"1573838886533-c90767b6e60e":[0.5,0.5],"1556764420-e37ef4cdfa5c":[0.6,0.4],"1545191050-96042d612b1f":[0.5,0.3]};
+const FOCUS = {"1649003515353-c58a239cf662":[0.45,0.45],"1778452419724-1f605dc17c46":[0.5,0.5],"1540198163009-7afda7da2945":[0.5,0.48],"1624280433509-b01afeaf68e5":[0.5,0.5],"1627484986972-e544190b8abb":[0.45,0.45],"1451187580459-43490279c0fa":[0.35,0.65],"1701690544250-f7cb95c934aa":[0.5,0.4],"1504333638930-c8787321eee0":[0.45,0.5],"1677442135703-1787eea5ce01":[0.68,0.5],"1609924211018-5526c55bad5b":[0.47,0.57],"1626003573503-2e088d82c647":[0.48,0.42]};
 function frame(im, focus, W, H) {
   const w = im.naturalWidth, h = im.naturalHeight;
   if (!w || !h || !focus) { im.style.cssText = ''; return; }
@@ -1209,7 +1209,6 @@ function settingsSheet() {
     <div class="btns"><button class="btn" data-act="copyBackup">Copy backup</button><button class="btn" data-act="restore">Restore from text</button></div>
     <h4>How it works</h4>
     <p class="muted">Briefly checks its sources every few minutes. Brand-new stories from major newsrooms land in the Just in tab first and move into the other tabs only once they prove important. Stories rise when many outlets cover them, when outlets put them in their top stories, and when they contain big-event words. The Forex tab shows only news likely to move gold, the US dollar or the Nasdaq, and its glow shows importance: red for breaking or high, gold for medium, cyan for low. Each Forex story forecasts all three with a 1–10 confidence score from simple rules, capped at 9 because nothing in markets is certain.</p>
-    <p class="muted"><a href="classic.html" style="text-decoration:underline">Open the previous design</a></p>
     <h4>Sources</h4>${srcs}`);
 }
 
