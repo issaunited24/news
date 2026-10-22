@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05070f">
+<title>Briefly Header Photos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root { --bg: #05070f; --ink: #f4f1ea; --mute: #8e95ad; color-scheme: dark; }
+* { box-sizing: border-box; } html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 15px/1.45 "Inter Tight", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 640px; margin: 0 auto; padding: calc(env(safe-area-inset-top,0px) + 24px) 16px 60px; }
+h1 { margin: 0; font: 600 30px/1.1 Fraunces, Georgia, serif; letter-spacing: -.02em; }
+.lede { margin: 8px 0 0; color: var(--mute); }
+h2 { margin: 34px 0 4px; font: 600 11px "IBM Plex Mono", monospace; letter-spacing: .2em; text-transform: uppercase; color: rgb(var(--t)); }
+.now { color: var(--mute); font-size: 13px; margin: 0 0 12px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.op { position: relative; aspect-ratio: 4 / 5; border-radius: 18px; overflow: hidden; background: #111833; box-shadow: 0 0 0 1px rgba(255,255,255,.08); }
+.op img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.op::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,7,15,.35), rgba(5,7,15,.1) 35%, rgba(5,7,15,.75)); }
+.op .w { position: absolute; z-index: 1; left: 10px; right: 6px; bottom: 30px; font: 900 34px/.9 "Inter Tight", sans-serif; letter-spacing: -.05em; text-transform: uppercase; white-space: nowrap; color: #fff; text-shadow: 0 2px 18px rgba(0,0,0,.6); }
+.op .n { position: absolute; z-index: 1; top: 10px; left: 10px; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center; font: 700 14px "Inter Tight", sans-serif; color: #05070f; background: #fff; }
+.op .d { position: absolute; z-index: 1; left: 10px; right: 10px; bottom: 10px; font: 500 10.5px "IBM Plex Mono", monospace; color: rgba(255,255,255,.8); }
+.op.cur { box-shadow: 0 0 0 2px rgb(var(--t)), 0 0 20px -4px rgb(var(--t)); }
+.op.cur .n::after { content: " · now"; font-weight: 500; }
+@media (min-width: 560px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pick your header photos</h1>
+  <p class="lede">Six options for each tab, including the three new ones at the bottom. The one outlined is what the app uses now. Tell me a number per tab, like "Top 3, World 5".</p>
+  <div id="list"></div>
+</div>
+<script>
+const U = id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&q=70&w=600&h=750`;
+const SETS = [
+  ['Top', '255,196,120', [['1769251971680-005dfa536f07', 'Earth from orbit'], ['1778452419724-1f605dc17c46', 'Earth at night'], ['1451187580459-43490279c0fa', 'City lights from space'], ['1771422961300-a78dfdf11c5a', 'Day and night on Earth'], ['1457327289196-f38b88d97147', 'Storm from space'], ['1573767291321-c0af2eaf5266', 'City from above at night']]],
+  ['Just in', '255,96,120', [['1768222935380-0a3a76fbb42e', 'TV control room'], ['1651465531201-7e430660fd82', 'News studio'], ['1675721554936-2628b714081e', 'White House podium'], ['1555201441-7b166836415d', 'Press microphones'], ['1570563568161-e4f5e8c6e27f', 'Microphone in the dark'], ['1624280433509-b01afeaf68e5', 'Light trails']]],
+  ['World', '255,150,90', [['1706630810491-b4bbaa8c45b3', 'London at dusk'], ['1513026705753-bc3fffca8bf4', 'London from above'], ['1627484986972-e544190b8abb', 'Shanghai at night'], ['1604928141064-207cea6f571f', 'Tokyo at night'], ['1512453979798-5ea266f8880c', 'Dubai'], ['1611323340350-bdcc0e6cfae5', 'Skyline over water']]],
+  ['U.S.', '120,160,255', [['1701690544250-f7cb95c934aa', 'Capitol dome at night'], ['1543372654-b45dd90eeee5', 'Capitol from the Mall'], ['1768401718070-dec7426d4f67', 'Capitol dome, black sky'], ['1506606401543-2e73709cebb4', 'New York light trails'], ['1593047614267-378b863c98c5', 'White House at night'], ['1562884328-39da45501a9c', 'American flag']]],
+  ['Forex', '60,230,200', [['1611974789855-9c2a0a7236a3', 'Candlestick chart'], ['1689732888407-310424e3a372', 'Chart on dark screen'], ['1610375461369-d613b564f4c4', 'Gold bars close-up'], ['1610375461246-83df859d849d', 'Stacked gold'], ['1778406466505-6129d0555557', 'Wall Street flags'], ['1767424412548-1a1ac7f4b9bc', 'Trading screens']]],
+  ['Tech & AI', '160,120,255', [['1782170932323-8f03eb41cc96', 'Room of blue lights'], ['1677442135703-1787eea5ce01', 'AI brain on a chip'], ['1587845323226-bad89242c735', 'Silicon wafer'], ['1782094673136-5198a372980c', 'Server fans'], ['1757466762489-52fea38071ad', 'Glowing particles'], ['1617751218806-9077a9093d8b', 'Purple light']]],
+  ['Sports', '255,120,60', [['1765924705648-9a0731ac5202', 'Basketball arena at night'], ['1767016697775-001518392206', 'Packed arena'], ['1533923156502-be31530547c4', 'Arena with the flag'], ['1545191050-96042d612b1f', 'UFC fight'], ['1626003573503-2e088d82c647', 'Football under the lights'], ['1566577739112-5180d4bf9390', 'NFL football']], 'new'],
+  ['Entertainment', '255,90,190', [['1609924211018-5526c55bad5b', 'Hollywood sign'], ['1514306191717-452ec28c7814', 'Red theater curtain'], ['1540039155733-5bb30b53aa14', 'Concert lights'], ['1470229722913-7c0e2dbbafd3', 'Stage glow'], ['1635400138431-0bbde4d01484', 'Movie theater'], ['1506184106046-1e6e90c0222d', 'Hollywood at dusk']], 'new'],
+  ['Science', '90,220,255', [['1462332420958-a05d1e002413', 'Nebula'], ['1504333638930-c8787321eee0', 'Orion nebula'], ['1610296669228-602fa827fc1f', 'Blue galaxy'], ['1633167606207-d840b5070fc2', 'Golden DNA'], ['1637929476734-bd7f5f78e40a', 'DNA helix'], ['1630959305606-3123a081dada', 'Microscope silhouette']], 'new'],
+];
+document.getElementById('list').innerHTML = SETS.map(([name, t, ops, isNew]) => `<h2 style="--t:${t}">${name}${isNew ? ' · new tab' : ''}</h2><p class="now">${isNew ? 'Pick one for the new tab' : 'Now using option 1'}</p><div class="grid">${ops.map(([id, d], i) => `<div class="op ${i === 0 && !isNew ? 'cur' : ''}" style="--t:${t}"><img class="bg" src="${U(id)}" alt="${d}" loading="lazy"><span class="n">${i + 1}</span><span class="w">${name}</span><span class="d">${d}</span></div>`).join('')}</div>`).join('');
+</script>
+</body>
+</html>
