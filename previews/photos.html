@@ -31,7 +31,7 @@ h2 { margin: 34px 0 4px; font: 600 11px "IBM Plex Mono", monospace; letter-spaci
 <body>
 <div class="wrap">
   <h1>Pick your header photos</h1>
-  <p class="lede">Six options for each tab. The one outlined is what the app uses now. Tell me a number per tab, like "Top 3, World 5".</p>
+  <p class="lede">Six options for each tab, including the three new ones at the bottom. The one outlined is what the app uses now. Tell me a number per tab, like "Top 3, World 5".</p>
   <div id="list"></div>
 </div>
 <script>
@@ -43,8 +43,11 @@ const SETS = [
   ['U.S.', '120,160,255', [['1701690544250-f7cb95c934aa', 'Capitol dome at night'], ['1543372654-b45dd90eeee5', 'Capitol from the Mall'], ['1768401718070-dec7426d4f67', 'Capitol dome, black sky'], ['1506606401543-2e73709cebb4', 'New York light trails'], ['1593047614267-378b863c98c5', 'White House at night'], ['1562884328-39da45501a9c', 'American flag']]],
   ['Forex', '60,230,200', [['1611974789855-9c2a0a7236a3', 'Candlestick chart'], ['1689732888407-310424e3a372', 'Chart on dark screen'], ['1610375461369-d613b564f4c4', 'Gold bars close-up'], ['1610375461246-83df859d849d', 'Stacked gold'], ['1778406466505-6129d0555557', 'Wall Street flags'], ['1767424412548-1a1ac7f4b9bc', 'Trading screens']]],
   ['Tech & AI', '160,120,255', [['1782170932323-8f03eb41cc96', 'Room of blue lights'], ['1677442135703-1787eea5ce01', 'AI brain on a chip'], ['1587845323226-bad89242c735', 'Silicon wafer'], ['1782094673136-5198a372980c', 'Server fans'], ['1757466762489-52fea38071ad', 'Glowing particles'], ['1617751218806-9077a9093d8b', 'Purple light']]],
+  ['Sports', '255,120,60', [['1765924705648-9a0731ac5202', 'Basketball arena at night'], ['1767016697775-001518392206', 'Packed arena'], ['1533923156502-be31530547c4', 'Arena with the flag'], ['1545191050-96042d612b1f', 'UFC fight'], ['1626003573503-2e088d82c647', 'Football under the lights'], ['1566577739112-5180d4bf9390', 'NFL football']], 'new'],
+  ['Entertainment', '255,90,190', [['1609924211018-5526c55bad5b', 'Hollywood sign'], ['1514306191717-452ec28c7814', 'Red theater curtain'], ['1540039155733-5bb30b53aa14', 'Concert lights'], ['1470229722913-7c0e2dbbafd3', 'Stage glow'], ['1635400138431-0bbde4d01484', 'Movie theater'], ['1506184106046-1e6e90c0222d', 'Hollywood at dusk']], 'new'],
+  ['Science', '90,220,255', [['1462332420958-a05d1e002413', 'Nebula'], ['1504333638930-c8787321eee0', 'Orion nebula'], ['1610296669228-602fa827fc1f', 'Blue galaxy'], ['1633167606207-d840b5070fc2', 'Golden DNA'], ['1637929476734-bd7f5f78e40a', 'DNA helix'], ['1630959305606-3123a081dada', 'Microscope silhouette']], 'new'],
 ];
-document.getElementById('list').innerHTML = SETS.map(([name, t, ops]) => `<h2 style="--t:${t}">${name}</h2><p class="now">Now using option 1</p><div class="grid">${ops.map(([id, d], i) => `<div class="op ${i === 0 ? 'cur' : ''}" style="--t:${t}"><img class="bg" src="${U(id)}" alt="${d}" loading="lazy"><span class="n">${i + 1}</span><span class="w">${name}</span><span class="d">${d}</span></div>`).join('')}</div>`).join('');
+document.getElementById('list').innerHTML = SETS.map(([name, t, ops, isNew]) => `<h2 style="--t:${t}">${name}${isNew ? ' · new tab' : ''}</h2><p class="now">${isNew ? 'Pick one for the new tab' : 'Now using option 1'}</p><div class="grid">${ops.map(([id, d], i) => `<div class="op ${i === 0 && !isNew ? 'cur' : ''}" style="--t:${t}"><img class="bg" src="${U(id)}" alt="${d}" loading="lazy"><span class="n">${i + 1}</span><span class="w">${name}</span><span class="d">${d}</span></div>`).join('')}</div>`).join('');
 </script>
 </body>
 </html>
