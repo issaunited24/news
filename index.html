@@ -405,7 +405,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-22.17';
+const APP_VERSION = '2026-10-22.18';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -584,8 +584,19 @@ function visible(s) {
   if (prefs.muted.includes(s.outlet) && !s.sources.some(o => !prefs.muted.includes(o.outlet))) return false;
   return true;
 }
+// Your picks per tab (from the robot's "likes" tags). Liked stories show a bit more often and a bit higher, never only them.
+const FX_LIKED = ['fed', 'earnings', 'bigtech', 'war', 'peace', 'oil', 'sanctions'];
+function liked(s, tab) {
+  if (tab === 'forex') return !!s.fx && FX_LIKED.includes(s.fx.driver);
+  return !!s.likes && s.likes.some(k => LIKE_TAB[k] === tab);
+}
+const LIKE_TAB = { war: 'world', europe: 'world', asia: 'world', trump: 'us', congress: 'us', crime: 'us', viral: 'us', movies: 'ent', boxoffice: 'ent', music: 'ent', results: 'sports', fight: 'sports', upset: 'sports', ai: 'tech', bigtech: 'tech', chips: 'tech', space: 'sci', health: 'sci', weird: 'sci' };
+const LIKE_LIFT = 45 * 60e3; // a liked story sorts as if it were 45 minutes newer
+// Top: the truly massive stories, plus the day's most-covered news (4+ outlets) from the last 10 hours
+const wideTop = s => s.score >= 45 && s.sources.length >= 4 && Date.now() - s.updatedAt < 10 * 3600e3 && s.categories.some(c => c === 'world' || c === 'us' || c === 'tech' || c === 'forex');
 function important(s, tab) {
-  if (tab === 'top') return !!s.top;
+  if (tab === 'top') return !!s.top || wideTop(s);
+  if (tab !== 'sports' && liked(s, tab) && (s.trusted || s.tier !== 'minor' || s.sources.length >= 1)) return true;
   if (tab === 'us' && s.flags?.some(f => f === 'viral' || f === 'culture' || f === 'crime' || f === 'stream')) return true;
   if (tab === 'world' && s.flags?.includes('disaster') && (s.sources.length >= 1 || s.score >= 25)) return true;
   if (tab === 'forex') return !!s.fx && (s.fx.impact !== 'low' || s.breaking);
@@ -595,30 +606,34 @@ function important(s, tab) {
     if (f.includes('sportfluff')) return false;
     const k = s.sport || 'other';
     if (k === 'soccer' || k === 'ufc') return true;
-    if (k === 'nba' || k === 'nfl') return (f.includes('big3') && (s.trusted || s.tier !== 'minor')) || f.includes('bigsport');
+    if (k === 'nba' || k === 'nfl') return (f.includes('big3') && (s.trusted || s.tier !== 'minor')) || f.includes('bigsport') || (liked(s, tab) && !!s.trusted && f.includes('big3'));
+    if (liked(s, tab) && !!s.trusted) return true;
     return !!s.trusted || f.includes('bigsport') || s.tier !== 'minor' || prefs.boosted.includes(s.outlet);
   }
   if (tab === 'ent' || tab === 'sci') return s.tier !== 'minor' || !!s.trusted || prefs.boosted.includes(s.outlet);
   if (s.tier !== 'minor') return true;
   return prefs.boosted.includes(s.outlet);
 }
-const rankScore = s => s.score + (prefs.boosted.includes(s.outlet) ? 12 : 0) + (s.breaking ? 25 : 0) - (Date.now() - s.updatedAt) / 3600e3 * 4;
+const rankScore = s => s.score + (prefs.boosted.includes(s.outlet) ? 12 : 0) + (s.breaking ? 25 : 0) + (s.top ? 10 : 0) - (Date.now() - s.updatedAt) / 3600e3 * 4;
 function storiesFor(tab, impOnly) {
   if (!data) return [];
   let list = data.stories.filter(visible);
   // Just in: every fresh story from a trusted newsroom, newest first. It only reaches the other tabs once it proves important.
   if (tab === 'justin') return list.filter(justIn).sort((a, b) => Math.min(b.published, b.firstSeen) - Math.min(a.published, a.firstSeen));
-  if (tab === 'top') list = list.filter(s => s.top || s.tier === 'major' || s.breaking);
+  if (tab === 'top') list = list.filter(s => s.top || s.tier === 'major' || s.breaking || wideTop(s));
   else if (tab === 'forex') list = list.filter(s => s.fx); // only news that can move gold, the dollar or the Nasdaq
   else list = list.filter(s => s.categories.includes(tab));
   if (impOnly) list = list.filter(s => important(s, tab));
   if (tab === 'sports') return mixSports(list);
-  return tab === 'top' ? [...list].sort((a, b) => rankScore(b) - rankScore(a)) : [...list].sort((a, b) => b.updatedAt - a.updatedAt);
+  if (tab === 'top') return [...list].sort((a, b) => rankScore(b) - rankScore(a));
+  const key = s => s.updatedAt + (liked(s, tab) ? LIKE_LIFT : 0);
+  return [...list].sort((a, b) => key(b) - key(a));
 }
 // Takes turns between sports so no single league fills the tab: soccer, UFC, NBA, NFL, everything else
 function mixSports(list) {
   const order = ['soccer', 'ufc', 'nba', 'nfl', 'other'], q = {};
-  for (const s of [...list].sort((a, b) => b.updatedAt - a.updatedAt)) (q[s.sport || 'other'] ||= []).push(s);
+  const key = s => s.updatedAt + (liked(s, 'sports') ? LIKE_LIFT : 0);
+  for (const s of [...list].sort((a, b) => key(b) - key(a))) (q[s.sport || 'other'] ||= []).push(s);
   const out = [];
   for (let more = true; more;) { more = false; for (const k of order) { const s = q[k]?.shift(); if (s) { out.push(s); more = true; } } }
   return out;

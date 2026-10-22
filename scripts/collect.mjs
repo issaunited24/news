@@ -232,7 +232,7 @@ const stories = cluster(items).map(group => {
   return {
     id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: best.summary, summaryFrom: best.from, image: best.image || undefined, more: more.length ? more : undefined,
     _cand: byTrust.filter(g => !/news\.google\.com/.test(g.link)).slice(0, 2).map(g => ({ id: g.id, link: g.link, outlet: g.outlet })),
-    published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats], top: top || undefined, justIn: justIn || undefined, trusted: trust < 99 || undefined, sport: cats.has('sports') ? (group.find(g => g.kind)?.kind || cls.sport || 'other') : undefined, flags: cls.flags.length ? cls.flags : undefined,
+    published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats], top: top || undefined, justIn: justIn || undefined, trusted: trust < 99 || undefined, sport: cats.has('sports') ? (group.find(g => g.kind)?.kind || cls.sport || 'other') : undefined, flags: cls.flags.length ? cls.flags : undefined, likes: cls.likes.length ? cls.likes : undefined,
     score: s.score, tier: s.tier, breaking, why: s.reasons, sources: others,
     fx: fx ? { impact: fx.impact, why: fx.why, assets: fx.assets, driver: fx.driver } : null,
     _all: 0,
