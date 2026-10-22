@@ -56,13 +56,15 @@ export function classify(title, summary, feedCats, score, tier, outletCount, bre
 
   // Sports: sports feeds, or clearly a sports story. It leaves World and U.S. unless it's huge or viral.
   const sportsHit = feedCats.has('sports') || (has(SPORTS_RE, t) && !/\b(golf|tennis|baseball|softball)[- ]ball|hail\b/i.test(t));
-  const big3 = sportsHit && (has(NBA_NFL_UFC_RE, t) || (feedCats.has('sports') && has(NBA_NFL_UFC_RE, ts)));
+  // Previews, odds, fantasy, surveys and college or high school games don't count as NBA/NFL/UFC news
+  const SPORTS_FLUFF = /\b(survey|reacts|how to watch|where to watch|odds|best bets?|picks|predictions?|fantasy|mailbag|livestream|live stream|high school|college|ncaa|recruit\w*|mock draft|power rankings|takeaways|grades|week \d+ (preview|picks))\b/i;
+  const big3 = sportsHit && !SPORTS_FLUFF.test(t) && (has(NBA_NFL_UFC_RE, t) || (feedCats.has('sports') && has(NBA_NFL_UFC_RE, ts)));
   if (sportsHit) {
     cats.add('sports');
     if (!has(MASSIVE_RE, t) && !has(VIRAL_RE, t)) { cats.delete('world'); if (!has(FIGURE_RE, t)) cats.delete('us'); }
   }
   // Entertainment: entertainment feeds or clearly entertainment (pop culture also stays in U.S.)
-  if (feedCats.has('ent') || has(ENT_RE, t) || has(STREAM_RE, t)) cats.add('ent');
+  if (feedCats.has('ent') || (!sportsHit && (has(ENT_RE, t) || has(STREAM_RE, t)))) cats.add('ent');
   // Science: science feeds or clearly a science, space or health discovery
   if (feedCats.has('sci') || has(SCI_RE, t)) cats.add('sci');
 
