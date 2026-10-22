@@ -314,6 +314,14 @@ const TABS = [
   { id: 'tech', name: 'Tech & AI' },
 ];
 const PAGE = 30;
+const APP_VERSION = '2026-10-22.1';
+// When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
+async function checkVersion() {
+  try {
+    const v = (await (await fetch(`version.txt?t=${Date.now()}`, { cache: 'no-store' })).text()).trim();
+    if (v && v !== APP_VERSION && !sessionStorage.getItem(`reloaded-${v}`)) { sessionStorage.setItem(`reloaded-${v}`, '1'); location.reload(); }
+  } catch {}
+}
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -831,8 +839,9 @@ function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add
 
 setInterval(() => { if (!document.hidden) load(); }, 2 * 60e3);
 setInterval(renderHeader, 30e3);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { load(); checkVersion(); } });
 load();
+checkVersion();
 </script>
 </body>
 </html>
