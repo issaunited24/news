@@ -26,6 +26,6 @@ jobs:
           node tools/shots.mjs
       - name: Publish
         run: |
-          cd out && git init -q && git checkout -q -b photo-check
+          cd out && git init -q && git checkout -q -b shot-check
           git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add . && git commit -qm "Screenshots" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" photo-check
+          git add . && git commit -qm "Screenshots" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" shot-check

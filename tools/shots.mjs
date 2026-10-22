@@ -1,21 +1,18 @@
-// One-off checks run on GitHub (by .github/workflows/shots.yml): which economic calendar sources work, from the robot and from a web page
+// Checks on GitHub (by .github/workflows/shots.yml): do the big cover titles fit on phone screens, with the real fonts?
 import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
-const from = new Date(Date.now() - 3 * 864e5).toISOString(), to = new Date(Date.now() + 4 * 864e5).toISOString();
-const urls = {
-  tvCal: `https://economic-calendar.tradingview.com/events?from=${from}&to=${to}&countries=US`,
-  ffJson: 'https://nfs.faireconomy.media/ff_calendar_thisweek.json',
-};
-const out = [];
-for (const [k, u] of Object.entries(urls)) {
-  for (const [label, headers] of [['plain', {}], ['tvOrigin', { Origin: 'https://www.tradingview.com', Referer: 'https://www.tradingview.com/' }]]) {
-    try { const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0', ...headers } }); const t = await r.text(); out.push(`robot ${k} ${label}: ${r.status} ${t.length} ${t.slice(0, 700).replace(/\s+/g, ' ')}`); }
-    catch (e) { out.push(`robot ${k} ${label}: FAIL ${e.message}`); }
+const b = await chromium.launch(), out = [];
+for (const width of [412, 384, 360]) {
+  const p = await b.newPage({ viewport: { width, height: 900 }, deviceScaleFactor: 2 });
+  await p.goto('https://issaunited24.github.io/news/?v=' + Date.now()); await p.waitForTimeout(6000);
+  out.push(`width ${width} version ${await p.evaluate(() => typeof APP_VERSION !== 'undefined' ? APP_VERSION : '?')}`);
+  for (const t of ['forex', 'top', 'justin', 'world', 'us', 'sci', 'tech', 'ent', 'sports']) {
+    await p.evaluate(t => document.querySelector(`.tab[data-tab="${t}"]`)?.click(), t); await p.waitForTimeout(1500);
+    const r = await p.evaluate(() => { const e = document.querySelector('#mast .word'); const s = getComputedStyle(e).fontSize; e.style.animation = 'none'; e.style.width = 'max-content'; const w = e.getBoundingClientRect(); e.style.width = ''; return `${e.textContent} ${s} right=${Math.round(w.right)}`; });
+    out.push(`  ${t}: ${r} ${await p.evaluate(w => document.querySelector('#mast .word').getBoundingClientRect().right <= w ? '' : 'TOO WIDE', width)}`);
+    if (width === 412 && ['world', 'sci', 'ent'].includes(t)) await p.screenshot({ path: `out/${t}.png`, clip: { x: 0, y: 0, width, height: 420 } });
   }
+  await p.close();
 }
-const b = await chromium.launch(); const pg = await b.newPage();
-await pg.goto('https://issaunited24.github.io/news/version.txt');
-const browser = await pg.evaluate(async u => { try { const r = await fetch(u); const t = await r.text(); return `${r.status} ${t.slice(0, 300)}`; } catch (e) { return 'FAIL ' + e.message; } }, urls.tvCal);
-out.push('browser tvCal: ' + browser);
 await b.close();
-console.log(out.join('\n')); await writeFile('out/cal.txt', out.join('\n'));
+console.log(out.join('\n')); await writeFile('out/fit.txt', out.join('\n'));

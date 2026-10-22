@@ -405,7 +405,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-22.18';
+const APP_VERSION = '2026-10-22.19';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1008,7 +1008,18 @@ function renderMast(count) {
   if (mastKey === key + size) return; // unchanged: don't rebuild (keeps tab switches light)
   mastKey = key + size;
   $('mast').innerHTML = html;
+  fitWord();
 }
+// Measure the name's real width and shrink it just enough to fit the screen (wide letters like W and M need it)
+function fitWord() {
+  const el = document.querySelector('#mast .word'); if (!el) return;
+  const W = Math.min(window.innerWidth, 640) - 30;
+  el.style.animation = 'none'; el.style.width = 'max-content';
+  const w = el.getBoundingClientRect().width, cur = parseFloat(el.style.fontSize);
+  el.style.width = ''; el.style.animation = '';
+  if (w > W) el.style.fontSize = Math.floor(cur * W / w) + 'px';
+}
+document.fonts?.ready?.then(fitWord);
 // Darken the backdrop as you scroll; at most once per frame, and only the overlay's opacity changes
 let dimQueued = false, dimLast = -1;
 addEventListener('scroll', () => {
