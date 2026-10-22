@@ -37,12 +37,12 @@ a { color: inherit; text-decoration: none; }
 
 /* The backdrop: the tab's photograph, filling the screen behind everything */
 .bd { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: #0a0f22; }
-.bd img { position: absolute; inset: -4%; width: 108%; height: 108%; object-fit: cover; opacity: 0; transition: opacity 1.1s ease, transform 1.1s ease; transform: scale(1.08); filter: saturate(1.1); }
+.bd img { position: absolute; inset: -4%; width: 108%; height: 108%; object-fit: cover; opacity: 0; transition: opacity 1.1s ease, transform 1.1s ease; transform: scale(1.08); filter: saturate(1.15) brightness(1.05); }
 .bd img.on { opacity: 1; transform: scale(1); animation: pan 30s ease-in-out infinite alternate; }
 @keyframes pan { to { transform: scale(1.08) translate3d(-2%, 1%, 0); } }
 .bd::after { content: ""; position: absolute; inset: 0; transition: background 1s;
   background:
-    linear-gradient(180deg, rgba(5,7,15,.5) 0%, rgba(5,7,15,.32) 24%, rgba(5,7,15,calc(.74 + var(--s, 0) * .18)) 50%, rgba(5,7,15,.94) 80%),
+    linear-gradient(180deg, rgba(5,7,15,.42) 0%, rgba(5,7,15,.12) 22%, rgba(5,7,15,.3) 40%, rgba(5,7,15,calc(.62 + var(--s, 0) * .26)) 60%, rgba(5,7,15,.9) 86%),
     radial-gradient(80% 50% at 50% 34%, rgba(var(--tint),.16), transparent 70%),
     linear-gradient(0deg, rgba(10,16,40,.6), rgba(10,16,40,0) 60%); }
 .grain { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
@@ -369,7 +369,7 @@ const TABS = [
   { id: 'tech', name: 'Tech & AI' },
 ];
 const PAGE = 30;
-const APP_VERSION = '2026-10-22.6';
+const APP_VERSION = '2026-10-22.7';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -409,20 +409,89 @@ const dayFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
 const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
 /* ---------- Photographs ---------- */
-// Cinematic category photography (Unsplash). Stories use the outlet's own photo when there is one.
-const U = id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&q=70&w=`;
-const PHOTOS = {
-  top: [U('1451187580459-43490279c0fa'), U('1634176866089-b633f4aec882'), U('1676944229887-b2def0f94185')],
-  justin: [U('1611323340350-bdcc0e6cfae5'), U('1634176866089-b633f4aec882'), U('1515868769-ad822a0c67e9')],
-  world: [U('1617336422396-e1dfc4210ec5'), U('1611323340350-bdcc0e6cfae5'), U('1515868769-ad822a0c67e9'), U('1599578705716-8d3d9246f53b')],
-  us: [U('1635255752782-febbe92c2da6'), U('1648231150978-27af59c1d3ca'), U('1764004657175-11ce991efcca'), U('1569285647999-67fc5a1ff1ad')],
-  tech: [U('1677442135136-760c813028c0'), U('1756908992154-c8a89f5e517f'), U('1631375937044-6dd5beac01d2'), U('1695144244472-a4543101ef35')],
-  forex: [U('1559094522-79422598840f'), U('1611974789855-9c2a0a7236a3'), U('1610375461246-83df859d849d'), U('1605702012553-e954fbde66eb')],
+// Cinematic photography (Unsplash), each one checked by eye.
+// Every tab has a backdrop photo and a brighter photo poured into its giant title.
+const U = id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&q=72&w=`;
+const P = {
+  top1: '1769251971680-005dfa536f07', top2: '1778452419724-1f605dc17c46', top3: '1451187580459-43490279c0fa', top4: '1771422961300-a78dfdf11c5a',
+  jin1: '1768222935380-0a3a76fbb42e', jin2: '1651465531201-7e430660fd82', jin3: '1675721554936-2628b714081e', jin4: '1555201441-7b166836415d',
+  wor1: '1513026705753-bc3fffca8bf4', wor2: '1627484986972-e544190b8abb', wor3: '1604928141064-207cea6f571f', wor4: '1706630810491-b4bbaa8c45b3', wor5: '1664353655151-9d94a9170eb0', wor6: '1611323340350-bdcc0e6cfae5',
+  us1: '1543372654-b45dd90eeee5', us2: '1701690544250-f7cb95c934aa', us4: '1768401718070-dec7426d4f67', us5: '1506606401543-2e73709cebb4', us6: '1593047614267-378b863c98c5', wh1: '1485394595691-5411947d63a4',
+  fx1: '1611974789855-9c2a0a7236a3', fx2: '1767424412548-1a1ac7f4b9bc', fx3: '1610375461369-d613b564f4c4', fx4: '1778406466505-6129d0555557', fx5: '1773266110858-acb9b6c43b15', fx6: '1590283603385-17ffb3a7f29f',
+  tec1: '1677442135703-1787eea5ce01', tec2: '1782170932323-8f03eb41cc96', tec3: '1587845323226-bad89242c735', tec4: '1782094673136-5198a372980c', tec5: '1757466762489-52fea38071ad', tec6: '1677442135136-760c813028c0',
+  war1: '1689182314475-ff55f109b430', war2: '1470936038081-27e790e22397', war3: '1708342421457-9c59f4843fe1', war4: '1639186053198-6025b98b2145',
+  oil1: '1518527989017-5baca7a58d3c', oil2: '1516199423456-1f1e91b06f25', oil3: '1777195148867-68a6f0e9aa8f',
+  qk1: '1677233860259-ce1a8e0f8498', qk2: '1677233861362-c3aa97f11638', qk3: '1581059686229-de26e6ae5dc4',
+  stm1: '1457327289196-f38b88d97147', stm2: '1454789476662-53eb23ba5907', stm3: '1584820537082-8e19daff36bd',
+  fire1: '1615092296061-e2ccfeb2f3d6', fire2: '1619461129861-d0c1479c48b4',
+  crt1: '1764113697577-b5899b9a339d', crt2: '1767972463877-b64ba4283cd0', crt3: '1568092806323-8ec13dfa9b92',
+  pol1: '1608095476825-d4e0f916372f', pol2: '1606022831434-91293aebf25a',
+  vote1: '1540910419892-4a36d2c3266c', vote2: '1720128401402-81c9dc339870', vote3: '1534293230397-c067fc201ab8',
+  usd1: '1526304640581-d334cdbbf45e', usd2: '1593672715438-d88a70629abe', usd3: '1633059050703-0f1b50828402',
+  gold1: '1610375461246-83df859d849d', gold2: '1624365169364-0640dd10e180',
+  stk1: '1768055104929-cf2317674a80', stk2: '1770461846516-b7e5993a8e4f', stk3: '1439434768192-c60615c1b3c8',
+  spc1: '1517976487492-5750f3195933', spc2: '1457364887197-9150188c107b',
+  air1: '1436491865332-7a61a109cc05', air2: '1483841971221-ed628402fe33',
+  phn1: '1510717029971-27681a0e9da9', phn2: '1511140973288-19bf21d7e771',
+  chip1: '1675602488512-bdd631490fcb', chip2: '1562408590-e32931084e23',
+  ai1: '1694903089438-bf28d4697d9a', ai2: '1770171323762-7b9a517a7094',
+  dc1: '1584169417032-d34e8d805e8b', dc2: '1762163516269-3c143e04175c',
+  ev1: '1615829386703-e2bb66a7cb7d', ev2: '1704340142770-b52988e5b6eb',
+  mus1: '1470229722913-7c0e2dbbafd3', mus2: '1540039155733-5bb30b53aa14',
+  mov1: '1635400138431-0bbde4d01484', mov2: '1620177088258-c84147ee601f',
+  pro1: '1488942446680-85dd7de440ef', pro2: '1591848478625-de43268e6fb8',
+  hlt1: '1519494026892-80bbd2d6fd0d', hlt2: '1576091160550-2173dba999ef',
+  rus1: '1513326738677-b964603b136d', rus2: '1547448415-e9f5b28e570d', chn1: '1535356795203-50b2eb73f96c',
+  dip1: '1590274853856-f22d5ee3d228', dip2: '1722073650943-fbebd9d244e1',
 };
-const photo = (cat, w = 1200, n = 0) => { const l = PHOTOS[cat] || PHOTOS.world; return l[n % l.length] + w; };
+const HERO = { // backdrop, title fill
+  top: ['top1', 'top1'], justin: ['jin1', 'jin2'], world: ['wor4', 'wor1'], us: ['us2', 'us5'],
+  forex: ['fx1', 'gold1'], tech: ['tec2', 'tec3'], saved: ['top2', 'top1'], search: ['top3', 'top1'],
+};
+// When a story has no photo of its own, pick one that matches what it's about
+const TOPICS = [
+  [/earthquake|quake|tsunami|aftershock/i, ['qk1', 'qk2', 'qk3']],
+  [/hurricane|typhoon|cyclone|tropical storm|\bstorms?\b|flood|tornado/i, ['stm1', 'stm2', 'stm3']],
+  [/wildfire|bushfire|blaze|\bfires?\b/i, ['fire1', 'fire2']],
+  [/tanker|strait|hormuz|shipping|\bnavy\b|warship|red sea/i, ['oil1', 'war3', 'war4']],
+  [/hack|cyber|ransomware|data breach|malware/i, ['dc2', 'tec5', 'tec4']],
+  [/\boil\b|crude|opec|refiner|gasoline|gas prices|petrol|natural gas|energy prices/i, ['oil2', 'oil3', 'oil1']],
+  [/\bgold\b|bullion|precious metal/i, ['gold1', 'gold2', 'fx3']],
+  [/\bfed\b|federal reserve|powell|interest rate|rate (cut|hike)|inflation|\bcpi\b|treasur|\bdollar\b|jobs report|payrolls|recession|tariff/i, ['usd1', 'usd2', 'usd3']],
+  [/nasdaq|s&p|dow jones|wall street|stocks?\b|shares|earnings|ipo|investor|market rally|sell-?off/i, ['stk1', 'stk2', 'stk3', 'fx2', 'fx6', 'fx4']],
+  [/missile|airstrike|air strike|strikes on|bomb|drone attack|troops|military|pentagon|army|warplane|fighter jet|invasion|\bwar\b/i, ['war1', 'war2', 'war3', 'war4']],
+  [/putin|kremlin|moscow|russia/i, ['rus1', 'rus2']],
+  [/china|chinese|beijing|xi jinping|shanghai|taiwan/i, ['chn1', 'wor2']],
+  [/ceasefire|peace (talks|deal|plan)|summit|united nations|\bun\b|nato|diplomat|g7|g20|talks with/i, ['dip1', 'dip2']],
+  [/rocket|spacex|nasa|satellite|\bspace\b|moon|mars|astronaut|starship/i, ['spc1', 'spc2']],
+  [/airline|plane|flight|airport|aviation|boeing|airbus|jet\b/i, ['air1', 'air2']],
+  [/nvidia|semiconductor|chips?\b|chipmaker|tsmc|intel|\bamd\b|qualcomm|wafer/i, ['chip1', 'chip2', 'tec3']],
+  [/data cent|\bcloud\b|server|aws|azure/i, ['dc1', 'dc2', 'tec4']],
+  [/\bai\b|a\.i\.|openai|chatgpt|anthropic|claude|gemini|grok|artificial intelligence|machine learning|robot|chatbot|llm/i, ['ai1', 'ai2', 'tec1', 'tec6', 'tec5']],
+  [/iphone|apple|smartphone|android|samsung|pixel|\bapp\b/i, ['phn1', 'phn2']],
+  [/tesla|electric vehicle|\bevs?\b|automaker|carmaker|self-driving|robotaxi/i, ['ev1', 'ev2']],
+  [/concert|album|singer|rapper|grammy|music|tour\b|song|band\b/i, ['mus1', 'mus2']],
+  [/box office|movie|film|hollywood|netflix|oscar|emmy|series|trailer|actor|actress|tv show|late-night|documentary|streaming/i, ['mov1', 'mov2']],
+  [/protest|rally|march(es|ed)? |demonstrat|strike by|walkout/i, ['pro1', 'pro2']],
+  [/hospital|virus|disease|outbreak|vaccine|cancer|health|doctor|medical|drug|fda|measles|flu\b|ebola|pandemic|\bcdc\b/i, ['hlt1', 'hlt2']],
+  [/court|judge|trial|verdict|lawsuit|sued|jury|sentenc|indict|charged|prosecut|attorney general|doj|justice department/i, ['crt1', 'crt2', 'crt3']],
+  [/police|shooting|shooter|murder|killed|stabbing|arrest|suspect|manhunt|homicide|crime/i, ['pol1', 'pol2']],
+  [/election|vote|voting|ballot|polls?\b|primary|midterm|campaign|candidate/i, ['vote1', 'vote2', 'vote3']],
+  [/congress|senate|house (republicans|democrats|speaker|vote)|capitol|lawmaker|speaker johnson|shutdown/i, ['us1', 'us2', 'us4']],
+  [/white house|trump|president|vance|biden|oval office|executive order/i, ['us6', 'wh1', 'jin3']],
+];
+const CAT_PHOTOS = { top: ['top1', 'top2', 'top3', 'top4'], justin: ['jin1', 'jin2', 'jin3', 'jin4'], world: ['wor1', 'wor2', 'wor3', 'wor4', 'wor5', 'wor6'], us: ['us1', 'us2', 'us4', 'us5', 'us6', 'wh1'], forex: ['fx1', 'fx2', 'fx3', 'fx4', 'fx5', 'fx6'], tech: ['tec1', 'tec2', 'tec3', 'tec4', 'tec5', 'tec6'] };
+const pic = (key, w) => U(P[key]) + w;
+const heroPic = (view, which, w) => pic((HERO[view] || HERO.top)[which], w);
 const catOf = s => (s.categories || []).find(c => c !== 'forex') || (s.categories || [])[0] || 'world';
+function topicPic(s, w) {
+  const text = `${s.title} ${s.summary || ''}`.slice(0, 400), h = hashN(s.id);
+  const t = TOPICS.find(([re]) => re.test(s.title)) || TOPICS.find(([re]) => re.test(text));
+  const list = t ? t[1] : CAT_PHOTOS[catOf(s)] || CAT_PHOTOS.world;
+  return pic(list[h % list.length], w);
+}
 function thumb(s, w = 300) {
-  const cat = catOf(s), fb = photo(cat, w, hashN(s.id));
+  const fb = topicPic(s, w);
   return s.image ? { src: s.image, fb } : { src: fb, fb: null };
 }
 const img = (t, cls = '') => `<img class="${cls}" src="${esc(t.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${t.fb ? ` onerror="this.onerror=null;this.src='${esc(t.fb)}'"` : ` onerror="this.style.visibility='hidden'"`}>`;
@@ -751,22 +820,22 @@ function backdrop(key) {
   if (key === bdKey) return; bdKey = key;
   const a = $(bdFlip ? 'bdA' : 'bdB'), b = $(bdFlip ? 'bdB' : 'bdA');
   a.onload = () => { a.classList.add('on'); b.classList.remove('on'); };
-  a.src = photo(key, 1600, 0);
+  a.src = heroPic(key, 0, 1600);
   if (a.complete && a.naturalWidth) a.onload();
   bdFlip = !bdFlip;
 }
 let mastKey = '';
 function renderMast(count) {
-  const key = view === 'feed' ? prefs.tab : view, cat = view === 'feed' ? key : 'top';
-  backdrop(cat);
+  const key = view === 'feed' ? prefs.tab : view;
+  backdrop(key);
   document.body.dataset.view = key;
   const name = view === 'feed' ? TABS.find(t => t.id === key).name : view === 'saved' ? 'Saved' : 'Search';
   const [k, p] = COPY[key];
   const W = Math.min(window.innerWidth, 640) - 30;
   const size = Math.round(Math.min(118, W / (name.length * 0.66)));
-  const ph = photo(cat, 1400, 0);
+  const ph = heroPic(key, 1, 1400);
   const html = `<div class="kick">${k}${count != null ? ` · ${count} ${count === 1 ? 'story' : 'stories'}` : ''}</div>
-    <h1 class="word" style="font-size:${size}px;background-image:linear-gradient(180deg, rgba(255,255,255,.16), rgba(var(--tint),.32)), url('${ph}'), linear-gradient(120deg, rgb(var(--tint)), #fff 60%, rgb(var(--tint)))">${esc(name)}</h1>
+    <h1 class="word" style="font-size:${size}px;background-image:linear-gradient(180deg, rgba(255,255,255,.1), rgba(var(--tint),.12)), url('${ph}'), linear-gradient(120deg, rgb(var(--tint)), #fff 60%, rgb(var(--tint)))">${esc(name)}</h1>
     <p>${p}</p>`;
   if (mastKey === key + count) return;
   const sameTab = mastKey.startsWith(key);
