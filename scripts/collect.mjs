@@ -96,7 +96,7 @@ function parseFeed(xmlText, src) {
     if (now - time > WINDOW_H * 3600e3 || time - now > 3600e3) continue;
     const summary = src.google ? '' : clean(textOf(x, 'description', 'summary', 'content:encoded', 'content')).slice(0, 900);
     out.push({
-      id: hash(link), title, link, outlet, summary, biz: !!src.business,
+      id: hash(link), title, link, outlet, summary, image: src.google ? null : imageOf(x), biz: !!src.business,
       time, category: src.category, top: !!src.top,
     });
   }
@@ -134,7 +134,7 @@ const fresh = (await pool(config.sources, 8, async (src, i) => {
 
 // 2. Merge with what we saw before (keeps stories around after they drop off a feed, and remembers when we first saw them)
 const byId = new Map();
-for (const it of prevState.items) if (now - it.time <= WINDOW_H * 3600e3 && !isJunkOutlet(it.outlet) && !notEnglish(it.title)) byId.set(it.id, { ...it, image: undefined, outlet: normOutlet(it.outlet), biz: it.biz || (it.cats || []).includes('business') || it.category === 'business', cats: (it.cats || [it.category]).map(c => (c === 'business' ? 'forex' : c)) });
+for (const it of prevState.items) if (now - it.time <= WINDOW_H * 3600e3 && !isJunkOutlet(it.outlet) && !notEnglish(it.title)) byId.set(it.id, { ...it, outlet: normOutlet(it.outlet), biz: it.biz || (it.cats || []).includes('business') || it.category === 'business', cats: (it.cats || [it.category]).map(c => (c === 'business' ? 'forex' : c)) });
 for (const it of fresh) {
   const old = byId.get(it.id);
   byId.set(it.id, { ...it, seen: old?.seen ?? now, cats: [...new Set([...(old?.cats || []), it.category])] });
@@ -151,7 +151,8 @@ const stories = cluster(items).map(group => {
   // Best summary and photo from any outlet covering the story (trusted outlets first)
   const byTrust = [...group].sort((a, b) => rank(a.outlet) - rank(b.outlet));
   const sumItem = lead.summary ? lead : byTrust.find(g => g.summary);
-  const best = { summary: sumItem?.summary || '', from: sumItem && sumItem !== lead ? sumItem.outlet : null };
+  const imgItem = lead.image ? lead : byTrust.find(g => g.image);
+  const best = { summary: sumItem?.summary || '', from: sumItem && sumItem !== lead ? sumItem.outlet : null, image: imgItem?.image || null };
   // A second and third take from other outlets, for a fuller summary in the story view
   const more = [];
   for (const g of byTrust) {
@@ -185,7 +186,7 @@ const stories = cluster(items).map(group => {
   const seenOutlets = new Set([lead.outlet]);
   const others = group.filter(g => g !== lead && !seenOutlets.has(g.outlet) && seenOutlets.add(g.outlet)).map(g => ({ outlet: g.outlet, link: g.link, title: g.title }));
   return {
-    id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: best.summary, summaryFrom: best.from, more: more.length ? more : undefined,
+    id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: best.summary, summaryFrom: best.from, image: best.image || undefined, more: more.length ? more : undefined,
     _cand: byTrust.filter(g => !/news\.google\.com/.test(g.link)).slice(0, 2).map(g => ({ id: g.id, link: g.link, outlet: g.outlet })),
     published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats], top: cls.top || undefined, flags: cls.flags.length ? cls.flags : undefined,
     score: s.score, tier: s.tier, breaking, why: s.reasons, sources: others,
@@ -198,6 +199,11 @@ const stories = cluster(items).map(group => {
 // 3b. Fuller summaries: for important stories with a thin summary, read the opening of the article
 //     (its description and first paragraphs) from an outlet that links directly. Cached between runs.
 const extracts = new Map((prevState.extracts || []).filter(e => now - e.at < WINDOW_H * 3600e3).map(e => [e.id, e]));
+function ogImage(html) {
+  const m = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'][^>]*content=["']([^"']+)["']/i) || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:image|twitter:image)["']/i);
+  const u = m ? decode(m[1]) : '';
+  return /^https:\/\//.test(u) && !/logo|placeholder|default|sprite|favicon/i.test(u) ? u : null;
+}
 function articleText(html) {
   const meta = (html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description|twitter:description)["'][^>]*content=["']([^"']{40,})["']/i) || html.match(/<meta[^>]+content=["']([^"']{40,})["'][^>]*(?:property|name)=["'](?:og:description|description)["']/i) || [])[1] || '';
   const body = html.replace(/<(script|style|noscript|figure|figcaption|aside|nav|header|footer)[\s\S]*?<\/\1>/gi, ' ');
@@ -208,21 +214,22 @@ function articleText(html) {
   return text;
 }
 if (!FIXTURES) {
-  const want = stories.filter(st => (st.tier !== 'minor' || st.fx) && (st.summary || '').length < 220 && st._cand?.length).slice(0, 120);
-  const todo = want.filter(st => !st._cand.some(c => extracts.has(c.id))).slice(0, 40);
+  const want = stories.filter(st => (st.tier !== 'minor' || st.fx || st.top) && ((st.summary || '').length < 220 || !st.image) && st._cand?.length).slice(0, 160);
+  const todo = want.filter(st => !st._cand.some(c => extracts.has(c.id))).slice(0, 50);
   await pool(todo, 6, async st => {
     for (const c of st._cand) {
       try {
         const html = await getPage(c.link);
-        const text = articleText(html);
-        if (text.length > 120) { extracts.set(c.id, { id: c.id, at: now, outlet: c.outlet, text }); return; }
+        const text = articleText(html), image = ogImage(html);
+        if (text.length > 120 || image) { extracts.set(c.id, { id: c.id, at: now, outlet: c.outlet, text: text.length > 120 ? text : '', image }); return; }
       } catch {}
     }
   });
 }
 for (const st of stories) {
   const e = st._cand?.map(c => extracts.get(c.id)).find(Boolean);
-  if (e && e.text.length > (st.summary || '').length) { st.summary = e.text; st.summaryFrom = e.outlet === st.outlet ? null : e.outlet; }
+  if (e && e.text && e.text.length > (st.summary || '').length) { st.summary = e.text; st.summaryFrom = e.outlet === st.outlet ? null : e.outlet; }
+  if (e?.image && !st.image) st.image = e.image;
   delete st._cand;
 }
 
