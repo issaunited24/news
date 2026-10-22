@@ -282,6 +282,44 @@ if (!FIXTURES && (!markets || now - markets.fetched > 25 * 60e3)) {
   markets = out;
 }
 
+// 5b. Forecast scorecard: record each gold / USD / Nasdaq call with the price at the time,
+//     then check the price 4 hours later. Kept for 7 days.
+const HORIZON = 4 * 3600e3, KEEP = 7 * 24 * 3600e3;
+const forecasts = new Map((prevState.forecasts || []).filter(f => now - f.at < KEEP).map(f => [f.key, f]));
+function priceAt(key, t) {
+  const pts = markets?.items?.[key]?.points;
+  if (!pts?.length) return null;
+  let best = null;
+  for (const [ts, v] of pts) { if (ts <= t) best = [ts, v]; else break; }
+  return best && t - best[0] <= 3 * 3600e3 ? best[1] : null;
+}
+for (const st of stories) {
+  if (!st.fx?.assets || now - st.firstSeen > 6 * 3600e3) continue;
+  for (const k of ['gold', 'usd', 'ndq']) {
+    const a = st.fx.assets[k], key = `${st.id}:${k}`;
+    if (!a || a.dir === 'flat' || !a.conf || forecasts.has(key)) continue;
+    const p0 = priceAt(k, st.firstSeen);
+    if (p0 == null) continue;
+    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, at: st.firstSeen, p0 });
+  }
+}
+for (const f of forecasts.values()) {
+  if (f.result || now < f.at + HORIZON) continue;
+  const p1 = priceAt(f.asset, f.at + HORIZON);
+  if (p1 == null) { if (now - f.at > HORIZON + 8 * 3600e3) f.result = 'nodata'; continue; }
+  f.chg = (p1 - f.p0) / f.p0 * 100;
+  f.result = Math.abs(f.chg) < 0.05 ? 'flat' : (f.chg > 0) === (f.dir === 'up') ? 'hit' : 'miss';
+}
+const judged = [...forecasts.values()].filter(f => f.result === 'hit' || f.result === 'miss');
+const tally = list => ({ hit: list.filter(f => f.result === 'hit').length, miss: list.filter(f => f.result === 'miss').length });
+const scorecard = {
+  horizonH: 4, days: 7,
+  assets: { gold: tally(judged.filter(f => f.asset === 'gold')), usd: tally(judged.filter(f => f.asset === 'usd')), ndq: tally(judged.filter(f => f.asset === 'ndq')) },
+  all: tally(judged), high: tally(judged.filter(f => f.conf >= 7)),
+  pending: [...forecasts.values()].filter(f => !f.result).length,
+  recent: judged.sort((a, b) => b.at - a.at).slice(0, 6).map(f => ({ title: f.title, asset: f.asset, dir: f.dir, conf: f.conf, result: f.result, chg: Math.round(f.chg * 100) / 100, at: f.at })),
+};
+
 // 6. Save
 await mkdir(new URL('data/', ROOT), { recursive: true });
 const okCount = status.filter(s => s.ok).length;
@@ -292,9 +330,10 @@ const out = {
   stories,
   calendar,
   markets,
+  scorecard,
   sources: status.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)),
 };
 await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()] }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()] }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);
