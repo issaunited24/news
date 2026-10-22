@@ -22,10 +22,15 @@ jobs:
           mkdir -p out img
           grep -v '^#' tools/photos.txt | while read -r label id; do
             [ -z "$id" ] && continue
-            if curl -sfL "https://images.unsplash.com/photo-$id?auto=format&fit=crop&q=60&w=420&h=300&fm=jpg" -o "img/$label.jpg"; then echo "ok $label"; else echo "MISSING $label $id" | tee -a out/missing.txt; fi
+            # whole photo (not cropped), with yellow lines at every 10% so a focus point can be read off
+            if curl -sfL "https://images.unsplash.com/photo-$id?auto=format&q=60&w=420&fm=jpg" -o "img/$label.jpg"; then
+              convert "img/$label.jpg" -fill none -stroke 'rgba(255,230,0,0.55)' -strokewidth 1 \
+                -draw "$(identify -format '%w %h' "img/$label.jpg" | awk '{for(i=1;i<10;i++){x=$1*i/10;y=$2*i/10;printf "line %d,0 %d,%d line 0,%d %d,%d ",x,x,$2,y,$1,y}}')" "img/$label.jpg"
+              echo "ok $label $(identify -format '%wx%h' "img/$label.jpg")" | tee -a out/sizes.txt
+            else echo "MISSING $label $id" | tee -a out/missing.txt; fi
           done
-          ls img/*.jpg | split -l 20 - list_
-          n=0; for f in list_*; do n=$((n+1)); montage $(cat $f) -tile 4x -geometry 300x214+6+6 -background '#111' -fill white -pointsize 18 -set label '%t' "out/sheet$n.jpg"; done
+          ls img/*.jpg | split -l 12 - list_
+          n=0; for f in list_*; do n=$((n+1)); montage $(cat $f) -tile 3x -geometry 400x400+6+6 -background '#111' -fill white -pointsize 18 -set label '%t' "out/sheet$n.jpg"; done
           touch out/missing.txt
       - name: Publish sheets
         run: |
