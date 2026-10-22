@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>Price source test</title><pre id="o">running…</pre>
+<script>
+// Checks which free live price sources a web page is allowed to read (used once to pick a source)
+const tests = {
+  tvScanGold: ['https://scanner.tradingview.com/symbol?symbol=OANDA:XAUUSD&fields=close,change,change_abs', {}],
+  tvScanPost: ['https://scanner.tradingview.com/global/scan', { method: 'POST', body: JSON.stringify({ symbols: { tickers: ['OANDA:XAUUSD', 'TVC:DXY', 'OANDA:NAS100USD'] }, columns: ['close', 'change', 'change_abs'] }) }],
+  tvScanCfd: ['https://scanner.tradingview.com/cfd/scan', { method: 'POST', body: JSON.stringify({ symbols: { tickers: ['OANDA:XAUUSD', 'TVC:DXY', 'OANDA:NAS100USD'] }, columns: ['close', 'change'] }) }],
+  goldApi: ['https://api.gold-api.com/price/XAU', {}],
+  swissGold: ['https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD', {}],
+  swissEur: ['https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/EUR/USD', {}],
+  binancePaxg: ['https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSDT', {}],
+  yahooProxy: ['https://corsproxy.io/?url=' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/NQ=F?range=1d&interval=5m'), {}],
+};
+(async () => {
+  const out = [];
+  for (const [k, [u, o]] of Object.entries(tests)) {
+    try { const t0 = performance.now(); const r = await fetch(u, o); const txt = await r.text(); out.push(`${k}: ${r.status} ${Math.round(performance.now() - t0)}ms ${txt.slice(0, 300).replace(/\s+/g, ' ')}`); }
+    catch (e) { out.push(`${k}: FAIL ${e.message}`); }
+  }
+  document.getElementById('o').textContent = out.join('\n');
+})();
+</script>
