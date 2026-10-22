@@ -717,8 +717,8 @@ function fmtPrice(key, v) {
 }
 /* Live prices straight from TradingView's own price service, so they match tradingview.com.
    Every 3 seconds while you're on Forex or the chart is open, otherwise once a minute. */
-// Several Nasdaq 100 tickers are asked for; the first one TradingView answers (in this order) is used
-const TV = { gold: ['OANDA:XAUUSD'], usd: ['TVC:DXY'], ndq: ['OANDA:NAS100USD', 'PEPPERSTONE:NAS100', 'CAPITALCOM:US100', 'NASDAQ:NDX', 'CME_MINI:NQ1!'] };
+// Nasdaq: the Nasdaq 100 futures (trade almost 24 hours like NAS100); the cash index is the backup
+const TV = { gold: ['OANDA:XAUUSD'], usd: ['TVC:DXY'], ndq: ['CME_MINI:NQ1!', 'NASDAQ:NDX'] };
 const live = {}; // asset -> { p: price, pct: today's % change, abs: today's change }
 let liveTimer = null;
 async function pollLive() {
