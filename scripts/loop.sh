@@ -6,7 +6,7 @@
 set -u
 LOOP_MINUTES=${LOOP_MINUTES:-110}   # how long one robot run keeps going
 EVERY=${EVERY:-210}                 # seconds from the start of one round to the next (3.5 minutes)
-SYNC_EVERY=${SYNC_EVERY:-3600}      # seconds between backups to main
+SYNC_EVERY=${SYNC_EVERY:-43200}     # seconds between backups to main (12h; the app reads the live branch, this is only a fallback)
 END=$(( $(date +%s) + LOOP_MINUTES * 60 ))
 
 git config user.name "briefly-bot"
@@ -33,6 +33,10 @@ publish_live() {
 }
 
 backup_to_main() {
+  # only if the last backup is older than SYNC_EVERY, so the main branch doesn't grow by megabytes every hour
+  git fetch -q --depth=1 origin main || return 0
+  local last; last=$(git log -1 --format=%ct FETCH_HEAD -- data 2>/dev/null || echo 0)
+  [ $(( $(date +%s) - ${last:-0} )) -lt "$SYNC_EVERY" ] && return 0
   for i in 1 2 3; do
     git fetch -q --depth=1 origin main && git reset -q --mixed FETCH_HEAD || { sleep 5; continue; }
     git add data
@@ -50,7 +54,7 @@ while [ "$(date +%s)" -lt "$END" ]; do
   git fetch -q --depth=1 origin main && git checkout -q FETCH_HEAD -- scripts feeds.json 2>/dev/null
   if timeout 300 node scripts/collect.mjs; then
     publish_live
-    if [ $(( $(date +%s) - last_sync )) -ge "$SYNC_EVERY" ]; then backup_to_main; last_sync=$(date +%s); fi
+    if [ $(( $(date +%s) - last_sync )) -ge 3600 ]; then backup_to_main; last_sync=$(date +%s); fi
   else
     echo "Round $round failed; trying again next round"
   fi
