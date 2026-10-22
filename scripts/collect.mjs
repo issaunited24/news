@@ -295,7 +295,7 @@ if (!FIXTURES && (!calendar || now - calendar.fetched > 55 * 60e3)) {
 const MARKETS = [
   { key: 'gold', name: 'Gold', yahoo: 'GC=F', stooq: 'xauusd' },
   { key: 'usd', name: 'US Dollar Index', yahoo: 'DX-Y.NYB', stooq: 'dx.f' },
-  { key: 'ndq', name: 'Nasdaq Composite', yahoo: '%5EIXIC', stooq: '%5Endq' },
+  { key: 'ndq', name: 'Nasdaq 100', yahoo: 'NQ%3DF', stooq: '%5Endx' }, // Nasdaq 100 futures (moves with NAS100 on TradingView)
 ];
 async function getText(url) {
   const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 15000);
