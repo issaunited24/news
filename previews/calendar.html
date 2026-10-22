@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05070f">
+<title>Calendar Designs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter+Tight:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Three ways to show the US economic calendar on the Forex tab, using this week's real events */
+:root { --bg: #05070f; --ink: #f4f1ea; --ink2: #cfd3e2; --mute: #8e95ad; --faint: #59617c; --up: #3ef0b4; --down: #ff6487; --hi: 255,72,108; --md: 255,190,70; --teal: 60,230,200;
+  --serif: Fraunces, Georgia, serif; --ui: "Inter Tight", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace; color-scheme: dark; }
+* { box-sizing: border-box; } html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 15px/1.45 var(--ui); -webkit-font-smoothing: antialiased; background: radial-gradient(70% 40% at 100% 0%, rgba(var(--teal),.12), transparent 70%), var(--bg); background-attachment: fixed; }
+.wrap { max-width: 560px; margin: 0 auto; padding: calc(env(safe-area-inset-top,0px) + 22px) 14px 60px; }
+h1 { margin: 0; font: 600 28px/1.1 var(--serif); letter-spacing: -.02em; }
+.lede { color: var(--mute); margin: 8px 0 0; font-size: 14px; }
+.opt { margin-top: 34px; }
+.opt > h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 4px; font: 800 20px var(--ui); letter-spacing: -.01em; }
+.opt > h2 b { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: rgb(var(--teal)); color: #05140f; font-size: 15px; }
+.opt > p { margin: 0 0 12px; color: var(--mute); font-size: 13px; }
+.dayh { margin: 16px 2px 8px; font: 600 10.5px var(--mono); letter-spacing: .2em; color: var(--mute); text-transform: uppercase; }
+.dayh:first-child { margin-top: 0; }
+.num { font-variant-numeric: tabular-nums; }
+.beat { color: var(--up); } .miss { color: var(--down); } .inline { color: var(--ink2); }
+
+/* Option 1 · Timeline */
+.tl { position: relative; padding-left: 64px; }
+.tl::before { content: ""; position: absolute; left: 50px; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: linear-gradient(rgba(var(--teal),.5), rgba(255,255,255,.06)); }
+.tle { position: relative; margin-bottom: 12px; padding: 12px 14px; border-radius: 16px; background: rgba(14,20,44,.9); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+.tle .t { position: absolute; left: -64px; top: 12px; width: 44px; text-align: right; font: 600 13px var(--mono); color: var(--ink2); }
+.tle::before { content: ""; position: absolute; left: -19px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: rgb(var(--c)); box-shadow: 0 0 0 4px var(--bg), 0 0 12px rgb(var(--c)); }
+.tle.past { opacity: .6; }
+.tle .n { font: 700 15px var(--ui); }
+.tle .r { display: flex; gap: 14px; margin-top: 6px; font: 500 12px var(--mono); color: var(--mute); }
+.tle .r b { font-weight: 600; color: var(--ink); margin-left: 4px; }
+.tle .r .a b { font-size: 14px; }
+.tle .pb { margin-top: 6px; font: 500 11px var(--mono); color: var(--mute); }
+
+/* Option 2 · Scoreboard cards */
+.sb { margin-bottom: 12px; border-radius: 20px; overflow: hidden; background: linear-gradient(160deg, rgba(var(--c),.14), rgba(14,20,44,.95) 45%); box-shadow: inset 0 0 0 1px rgba(var(--c),.3), 0 0 26px -12px rgba(var(--c),.8); }
+.sb .top { display: flex; align-items: center; gap: 10px; padding: 12px 14px 0; }
+.sb .imp { font: 700 9.5px var(--mono); letter-spacing: .14em; color: rgb(var(--c)); text-shadow: 0 0 10px rgba(var(--c),.8); }
+.sb .when { margin-left: auto; font: 600 11px var(--mono); color: var(--ink2); }
+.sb .n { padding: 4px 14px 0; font: 600 18px/1.2 var(--serif); }
+.sb .g { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 12px; border-top: 1px solid rgba(255,255,255,.06); }
+.sb .g div { padding: 10px 14px 12px; }
+.sb .g div + div { border-left: 1px solid rgba(255,255,255,.06); }
+.sb .g small { display: block; font: 600 9.5px var(--mono); letter-spacing: .14em; color: var(--mute); }
+.sb .g strong { display: block; margin-top: 2px; font: 800 22px var(--ui); letter-spacing: -.02em; }
+.sb .g .a strong.wait { font-size: 14px; color: var(--mute); font-weight: 600; padding-top: 6px; }
+.sb .res { display: flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,.25); font: 500 11.5px var(--mono); color: var(--ink2); }
+.sb .res .tag { padding: 2px 8px; border-radius: 999px; font-weight: 700; }
+.sb .res .tag.beat { color: #04140f; background: var(--up); } .sb .res .tag.miss { color: #fff; background: #e8324f; } .sb .res .tag.inline { color: var(--ink); background: rgba(255,255,255,.12); }
+
+/* Option 3 · Clean list, tap to open */
+.cl { border-radius: 20px; overflow: hidden; background: rgba(14,20,44,.92); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+.cl .dayh { margin: 0; padding: 12px 14px 6px; background: rgba(255,255,255,.03); }
+.cle { border-top: 1px solid rgba(255,255,255,.05); }
+.cle summary { list-style: none; display: grid; grid-template-columns: 52px 6px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 14px; cursor: pointer; }
+.cle summary::-webkit-details-marker { display: none; }
+.cle .t { font: 600 13px var(--mono); color: var(--ink2); }
+.cle .bar { width: 6px; height: 28px; border-radius: 3px; background: rgb(var(--c)); box-shadow: 0 0 10px rgba(var(--c),.7); }
+.cle .n { font: 600 14.5px var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cle .v { text-align: right; font: 700 15px var(--mono); }
+.cle .v small { display: block; font: 500 10px var(--mono); color: var(--mute); }
+.cle.past summary { opacity: .65; }
+.cle .more { padding: 0 14px 14px 82px; font: 500 12px var(--mono); color: var(--mute); }
+.cle .more div { margin-top: 4px; }
+.cle .more b { color: var(--ink); }
+.cle[open] { background: rgba(var(--teal),.05); }
+.empty { color: var(--mute); font-size: 13px; padding: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Calendar designs</h1>
+  <p class="lede">Three options for the Forex tab's economic calendar, using this week's real US events. Actual numbers fill in a few minutes after each release, marked as a beat or a miss against the forecast.</p>
+  <section class="opt"><h2><b>1</b>Timeline</h2><p>A vertical line through the day. Time on the left, numbers in one easy row, and what a beat or miss usually does.</p><div id="o1"></div></section>
+  <section class="opt"><h2><b>2</b>Scoreboard</h2><p>Each release as a glowing card with big Actual · Forecast · Previous numbers and a clear beat or miss result.</p><div id="o2"></div></section>
+  <section class="opt"><h2><b>3</b>Clean list</h2><p>One tidy row per event with the key number on the right. Tap a row to see all the numbers and what it usually moves.</p><div id="o3"></div></section>
+</div>
+<script>
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const day = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'short' }), tm = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+const num = v => { const m = String(v ?? '').replace(/,/g, '').match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : null; };
+const INVERSE = /unemployment|jobless|claims|inventor/i;
+const PB = [
+  [/core pce|pce|cpi|ppi|inflation|price index/i, ['up', 'down', 'down']],
+  [/non-?farm|nfp|employment change|adp|jolts|job openings/i, ['up', 'down', 'mixed']],
+  [/unemployment rate|unemployment claims|jobless claims/i, ['down', 'up', 'mixed']],
+  [/federal funds|fomc|fed chair|powell|warsh|fed (statement|minutes)|press conference/i, ['up', 'down', 'down']],
+  [/gdp/i, ['up', 'down', 'up']],
+  [/retail sales|ism|pmi|durable goods|consumer confidence|sentiment|housing starts|building permits|industrial production/i, ['up', 'down', 'up']],
+];
+const ARW = { up: '<span class="beat">▲</span>', down: '<span class="miss">▼</span>', mixed: '<span style="color:#ffc463">◆</span>' };
+const flip = d => (d === 'up' ? 'down' : d === 'down' ? 'up' : d);
+function result(e) {
+  const a = num(e.actual), f = num(e.forecast);
+  if (a == null || f == null) return null;
+  if (a === f) return { k: 'inline', word: 'In line' };
+  const good = INVERSE.test(e.title) ? a < f : a > f;
+  return { k: good ? 'beat' : 'miss', word: good ? 'Beat' : 'Miss', good };
+}
+function moves(e) { // what a beat usually does (USD, Gold, Nasdaq)
+  const r = PB.find(([re]) => re.test(e.title)); if (!r) return '';
+  const res = result(e), eff = res && !res.good ? r[1].map(flip) : r[1];
+  return `${res ? 'Expect' : 'A beat usually'}: USD ${ARW[eff[0]]} Gold ${ARW[eff[1]]} Nasdaq ${ARW[eff[2]]}`;
+}
+const color = e => (e.impact === 'high' ? 'var(--hi)' : 'var(--md)');
+fetch(`https://raw.githubusercontent.com/issaunited24/news/live/news.json?t=${Date.now()}`).then(r => r.json()).catch(() => fetch(`../data/news.json?t=${Date.now()}`).then(r => r.json())).then(d => {
+  const now = Date.now();
+  const evs = (d.calendar?.events || []).map(e => ({ ...e, t: Date.parse(e.time) })).filter(e => e.t > now - 2 * 864e5).sort((a, b) => a.t - b.t);
+  const byDay = {}; for (const e of evs) (byDay[day.format(e.t)] ||= []).push(e);
+  const empty = '<div class="empty">No US events on the calendar right now.</div>';
+  // 1 Timeline
+  document.getElementById('o1').innerHTML = Object.entries(byDay).map(([dd, list]) => `<div class="dayh">${dd}</div><div class="tl">${list.map(e => { const r = result(e); return `<div class="tle ${e.t < now ? 'past' : ''}" style="--c:${color(e)}"><span class="t">${tm.format(e.t)}</span>
+    <div class="n">${esc(e.title)}</div>
+    <div class="r num"><span class="a">Actual<b class="${r ? r.k : ''}">${esc(e.actual ?? '—')}</b></span><span>Fcst<b>${esc(e.forecast || '—')}</b></span><span>Prev<b>${esc(e.previous || '—')}</b></span></div>
+    ${moves(e) ? `<div class="pb">${moves(e)}</div>` : ''}</div>`; }).join('')}</div>`).join('') || empty;
+  // 2 Scoreboard
+  document.getElementById('o2').innerHTML = Object.entries(byDay).map(([dd, list]) => `<div class="dayh">${dd}</div>${list.map(e => { const r = result(e); return `<div class="sb" style="--c:${color(e)}">
+    <div class="top"><span class="imp">${e.impact === 'high' ? 'HIGH IMPACT' : 'MEDIUM'}</span><span class="when">${tm.format(e.t)}</span></div>
+    <div class="n">${esc(e.title)}</div>
+    <div class="g num"><div class="a"><small>ACTUAL</small>${e.actual ? `<strong class="${r ? r.k : ''}">${esc(e.actual)}</strong>` : `<strong class="wait">${e.t < now ? 'Coming in' : 'Waiting'}</strong>`}</div><div><small>FORECAST</small><strong>${esc(e.forecast || '—')}</strong></div><div><small>PREVIOUS</small><strong>${esc(e.previous || '—')}</strong></div></div>
+    ${r || moves(e) ? `<div class="res">${r ? `<span class="tag ${r.k}">${r.word}</span>` : ''}<span>${moves(e)}</span></div>` : ''}</div>`; }).join('')}`).join('') || empty;
+  // 3 Clean list
+  document.getElementById('o3').innerHTML = `<div class="cl">${Object.entries(byDay).map(([dd, list]) => `<div class="dayh">${dd}</div>${list.map(e => { const r = result(e); return `<details class="cle ${e.t < now ? 'past' : ''}" style="--c:${color(e)}"><summary><span class="t">${tm.format(e.t)}</span><span class="bar"></span><span class="n">${esc(e.title)}</span><span class="v num ${r ? r.k : ''}">${esc(e.actual || e.forecast || '—')}<small>${e.actual ? (r ? r.word : 'actual') : 'forecast'}</small></span></summary>
+    <div class="more num"><div>Actual <b class="${r ? r.k : ''}">${esc(e.actual || '—')}</b> · Forecast <b>${esc(e.forecast || '—')}</b> · Previous <b>${esc(e.previous || '—')}</b></div>${moves(e) ? `<div>${moves(e)}</div>` : ''}</div></details>`; }).join('')}`).join('')}</div>`;
+});
+</script>
+</body>
+</html>
