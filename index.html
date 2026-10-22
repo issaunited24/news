@@ -871,6 +871,7 @@ function scorecardHTML() {
     <div class="sc-h"><span>FORECAST SCORECARD</span><span>${sc.horizonH}h after the news · last ${sc.days} days</span></div>
     ${total ? `<div class="sc-g">${cell('GOLD', sc.assets.gold)}${cell('USD', sc.assets.usd)}${cell('NASDAQ', sc.assets.ndq)}${cell('CONF 7+', sc.high)}</div>`
       : `<p class="sc-empty">Collecting results. Each call is checked ${sc.horizonH} hours after the news${sc.pending ? ` · ${sc.pending} waiting` : ''}.</p>`}
+    ${sc.cal ? `<p class="sc-empty">Includes calendar calls (a beat or miss checked 1 hour after the release): ${sc.cal.hit + sc.cal.miss ? `${pct(sc.cal)} right, ${sc.cal.hit}/${sc.cal.hit + sc.cal.miss}` : 'waiting for the next release'}.</p>` : ''}
   </div>`;
 }
 function forexTop() {

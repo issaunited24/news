@@ -278,14 +278,32 @@ for (const st of stories) {
   delete st._cand;
 }
 
-// 4. Economic calendar (at most once an hour; that site asks for gentle use)
+// 4. Economic calendar (US only, high and medium impact).
+//    TradingView's calendar has the actual numbers within minutes of each release, so it's checked every
+//    ~10 minutes, and every run while a recent release is still waiting for its actual. ForexFactory is the backup.
 let calendar = prevState.calendar;
-if (!FIXTURES && (!calendar || now - calendar.fetched > 55 * 60e3)) {
+const fmtVal = (v, e) => (v == null || v === '' ? null : `${Math.round(v * 1000) / 1000}${e.scale || ''}${e.unit && e.unit !== e.scale ? e.unit : ''}`);
+async function tvCalendar() {
+  const from = new Date(now - 2 * 864e5).toISOString(), to = new Date(now + 8 * 864e5).toISOString();
+  const res = await fetch(`https://economic-calendar.tradingview.com/events?from=${from}&to=${to}&countries=US`, { headers: { Origin: 'https://www.tradingview.com', Referer: 'https://www.tradingview.com/', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  return (j.result || []).filter(e => (e.importance ?? -1) >= 0 && e.date).map(e => calendarEvent({
+    title: e.title, country: 'USD', date: e.date, impact: e.importance >= 1 ? 'high' : 'medium',
+    forecast: fmtVal(e.forecast, e), previous: fmtVal(e.previous, e), actual: fmtVal(e.actual, e),
+  })).sort((a, b) => Date.parse(a.time) - Date.parse(b.time));
+}
+const waitingActual = (calendar?.events || []).some(e => !e.actual && e.forecast && now - Date.parse(e.time) > 0 && now - Date.parse(e.time) < 90 * 60e3);
+if (!FIXTURES && (!calendar || calendar.src !== 'tv' || now - calendar.fetched > 10 * 60e3 || waitingActual)) {
+  try { calendar = { fetched: now, ok: true, src: 'tv', events: await tvCalendar() }; }
+  catch (e) { if (calendar) calendar = { ...calendar, src: calendar.src === 'tv' ? 'tv-stale' : calendar.src, tvError: String(e.message || e).slice(0, 120) }; }
+}
+if (!FIXTURES && (!calendar || (calendar.src !== 'tv' && now - calendar.fetched > 55 * 60e3))) {
   try {
     const res = await fetch(CAL_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; personal-news-reader/1.0)' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const events = (await res.json()).filter(e => /high|medium/i.test(e.impact) && e.country === 'USD').map(calendarEvent);
-    calendar = { fetched: now, ok: true, events };
+    calendar = { fetched: now, ok: true, src: 'ff', events };
   } catch (e) {
     calendar = { ...(calendar || { events: [] }), ok: false, error: String(e.message || e).slice(0, 120), fetched: calendar?.fetched ?? 0 };
   }
@@ -361,11 +379,37 @@ if (!FIXTURES) {
 const HORIZON = 4 * 3600e3, KEEP = 7 * 24 * 3600e3;
 const forecasts = new Map((prevState.forecasts || []).filter(f => now - f.at < KEEP).map(f => [f.key, f]));
 function priceAt(key, t) {
-  const pts = markets?.items?.[key]?.points;
+  const fine = charts.assets?.[key]?.ranges?.['1W']?.bars?.map(b => [b[0] * 1000, b[4]]);
+  const pts = fine?.length ? fine : markets?.items?.[key]?.points;
   if (!pts?.length) return null;
   let best = null;
   for (const [ts, v] of pts) { if (ts <= t) best = [ts, v]; else break; }
   return best && t - best[0] <= 3 * 3600e3 ? best[1] : null;
+}
+// Calendar calls: when a US release beats or misses its forecast, the usual reaction is recorded as a forecast
+// for the US dollar, gold and the Nasdaq, then checked against the price an hour later.
+const CAL_HORIZON = 3600e3;
+const CAL_RULES = [ // [title pattern, effect when the actual comes in ABOVE forecast (USD, gold, Nasdaq)]
+  [/core pce|pce|cpi|ppi|inflation|price index/i, ['up', 'down', 'down']],
+  [/non-?farm|nfp|employment change|adp|jolts|job openings/i, ['up', 'down', null]],
+  [/unemployment rate|unemployment claims|jobless claims|initial claims|continuing claims/i, ['down', 'up', null]],
+  [/federal funds|fed interest rate|interest rate decision/i, ['up', 'down', 'down']],
+  [/gdp/i, ['up', 'down', 'up']],
+  [/retail sales|ism|pmi|durable goods|consumer confidence|sentiment|housing starts|building permits|industrial production/i, ['up', 'down', 'up']],
+];
+const flipDir = d => (d === 'up' ? 'down' : d === 'down' ? 'up' : d);
+const numOf = v => { const m = String(v ?? '').replace(/,/g, '').match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : null; };
+for (const e of calendar?.events || []) {
+  const t = Date.parse(e.time), a = numOf(e.actual), f = numOf(e.forecast);
+  if (!t || a == null || f == null || a === f || now - t > KEEP) continue;
+  const rule = CAL_RULES.find(([re]) => re.test(e.title)); if (!rule) continue;
+  const eff = a > f ? rule[1] : rule[1].map(flipDir);
+  ['usd', 'gold', 'ndq'].forEach((k, i) => {
+    const dir = eff[i], key = `cal:${e.title}:${e.time}:${k}`;
+    if (!dir || forecasts.has(key)) return;
+    const p0 = priceAt(k, t); if (p0 == null) return;
+    forecasts.set(key, { key, cal: true, title: `${e.title}: ${e.actual} vs ${e.forecast} forecast`.slice(0, 100), asset: k, dir, conf: 6, at: t, p0, horizon: CAL_HORIZON });
+  });
 }
 for (const st of stories) {
   if (!st.fx?.assets || now - st.firstSeen > 6 * 3600e3) continue;
@@ -378,9 +422,10 @@ for (const st of stories) {
   }
 }
 for (const f of forecasts.values()) {
-  if (f.result || now < f.at + HORIZON) continue;
-  const p1 = priceAt(f.asset, f.at + HORIZON);
-  if (p1 == null) { if (now - f.at > HORIZON + 8 * 3600e3) f.result = 'nodata'; continue; }
+  const hz = f.horizon || HORIZON;
+  if (f.result || now < f.at + hz) continue;
+  const p1 = priceAt(f.asset, f.at + hz);
+  if (p1 == null) { if (now - f.at > hz + 8 * 3600e3) f.result = 'nodata'; continue; }
   f.chg = (p1 - f.p0) / f.p0 * 100;
   f.result = Math.abs(f.chg) < 0.05 ? 'flat' : (f.chg > 0) === (f.dir === 'up') ? 'hit' : 'miss';
 }
@@ -389,9 +434,9 @@ const tally = list => ({ hit: list.filter(f => f.result === 'hit').length, miss:
 const scorecard = {
   horizonH: 4, days: 7,
   assets: { gold: tally(judged.filter(f => f.asset === 'gold')), usd: tally(judged.filter(f => f.asset === 'usd')), ndq: tally(judged.filter(f => f.asset === 'ndq')) },
-  all: tally(judged), high: tally(judged.filter(f => f.conf >= 7)),
+  all: tally(judged), high: tally(judged.filter(f => f.conf >= 7)), news: tally(judged.filter(f => !f.cal)), cal: tally(judged.filter(f => f.cal)),
   pending: [...forecasts.values()].filter(f => !f.result).length,
-  recent: judged.sort((a, b) => b.at - a.at).slice(0, 6).map(f => ({ title: f.title, asset: f.asset, dir: f.dir, conf: f.conf, result: f.result, chg: Math.round(f.chg * 100) / 100, at: f.at })),
+  recent: judged.sort((a, b) => b.at - a.at).slice(0, 6).map(f => ({ title: f.title, asset: f.asset, dir: f.dir, conf: f.conf, result: f.result, chg: Math.round(f.chg * 100) / 100, at: f.at, cal: f.cal || undefined })),
 };
 
 // 6. Save
