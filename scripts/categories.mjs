@@ -7,12 +7,16 @@ const FOREIGN_RE = /\b(iran\w*|israel\w*|gaza|hamas|hezbollah|lebanon|syria\w*|i
 const FIGURE_RE = /\b(trump|melania|vance|elon musk|musk|ocasio-cortez|aoc|schumer|ilhan omar|pelosi|newsom|desantis|mamdani|rfk|kennedy jr|marjorie taylor greene|mtg|jeffries|mcconnell|speaker johnson|tucker carlson|candace owens|ben shapiro|charlie kirk|joe rogan|bernie sanders|obama|biden|harris|hegseth|rubio|bondi|kash patel|epstein|diddy|kanye|taylor swift|mrbeast|kai cenat|adin ross|ishowspeed|hasan ?piker|xqc|pokimane)\b/i;
 const VIRAL_RE = /\b(viral|backlash|outrage|slams|blasts|rips|meltdown|feud|controversy|controversial|apologi[sz]es|cancel(l)?ed|fired|resigns|sparks? (outrage|debate|backlash|fury)|furious|mocked|mocks|roasted|heated|clash(es)?|walks out|explodes|scandal|leaked|caught on camera|goes off on|trending)\b/i;
 const CRIME_RE = /\b(trial|verdict|jury|sentenced|indicted|indictment|arrested|charged|convicted|acquitted|shooting|shooter|murder\w*|homicide|stabbing|kidnapp\w*|manhunt|police|fbi raid)\b/i;
+const CULTURE_RE = /\b(box office|flops?|bombs at|opening weekend|concert|tour|album|single|grammys?|oscars?|emmys?|golden globes|super bowl halftime|halftime show|netflix|hbo|disney|marvel|movie|film|trailer|sequel|hollywood|celebrit\w*|rapper|singer|actor|actress|comedian|comedy|stand-up|late-night|talk show|snl|podcast|kanye|ye\b|drake|taylor swift|beyonce|kardashian|diddy|met gala|red carpet|influencer|reality (tv|show)|feud|beef|diss)\b/i;
+const SERIOUS_CRIME_RE = /\b(serial killer|murder\w*|homicide|mass shooting|shooting|shooter|manhunt|kidnapp\w*|trial|verdict|jury|sentenced|convicted|acquitted|indicted|charged with|true crime)\b/i;
 const STREAM_RE = /\b(streamer|twitch|kick|youtuber|tiktok(er)?|influencer|podcast(er)?|livestream\w*)\b/i;
 
 const TECH_RE = /\b(ai|a\.i\.|artificial intelligence|openai|anthropic|deepmind|chatgpt|claude|gemini|grok|xai|llama|mistral|llms?|chatbots?|machine learning|nvidia|tsmc|semiconductors?|chipmakers?|chips? (export|ban|maker|plant|shortage)|gpus?|data cent(er|re)s?|apple|iphone|ipad|google|alphabet|microsoft|windows|meta|instagram|whatsapp|amazon|aws|tesla|spacex|starlink|neuralink|robot\w*|humanoid|quantum|cyber\w*|hack(ed|ers?|ing)?|ransomware|data breach|smartphones?|android|samsung|startup|unicorn|app store|antitrust|big tech|silicon valley|software|cloud|crypto exchange|deepfakes?|autonomous|self-driving|waymo|drones? maker)\b/i;
 
 // Truly massive: shown in Top
 const MASSIVE_RE = /\b(declares? war|war (breaks out|erupts)|invasion|invades?|launches? (attack|strikes|offensive|invasion)|nuclear|coup|assassinat\w*|killed (dozens|hundreds|scores)|dozens (killed|dead)|hundreds (killed|dead)|\d{2,} (killed|dead)|death toll|massacre|explosion|blast|earthquake|tsunami|hurricane|typhoon|cyclone|wildfires?|landfall|plane crash|crash kills|terror(ist)? attack|mass shooting|state of emergency|martial law|pandemic|outbreak|elected|wins? (election|presidency|vote)|election (results?|victory)|landslide|resigns|ousted|impeach\w*|dies|dead at|died|ceasefire|peace (deal|agreement)|market crash|stocks plunge|rate (cut|hike)|default|collapse|historic|unprecedented|record)\b/i;
+
+const DISASTER_RE = /\b(earthquake|quake|tsunami|volcan\w*|eruption|hurricane|typhoon|cyclone|tornado(es)?|floods?|flooding|landslide|wildfires?|bushfires?|heatwave|blizzard|avalanche|famine|epidemic|outbreak|plane crash|train (crash|derailment)|ferry (sinks|capsizes)|building collapse|explosion|blast)\b/i;
 
 const has = (re, t) => re.test(t);
 
@@ -28,18 +32,22 @@ export function classify(title, summary, feedCats, score, tier, outletCount, bre
     else if (foreignHit && !usHit) cats.add('world');
     else if (usHit && foreignHit) { cats.add('world'); cats.add('us'); }
     else cats.add(fromUS ? 'us' : 'world');
-  } else if (usHit && !foreignHit && (has(FIGURE_RE, t) || has(CRIME_RE, t) || has(VIRAL_RE, t))) {
+  } else if (usHit && !foreignHit && (has(FIGURE_RE, t) || has(CRIME_RE, t) || has(VIRAL_RE, t) || has(CULTURE_RE, t))) {
     cats.add('us'); // e.g. a business or tech story that is really a U.S. politics story
   }
+
+  // Disasters and genuinely big breaking news show in World too, wherever they happen
+  if (has(DISASTER_RE, t) || (breaking && has(MASSIVE_RE, t))) cats.add('world');
 
   // Tech & AI: tech feeds, plus tech stories from anywhere else
   if (fromTech || has(TECH_RE, t)) cats.add('tech');
 
   const flags = [];
-  if (has(FIGURE_RE, t)) flags.push('figure');
+  if (has(CULTURE_RE, t)) flags.push('culture');
   if (has(VIRAL_RE, t)) flags.push('viral');
-  if (has(CRIME_RE, t)) flags.push('crime');
+  if (has(SERIOUS_CRIME_RE, t)) flags.push('crime');
   if (has(STREAM_RE, t)) flags.push('stream');
+  if (has(DISASTER_RE, t)) flags.push('disaster');
 
   // Top: only genuinely massive stories
   const massive = has(MASSIVE_RE, t);

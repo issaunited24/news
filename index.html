@@ -135,7 +135,8 @@ header.top { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-i
 #sheetBody.in-l { transform: translateX(-36px); opacity: 0; transition: none; }
 #sheetBody.bump-l { transform: translateX(-10px); }
 #sheetBody.bump-r { transform: translateX(10px); }
-.feed { transition: transform .14s ease, opacity .14s ease; }
+main, #sheet { touch-action: pan-y; }
+main, #sheetBody { will-change: transform; }
 .feed.out-l { transform: translateX(-28px); opacity: 0; }
 .feed.out-r { transform: translateX(28px); opacity: 0; }
 .pv { position: relative; }
@@ -314,7 +315,7 @@ const TABS = [
   { id: 'tech', name: 'Tech & AI' },
 ];
 const PAGE = 30;
-const APP_VERSION = '2026-10-22.1';
+const APP_VERSION = '2026-10-22.2';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -383,7 +384,8 @@ function visible(s) {
 }
 function important(s, tab) {
   if (tab === 'top') return !!s.top;
-  if (tab === 'us' && s.flags?.some(f => f === 'figure' || f === 'viral' || f === 'stream')) return true;
+  if (tab === 'us' && s.flags?.some(f => f === 'viral' || f === 'culture' || f === 'crime' || f === 'stream')) return true;
+  if (tab === 'world' && s.flags?.includes('disaster') && (s.sources.length >= 1 || s.score >= 25)) return true;
   if (tab === 'forex') return !!s.fx && s.fx.impact !== 'low' || s.tier === 'major';
   if (s.tier !== 'minor') return true;
   if (tab === 'forex' && s.fx && s.fx.impact !== 'low') return true;
@@ -468,7 +470,7 @@ const ICON = {
 };
 function head(s, lv) {
   const f = s.flags || [];
-  const badge = f.includes('viral') ? '<span class="flag">VIRAL</span>' : f.includes('stream') ? '<span class="flag">STREAMERS</span>' : f.includes('crime') ? '<span class="flag">CRIME</span>' : '';
+  const badge = f.includes('disaster') ? '<span class="flag">DISASTER</span>' : f.includes('viral') ? '<span class="flag">VIRAL</span>' : f.includes('stream') ? '<span class="flag">STREAMERS</span>' : f.includes('crime') ? '<span class="flag">CRIME</span>' : f.includes('culture') ? '<span class="flag">POP CULTURE</span>' : '';
   return `<div class="head"><span class="led"></span><span class="tag">${lv.tag}</span><span class="age">${ago(s.published)}</span>${isNew(s) ? '<span class="new">NEW</span>' : ''}${badge}<span class="outlet">${esc(s.outlet)}</span></div>`;
 }
 function foot(s, cat) {
@@ -558,7 +560,7 @@ function forexTop() {
     </button>
     ${prefs.calOpen ? `<div class="cal">${rows || '<div class="ev"><span style="grid-column:1/-1" class="muted">Nothing left on the calendar this week.</span></div>'}<button class="cal-tog" id="calTog">${prefs.calAll ? 'Show high impact only' : 'Show medium impact too'}</button></div>` : ''}
     <div class="mkts">${mk}</div>
-    <p class="note">Market-moving news first: central banks, inflation and jobs data, conflicts, trade, oil, earnings. Each story shows the pairs likely to move (▲ ▼, or ◆ to watch) plus gold, USD and Nasdaq forecasts. Rule-based, never certain, not financial advice. “Important” shows high and medium impact only.</p>`;
+    <p class="note">News likely to move gold, the US dollar or the Nasdaq: the Fed and US data, conflicts, trade, oil, big earnings, US politics. Charts show recent prices, then a dashed forecast with a confidence score. Rule-based, never certain, not financial advice. “Important” shows high and medium impact only.</p>`;
 }
 
 /* ---------- Render ---------- */
@@ -697,28 +699,11 @@ function previewHTML(s) {
     </div>
   </div>`;
 }
-function previewSheet(id, dir) {
+function previewSheet(id) {
   const s = findStory(id); if (!s) return;
   pvId = id;
-  const sheet = $('sheet');
-  if (dir && sheet.classList.contains('open')) {
-    const body = $('sheetBody');
-    body.classList.add(dir === 'next' ? 'out-l' : 'out-r');
-    setTimeout(() => {
-      body.innerHTML = previewHTML(s); sheet.scrollTop = 0;
-      body.classList.remove('out-l', 'out-r'); body.classList.add(dir === 'next' ? 'in-r' : 'in-l');
-      requestAnimationFrame(() => requestAnimationFrame(() => body.classList.remove('in-r', 'in-l')));
-    }, 160);
-    return;
-  }
+  const body = $('sheetBody'); body.style.transform = ''; body.style.opacity = ''; body.style.transition = '';
   openSheet(previewHTML(s), true);
-}
-function stepPreview(d) {
-  const i = currentList.indexOf(pvId);
-  if (i < 0) return;
-  const j = i + d;
-  if (j < 0 || j >= currentList.length) { const b = $('sheetBody'); b.classList.add(d > 0 ? 'bump-l' : 'bump-r'); setTimeout(() => b.classList.remove('bump-l', 'bump-r'), 220); return; }
-  previewSheet(currentList[j], d > 0 ? 'next' : 'prev');
 }
 function settingsSheet() {
   const pills = (arr, act) => arr.length ? `<div class="pills">${arr.map(o => `<button data-act="${act}" data-outlet="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : '<p class="muted">None.</p>';
@@ -807,31 +792,73 @@ $('live').addEventListener('click', () => load(true));
 $('scrim').onclick = closeSheet;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 
-/* ---------- Swipes: change tabs on the feed, change stories in the story view ---------- */
-function swipe(el, onLeft, onRight, allow) {
-  let x0 = 0, y0 = 0, t0 = 0, on = false;
-  el.addEventListener('touchstart', e => { if (e.touches.length !== 1 || (allow && !allow(e))) { on = false; return; } on = true; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); }, { passive: true });
-  el.addEventListener('touchend', e => {
-    if (!on) return; on = false;
-    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
-    if (Date.now() - t0 > 700 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
-    dx < 0 ? onLeft() : onRight();
-  }, { passive: true });
-}
-function goTab(d) {
-  if (view !== 'feed') return;
-  const i = TABS.findIndex(t => t.id === prefs.tab), j = i + d;
-  if (j < 0 || j >= TABS.length) return;
-  const feed = $('feed');
-  feed.classList.add(d > 0 ? 'out-l' : 'out-r');
+/* ---------- Swipes that follow your finger: tabs on the feed, stories in the story card ---------- */
+const EASE_OUT = 'cubic-bezier(.2,.8,.2,1)';
+function slide(target, d, commit) {
+  const W = Math.min(window.innerWidth, 640);
+  target.style.transition = `transform .17s cubic-bezier(.4,0,1,1), opacity .17s linear`;
+  target.style.transform = `translate3d(${-d * W * 0.6}px,0,0)`;
+  target.style.opacity = '0';
   setTimeout(() => {
-    animateNext = true; prefs.tab = TABS[j].id; shown = PAGE; save(); render(); window.scrollTo({ top: 0 });
-    feed.classList.remove('out-l', 'out-r');
-    document.querySelector('.tab[aria-selected="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-  }, 140);
+    commit(d);
+    target.style.transition = 'none';
+    target.style.transform = `translate3d(${d * W * 0.35}px,0,0)`;
+    target.style.opacity = '0';
+    void target.offsetWidth; // apply the start position before animating in
+    target.style.transition = `transform .34s ${EASE_OUT}, opacity .26s ease-out`;
+    target.style.transform = 'translate3d(0,0,0)';
+    target.style.opacity = '1';
+  }, 170);
 }
-swipe(document.querySelector('main'), () => goTab(1), () => goTab(-1), e => !e.target.closest('.lcd, .others, textarea, input'));
-swipe($('sheet'), () => { if ($('sheet').classList.contains('float')) stepPreview(1); }, () => { if ($('sheet').classList.contains('float')) stepPreview(-1); });
+function dragSwipe(el, getTarget, canGo, commit, allow) {
+  let x0 = 0, y0 = 0, t0 = 0, dx = 0, lock = null, active = false, target = null;
+  const W = () => Math.min(window.innerWidth, 640);
+  el.addEventListener('touchstart', e => {
+    active = e.touches.length === 1 && (!allow || allow(e));
+    if (!active) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = performance.now(); dx = 0; lock = null; target = getTarget();
+  }, { passive: true });
+  el.addEventListener('touchmove', e => {
+    if (!active || !target) return;
+    const x = e.touches[0].clientX, y = e.touches[0].clientY;
+    dx = x - x0; const dy = y - y0;
+    if (!lock && Math.max(Math.abs(dx), Math.abs(dy)) > 8) lock = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
+    if (lock !== 'x') return;
+    e.preventDefault();
+    const d = dx < 0 ? 1 : -1;
+    const eff = canGo(d) ? dx : dx * 0.22; // rubber band at the ends
+    target.style.transition = 'none';
+    target.style.transform = `translate3d(${eff}px,0,0)`;
+    target.style.opacity = String(1 - Math.min(Math.abs(eff) / W(), 1) * 0.45);
+  }, { passive: false });
+  const end = () => {
+    if (!active || lock !== 'x' || !target) { active = false; return; }
+    active = false;
+    const v = dx / Math.max(1, performance.now() - t0), d = dx < 0 ? 1 : -1;
+    if (canGo(d) && (Math.abs(dx) > W() * 0.2 || (Math.abs(v) > 0.45 && Math.abs(dx) > 40))) slide(target, d, commit);
+    else {
+      target.style.transition = `transform .32s ${EASE_OUT}, opacity .32s ${EASE_OUT}`;
+      target.style.transform = 'translate3d(0,0,0)';
+      target.style.opacity = '1';
+    }
+  };
+  el.addEventListener('touchend', end, { passive: true });
+  el.addEventListener('touchcancel', end, { passive: true });
+}
+const tabIndex = () => TABS.findIndex(t => t.id === prefs.tab);
+const canTab = d => view === 'feed' && tabIndex() + d >= 0 && tabIndex() + d < TABS.length && !$('sheet').classList.contains('open');
+function commitTab(d) {
+  prefs.tab = TABS[tabIndex() + d].id; shown = PAGE; animateNext = false; save(); render(); window.scrollTo({ top: 0 });
+  document.querySelector('.tab[aria-selected="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+}
+const goTab = d => { if (canTab(d)) slide(document.querySelector('main'), d, commitTab); };
+dragSwipe(document.querySelector('main'), () => document.querySelector('main'), canTab, commitTab, e => !e.target.closest('textarea, input'));
+
+const pvIndex = () => currentList.indexOf(pvId);
+const canStory = d => $('sheet').classList.contains('float') && $('sheet').classList.contains('open') && pvIndex() >= 0 && pvIndex() + d >= 0 && pvIndex() + d < currentList.length;
+function commitStory(d) { pvId = currentList[pvIndex() + d]; $('sheetBody').innerHTML = previewHTML(findStory(pvId)); $('sheet').scrollTop = 0; }
+function stepPreview(d) { if (canStory(d)) slide($('sheetBody'), d, commitStory); }
+dragSwipe($('sheet'), () => $('sheetBody'), canStory, commitStory);
 document.addEventListener('keydown', e => { if (!$('sheet').classList.contains('float') || !$('sheet').classList.contains('open')) return; if (e.key === 'ArrowRight') stepPreview(1); if (e.key === 'ArrowLeft') stepPreview(-1); });
 
 let toastTimer;

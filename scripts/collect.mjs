@@ -189,7 +189,7 @@ const stories = cluster(items).map(group => {
     _cand: byTrust.filter(g => !/news\.google\.com/.test(g.link)).slice(0, 2).map(g => ({ id: g.id, link: g.link, outlet: g.outlet })),
     published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats], top: cls.top || undefined, flags: cls.flags.length ? cls.flags : undefined,
     score: s.score, tier: s.tier, breaking, why: s.reasons, sources: others,
-    fx: fx ? { impact: fx.impact, why: fx.why, assets: fx.assets, driver: fx.driver, pairs: fx.pairs, currencies: fx.currencies } : null,
+    fx: fx ? { impact: fx.impact, why: fx.why, assets: fx.assets, driver: fx.driver } : null,
     _all: 0,
   };
 }).filter(Boolean).map(({ _all, ...s }) => s)
@@ -232,7 +232,7 @@ if (!FIXTURES && (!calendar || now - calendar.fetched > 55 * 60e3)) {
   try {
     const res = await fetch(CAL_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; personal-news-reader/1.0)' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const events = (await res.json()).filter(e => /high|medium/i.test(e.impact) && ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'CNY'].includes(e.country)).map(calendarEvent);
+    const events = (await res.json()).filter(e => /high|medium/i.test(e.impact) && e.country === 'USD').map(calendarEvent);
     calendar = { fetched: now, ok: true, events };
   } catch (e) {
     calendar = { ...(calendar || { events: [] }), ok: false, error: String(e.message || e).slice(0, 120), fetched: calendar?.fetched ?? 0 };
