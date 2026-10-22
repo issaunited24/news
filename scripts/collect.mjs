@@ -4,6 +4,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { entries, all, first, textOf } from './xml.mjs';
 import { marketCatalyst, isPriceRecap } from './markets.mjs';
+import { classify } from './categories.mjs';
 import { cluster, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
@@ -163,32 +164,32 @@ const stories = cluster(items).map(group => {
   const s = scoreStory([lead, ...group.filter(g => g !== lead)], keywords, now);
   const q = qualityAdjust(s.score, lead, new Set(group.map(g => g.outlet.toLowerCase())).size);
   s.score = q.score; s.tier = q.tier; s.reasons.push(...q.why);
-  const cats = new Set(group.flatMap(g => g.cats));
-  const fromFxFeed = cats.has('forex');
+  const feedCats = new Set(group.flatMap(g => g.cats).map(c => (c === 'business' ? 'forex' : c)));
+  const fromFxFeed = feedCats.has('forex');
   const fromBiz = group.some(g => g.biz);
-  cats.delete('business');
-  cats.delete('forex'); // the Forex tab only gets stories likely to MOVE gold, the dollar or the Nasdaq
   const outletCount = new Set(group.map(g => g.outlet)).size;
   const text = `${lead.title} ${lead.summary}`;
   const fx = marketCatalyst(lead.title, text, { policy: policyOf(text) }, s.tier, outletCount);
-  if (fx) cats.add('forex');
-  if (!fx && fromBiz && !isPriceRecap(lead.title)) cats.add('forex'); // business news lives in Forex & Markets too
   if (fx && fx.impact === 'high' && s.tier === 'minor') s.tier = 'notable';
-  // Price recaps and chart pieces from forex sites ("Gold rises...", "EUR/USD forecast") are dropped entirely
-  if (!fx && fromFxFeed && !cats.size && isPriceRecap(lead.title)) return null;
-  if (!fx && fromFxFeed && !cats.size) return null;
   const firstSeen = Math.min(...group.map(g => g.seen ?? now));
   const published = group[0].time;
   const ageMin = (now - Math.min(firstSeen, published)) / 60000;
   const breaking = (s.tier === 'major' && ageMin <= 90) || (s.breakingTag && ageMin <= 120);
+  // Tabs: World (outside the US) / U.S. / Tech & AI from the classifier; Forex = market-moving news (+ business news)
+  const cls = classify(lead.title, lead.summary, feedCats, s.score, s.tier, outletCount, breaking);
+  const cats = cls.cats;
+  if (fx) cats.add('forex');
+  if (!fx && fromBiz && !isPriceRecap(lead.title)) cats.add('forex');
+  // Price recaps and chart pieces from forex sites ("Gold rises...", "EUR/USD forecast") are dropped entirely
+  if (!fx && fromFxFeed && !cats.size) return null;
   const seenOutlets = new Set([lead.outlet]);
   const others = group.filter(g => g !== lead && !seenOutlets.has(g.outlet) && seenOutlets.add(g.outlet)).map(g => ({ outlet: g.outlet, link: g.link, title: g.title }));
   return {
     id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: best.summary, summaryFrom: best.from, more: more.length ? more : undefined,
     _cand: byTrust.filter(g => !/news\.google\.com/.test(g.link)).slice(0, 2).map(g => ({ id: g.id, link: g.link, outlet: g.outlet })),
-    published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats],
+    published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats], top: cls.top || undefined, flags: cls.flags.length ? cls.flags : undefined,
     score: s.score, tier: s.tier, breaking, why: s.reasons, sources: others,
-    fx: fx ? { impact: fx.impact, why: fx.why, assets: fx.assets, driver: fx.driver } : null,
+    fx: fx ? { impact: fx.impact, why: fx.why, assets: fx.assets, driver: fx.driver, pairs: fx.pairs, currencies: fx.currencies } : null,
     _all: 0,
   };
 }).filter(Boolean).map(({ _all, ...s }) => s)
@@ -231,7 +232,7 @@ if (!FIXTURES && (!calendar || now - calendar.fetched > 55 * 60e3)) {
   try {
     const res = await fetch(CAL_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; personal-news-reader/1.0)' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const events = (await res.json()).filter(e => /high|medium/i.test(e.impact) && e.country === 'USD').map(calendarEvent);
+    const events = (await res.json()).filter(e => /high|medium/i.test(e.impact) && ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'CNY'].includes(e.country)).map(calendarEvent);
     calendar = { fetched: now, ok: true, events };
   } catch (e) {
     calendar = { ...(calendar || { events: [] }), ok: false, error: String(e.message || e).slice(0, 120), fetched: calendar?.fetched ?? 0 };

@@ -26,22 +26,46 @@ const DRIVERS = [
       const severe = /\b(escalat\w+|invasion|invades?|declares? war|nuclear|hormuz|oil|aramco|tankers?|vows invasion|war (breaks out|erupts|widens))\b/i.test(t) ? 1 : 0;
       const major = /\b(iran\w*|irgc|russia\w*|kyiv|moscow|china|chinese|taiwan|saudi|riyadh|aramco|gulf|hormuz|north korea\w*|nato|pentagon|oil|tankers?|u\.?s\.? (forces|troops|strikes?|military|bases?))\b/i.test(t);
       if (!major && !severe) return { why: 'A regional flare-up: small safe-haven effect unless it spreads.', gold: 'up', usd: 'flat', ndq: 'flat', base: { gold: 3 } };
-      return { why: 'Conflict raises risk: safe-haven demand usually lifts gold and the dollar while stocks dip.', gold: 'up', usd: 'up', ndq: 'down', base: { gold: 6 + severe, usd: 4, ndq: 5 } };
+      return { why: 'Conflict raises risk: safe-haven demand usually lifts gold, the dollar, yen and franc while stocks and the Aussie dip.', gold: 'up', usd: 'up', ndq: 'down', base: { gold: 6 + severe, usd: 4, ndq: 5 }, fxc: { USD: 'up', JPY: 'up+', CHF: 'up+', AUD: 'down', NZD: 'down', ...(severe ? { CAD: 'up' } : {}) } };
     },
   },
   {
     name: 'peace',
     test: t => /\b(ceasefire|cease-fire|truce|peace (deal|talks|agreement|plan|accord|summit)|de-escalat\w+|hostages? (released|freed|deal)|armistice|end (to|of) the war)\b/i.test(t)
-      ? { why: 'Easing conflict usually cools safe-haven demand: gold tends to slip and stocks firm.', gold: 'down', usd: 'flat', ndq: 'up', base: { gold: 5, ndq: 4 } } : null,
+      ? { why: 'Easing conflict usually cools safe-haven demand: gold, yen and franc tend to slip while stocks and the Aussie firm.', gold: 'down', usd: 'flat', ndq: 'up', base: { gold: 5, ndq: 4 }, fxc: { JPY: 'down', CHF: 'down', AUD: 'up', NZD: 'up' } } : null,
   },
   {
     name: 'fed',
     test: (t, ctx) => {
       if (!has(US_RE, t)) return null;
-      if (ctx.policy === 'hawkish') return { why: 'Hawkish Fed signal or hot US data: higher-rate expectations support the dollar and weigh on gold and tech.', gold: 'down', usd: 'up', ndq: 'down', base: { gold: 6, usd: 7, ndq: 6 } };
-      if (ctx.policy === 'dovish') return { why: 'Dovish Fed signal or soft US data: rate-cut hopes weigh on the dollar and help gold and tech.', gold: 'up', usd: 'down', ndq: 'up', base: { gold: 6, usd: 7, ndq: 6 } };
+      if (ctx.policy === 'hawkish') return { why: 'Hawkish Fed signal or hot US data: higher-rate expectations support the dollar and weigh on gold and tech.', gold: 'down', usd: 'up', ndq: 'down', base: { gold: 6, usd: 7, ndq: 6 }, fxc: { USD: 'up' } };
+      if (ctx.policy === 'dovish') return { why: 'Dovish Fed signal or soft US data: rate-cut hopes weigh on the dollar and help gold and tech.', gold: 'up', usd: 'down', ndq: 'up', base: { gold: 6, usd: 7, ndq: 6 }, fxc: { USD: 'down' } };
       if (/\b(fomc|fed (decision|meeting|minutes|chair|governor|speaks|speech)|powell|warsh|cpi|inflation (data|report)|jobs report|nonfarm|payrolls|gdp|pce)\b/i.test(t))
-        return { why: 'Major Fed or US data event: expect volatility in the dollar, gold and stocks; direction depends on the outcome.', gold: 'flat', usd: 'flat', ndq: 'flat', base: {}, impact: 'medium' };
+        return { why: 'Major Fed or US data event: expect volatility in the dollar, gold and stocks; direction depends on the outcome.', gold: 'flat', usd: 'flat', ndq: 'flat', base: {}, impact: 'medium', fxc: { USD: 'watch' } };
+      return null;
+    },
+  },
+  {
+    name: 'cb',
+    test: (t, ctx) => {
+      const CB = [
+        ['EUR', /\b(ecb|european central bank|lagarde|euro ?zone|euro area|german (inflation|gdp|economy))\b/i, 'the euro'],
+        ['GBP', /\b(bank of england|boe|bailey|uk (inflation|cpi|gdp|jobs|wages|unemployment|economy|budget)|british (inflation|economy)|sterling)\b/i, 'the pound'],
+        ['JPY', /\b(bank of japan|boj|ueda|japan'?s? (inflation|cpi|gdp|economy)|yen intervention|japanese (inflation|economy))\b/i, 'the yen'],
+        ['CHF', /\b(snb|swiss national bank|swiss (inflation|economy))\b/i, 'the Swiss franc'],
+        ['CAD', /\b(bank of canada|macklem|canad(a|ian) (inflation|cpi|jobs|gdp|unemployment|economy))\b/i, 'the Canadian dollar'],
+        ['AUD', /\b(rba|reserve bank of australia|bullock|australian? (inflation|cpi|jobs|gdp|unemployment|economy))\b/i, 'the Aussie dollar'],
+        ['NZD', /\b(rbnz|reserve bank of new zealand|new zealand (inflation|cpi|gdp|jobs|economy))\b/i, 'the Kiwi dollar'],
+        ['CNY', /\b(pboc|people'?s bank of china|china'?s? (gdp|exports|economy|stimulus|pmi|deflation)|chinese (economy|stimulus|exports))\b/i, 'the yuan'],
+      ];
+      const hit = CB.find(([, re]) => re.test(t));
+      if (!hit) return null;
+      const [cur, , name] = hit;
+      const extra = cur === 'CNY' ? { AUD: null, NZD: null } : {};
+      if (ctx.policy === 'hawkish') return { why: `Hawkish central bank signal or strong data usually lifts ${name}.`, gold: 'flat', usd: 'flat', ndq: 'flat', base: {}, impact: 'medium', fxc: { [cur]: 'up', ...(cur === 'CNY' ? { AUD: 'up', NZD: 'up' } : extra) }, conf: 6 };
+      if (ctx.policy === 'dovish') return { why: `Dovish central bank signal or weak data usually weighs on ${name}.`, gold: 'flat', usd: 'flat', ndq: 'flat', base: {}, impact: 'medium', fxc: { [cur]: 'down', ...(cur === 'CNY' ? { AUD: 'down', NZD: 'down' } : extra) }, conf: 6 };
+      if (ctx.policy === 'hold' || ctx.policy === 'mixed' || /\b(rate decision|decision|meeting|minutes|cpi|inflation|gdp|jobs|payrolls|unemployment|budget|intervention|stimulus|holds?|keeps?|pauses?)\b/i.test(t))
+        return { why: `A major event for ${name}: expect volatility in its pairs; direction depends on the outcome.`, gold: 'flat', usd: 'flat', ndq: 'flat', base: {}, impact: 'medium', fxc: { [cur]: 'watch' }, conf: 0 };
       return null;
     },
   },
@@ -63,9 +87,9 @@ const DRIVERS = [
     name: 'trade',
     test: t => {
       if (/\b(trade (deal|agreement|truce)|tariffs? (cut|lifted|removed|paused|suspended|eased)|lifts? tariffs|eases? (export )?(curbs|controls))\b/i.test(t))
-        return { why: 'Easing trade tension usually helps stocks and cools demand for gold.', gold: 'down', usd: 'flat', ndq: 'up', base: { gold: 3, ndq: 5 } };
+        return { why: 'Easing trade tension usually helps stocks and trade-linked currencies like the Aussie and yuan, and cools demand for gold.', gold: 'down', usd: 'flat', ndq: 'up', base: { gold: 3, ndq: 5 }, fxc: { AUD: 'up', CNY: 'up', JPY: 'down' } };
       if (/\b(new tariffs?|tariffs? (on|of|hike|increase|threat)|imposes? tariffs|trade war|export (ban|controls|curbs|restrictions)|chip (ban|curbs|restrictions)|retaliat\w+)\b/i.test(t))
-        return { why: 'Trade conflict hurts growth and tech supply chains: stocks tend to fall and gold to rise.', gold: 'up', usd: 'flat', ndq: 'down', base: { gold: 4, ndq: 5 } };
+        return { why: 'Trade conflict hurts growth and supply chains: stocks, the Aussie and yuan tend to fall while gold and the yen rise.', gold: 'up', usd: 'flat', ndq: 'down', base: { gold: 4, ndq: 5 }, fxc: { AUD: 'down', CNY: 'down', JPY: 'up' } };
       return null;
     },
   },
@@ -74,9 +98,9 @@ const DRIVERS = [
     test: t => {
       if (!has(US_CTX_RE, t)) return null;
       if (/\b(government shutdown|shutdown (looms|begins|deadline)|debt ceiling|default on (its )?debt|credit (rating )?downgrade|downgrades? (the )?u\.?s\.?)\b/i.test(t))
-        return { why: 'US fiscal stress usually weakens the dollar and stocks and lifts gold.', gold: 'up', usd: 'down', ndq: 'down', base: { gold: 5, usd: 4, ndq: 4 } };
+        return { why: 'US fiscal stress usually weakens the dollar and stocks and lifts gold, the yen and franc.', gold: 'up', usd: 'down', ndq: 'down', base: { gold: 5, usd: 4, ndq: 4 }, fxc: { USD: 'down', JPY: 'up', CHF: 'up' } };
       if (/\b(election results?|wins? (the )?(election|presidency|midterms?)|midterm results|presidential debate|polls? close|concedes)\b/i.test(t))
-        return { why: 'US election outcomes can shift policy expectations for the dollar, gold and stocks.', gold: 'flat', usd: 'flat', ndq: 'flat', base: {}, impact: 'medium' };
+        return { why: 'US election outcomes can shift policy expectations for the dollar, gold and stocks.', gold: 'flat', usd: 'flat', ndq: 'flat', base: {}, impact: 'medium', fxc: { USD: 'watch' } };
       return null;
     },
   },
@@ -84,16 +108,16 @@ const DRIVERS = [
     name: 'oil',
     test: t => {
       if (/\b(opec\+? (cuts?|curbs?)|strait of hormuz|attacks? on (oil|energy|tankers?|refiner\w*)|oil (field|facility|pipeline|tanker) (attack|struck|hit|fire)|oil supply (shock|disruption))\b/i.test(t))
-        return { why: 'An oil supply shock feeds inflation fears: gold tends to rise and stocks to fall.', gold: 'up', usd: 'flat', ndq: 'down', base: { gold: 4, ndq: 4 } };
+        return { why: 'An oil supply shock feeds inflation fears: gold and oil-linked currencies like the Canadian dollar tend to rise, while the yen and stocks fall.', gold: 'up', usd: 'flat', ndq: 'down', base: { gold: 4, ndq: 4 }, fxc: { CAD: 'up', NOK: 'up', JPY: 'down' } };
       if (/\b(opec\+? (raises?|boosts?|hikes?|increases?) (output|production)|oil (glut|oversupply))\b/i.test(t))
-        return { why: 'More oil supply eases inflation pressure, which tends to help stocks.', gold: 'flat', usd: 'flat', ndq: 'up', base: { ndq: 3 } };
+        return { why: 'More oil supply eases inflation pressure, which tends to help stocks and weigh on the Canadian dollar.', gold: 'flat', usd: 'flat', ndq: 'up', base: { ndq: 3 }, fxc: { CAD: 'down' } };
       return null;
     },
   },
   {
     name: 'banking',
     test: t => /\b(bank (run|collapse|failure|crisis|rescue|bailout)|banks? collaps\w+|banking (crisis|turmoil|stress)|credit crunch|liquidity crisis|contagion|financial crisis|systemic risk)\b/i.test(t)
-      ? { why: 'Financial stress sends money to safety: gold usually rises and stocks fall.', gold: 'up', usd: 'flat', ndq: 'down', base: { gold: 6, ndq: 6 } } : null,
+      ? { why: 'Financial stress sends money to safety: gold, the yen and franc usually rise while stocks fall.', gold: 'up', usd: 'flat', ndq: 'down', base: { gold: 6, ndq: 6 }, fxc: { JPY: 'up+', CHF: 'up+', AUD: 'down' } } : null,
   },
   {
     name: 'sanctions',
@@ -115,6 +139,27 @@ const DRIVERS = [
 ];
 
 const HIGH_DRIVERS = new Set(['war', 'fed', 'banking']);
+
+// Turn currency effects into the main pairs: XXX/USD for EUR, GBP, AUD, NZD; USD/XXX for JPY, CHF, CAD, CNH
+const BASE_FIRST = ['EUR', 'GBP', 'AUD', 'NZD'];
+const ORDER = ['EUR', 'JPY', 'GBP', 'AUD', 'CAD', 'CHF', 'NZD', 'CNY', 'NOK'];
+function pairsFor(fxc) {
+  const usd = fxc.USD;
+  const out = [];
+  const val = d => (d === 'up+' ? 2 : d === 'up' ? 1 : d === 'down' ? -1 : 0);
+  const named = ORDER.filter(c => fxc[c]);
+  const list = named.length ? named : (usd ? ['EUR', 'JPY', 'GBP'] : []);
+  for (const c of list) {
+    const d = fxc[c];
+    const pair = c === 'CNY' ? 'USD/CNH' : c === 'NOK' ? 'USD/NOK' : BASE_FIRST.includes(c) ? `${c}/USD` : `USD/${c}`;
+    if (d === 'watch' || (!d && usd === 'watch') || (usd === 'watch' && !d)) { out.push({ pair, dir: 'watch' }); continue; }
+    let v = val(d) - val(usd === 'watch' ? null : usd); // strength of c against USD
+    if (!BASE_FIRST.includes(c)) v = -v;               // USD/XXX moves the other way
+    if (v === 0) { if (d === 'watch' || usd === 'watch') out.push({ pair, dir: 'watch' }); continue; }
+    out.push({ pair, dir: v > 0 ? 'up' : 'down' });
+  }
+  return out.slice(0, 4);
+}
 
 export function isPriceRecap(title) {
   return RECAP_RE.test(title) || TECH_RE.test(title);
@@ -145,5 +190,12 @@ export function marketCatalyst(title, text, ctx, tier, outlets) {
   const maxConf = Math.max(0, ...Object.values(assets).map(a => a.conf || 0));
   let impact = lead.impact || (maxConf >= 7 || (HIGH_DRIVERS.has(lead.name) && maxConf >= 6) ? 'high' : maxConf >= 5 ? 'medium' : 'low');
   if (tier === 'major' && impact === 'low') impact = 'medium';
-  return { impact, assets, why: lead.why, driver: lead.name, drivers: hits.map(h => h.name) };
+  // Currency effects and the pairs to watch
+  const fxc = {};
+  for (const h of hits) for (const [c, d] of Object.entries(h.fxc || {})) if (d && !fxc[c]) fxc[c] = d;
+  if (assets.usd.dir !== 'flat' && (!fxc.USD || fxc.USD === 'watch')) fxc.USD = assets.usd.dir;
+  const pairs = pairsFor(fxc);
+  const fxConf = cap(Math.max(assets.usd.conf || 0, ...hits.map(h => h.conf || 0), 4) + 0);
+  const currencies = Object.entries(fxc).map(([code, dir]) => ({ code, dir: dir === 'up+' ? 'up' : dir }));
+  return { impact, assets, why: lead.why, driver: lead.name, drivers: hits.map(h => h.name), currencies, pairs, fxConf };
 }
