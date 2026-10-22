@@ -943,7 +943,10 @@ function calendarHTML(now) {
   const all = [...evs, ...hols].sort((a, b) => a.t - b.t), byDay = {};
   for (const x of all) (byDay[dayLong.format(x.t)] ||= []).push(x);
   return Object.entries(byDay).map(([d, list]) => `<div class="cal-day">${d}</div>${list.map(x => {
-    if (x.hol) return `<div class="sbh"><span class="sbh-i">🏦</span><div><b>${esc(x.title)}</b> · ${esc(x.currency)}<br><span>Banks closed, so trading is usually thinner and moves can be jumpy</span></div></div>`;
+    if (x.hol) {
+      const bank = /bank holiday/i.test(x.title), dst = /daylight|dst/i.test(x.title);
+      return `<div class="sbh"><span class="sbh-i">${bank ? '🏦' : dst ? '🕒' : '📅'}</span><div><b>${esc(x.title)}</b> · ${esc(x.currency)}<br><span>${bank ? 'Banks closed, so trading is usually thinner and moves can be jumpy' : dst ? 'Clocks change, so trading session times shift by an hour' : 'Market holiday or schedule change'}</span></div></div>`;
+    }
     const r = calResult(x), mv = calMoves(x, r);
     return `<div class="sb ${x.t < now && !x.actual ? 'wait' : ''}" style="--c:var(--${x.impact === 'high' ? 'red' : 'gold'})">
       <div class="sb-top"><span class="sb-imp">${x.impact === 'high' ? 'HIGH IMPACT' : 'MEDIUM'}</span><span class="sb-when">${timeFmt.format(x.t)}</span></div>
