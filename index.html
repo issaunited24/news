@@ -377,13 +377,14 @@ textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: va
 <script>
 const TABS = [
   { id: 'top', name: 'Top' },
+  { id: 'justin', name: 'Just in' },
   { id: 'world', name: 'World' },
   { id: 'us', name: 'U.S.' },
   { id: 'forex', name: 'Forex' },
   { id: 'tech', name: 'Tech & AI' },
 ];
 const PAGE = 30;
-const APP_VERSION = '2026-10-22.4';
+const APP_VERSION = '2026-10-22.5';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -400,7 +401,7 @@ const defaults = { tab: 'top', important: true, hidden: [], muted: [], boosted: 
 let prefs = { ...defaults };
 try { prefs = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch {} };
-if (!['top', 'world', 'us', 'forex', 'tech'].includes(prefs.tab)) prefs.tab = 'top';
+if (!['top', 'justin', 'world', 'us', 'forex', 'tech'].includes(prefs.tab)) prefs.tab = 'top';
 const prevVisit = prefs.lastVisit || 0;            // used for the "new since your last visit" marker
 const markVisit = () => { prefs.lastVisit = Date.now(); save(); };
 document.addEventListener('visibilitychange', () => { if (document.hidden) markVisit(); });
@@ -459,7 +460,6 @@ function visible(s) {
 }
 function important(s, tab) {
   if (tab === 'top') return !!s.top;
-  if (s.justIn && tab !== 'forex') return true; // fresh story from a trusted outlet, shown before others confirm it
   if (tab === 'us' && s.flags?.some(f => f === 'viral' || f === 'culture' || f === 'crime' || f === 'stream')) return true;
   if (tab === 'world' && s.flags?.includes('disaster') && (s.sources.length >= 1 || s.score >= 25)) return true;
   if (tab === 'forex') return !!s.fx && s.fx.impact !== 'low' || s.tier === 'major';
@@ -467,10 +467,12 @@ function important(s, tab) {
   if (tab === 'forex' && s.fx && s.fx.impact !== 'low') return true;
   return prefs.boosted.includes(s.outlet);
 }
-const rankScore = s => s.score + (prefs.boosted.includes(s.outlet) ? 12 : 0) + (s.breaking ? 25 : 0) + (s.justIn ? 10 : 0) - (Date.now() - s.updatedAt) / 3600e3 * 4;
+const rankScore = s => s.score + (prefs.boosted.includes(s.outlet) ? 12 : 0) + (s.breaking ? 25 : 0) - (Date.now() - s.updatedAt) / 3600e3 * 4;
 function storiesFor(tab, impOnly) {
   if (!data) return [];
   let list = data.stories.filter(visible);
+  // Just in: every fresh story from a trusted newsroom, newest first. It only reaches the other tabs once it proves important.
+  if (tab === 'justin') return list.filter(justIn).sort((a, b) => Math.min(b.published, b.firstSeen) - Math.min(a.published, a.firstSeen));
   if (tab === 'top') list = list.filter(s => s.top || s.tier === 'major' || s.breaking);
   else list = list.filter(s => s.categories.includes(tab));
   if (impOnly) list = list.filter(s => important(s, tab));
@@ -767,7 +769,7 @@ function render() {
     meta.className = 'meta-r muted'; meta.textContent = query ? `${list.length} RESULT${list.length === 1 ? '' : 'S'}` : 'TYPE TO SEARCH';
     tab = 'search';
   } else {
-    row.hidden = false; $('row').querySelector('.seg').hidden = false;
+    row.hidden = false; $('row').querySelector('.seg').hidden = tab === 'justin';
     top.innerHTML = tab === 'forex' ? forexTop() : '';
     list = storiesFor(tab, prefs.important);
     const fresh = list.filter(isNew).length;
@@ -778,7 +780,7 @@ function render() {
   if (!list.length) {
     const msg = view === 'saved' ? ['Nothing saved yet', 'Tap the bookmark on any story to keep it here.']
       : view === 'search' ? (query ? ['No matches', 'Try a different word, outlet or currency.'] : ['Search everything', 'Stories from the last 36 hours, by word, outlet or currency.'])
-      : ['Nothing important right now', 'Switch to All to see every story in this section.'];
+      : tab === 'justin' ? ['Quiet for the moment', 'Fresh stories from major newsrooms land here within minutes.'] : ['Nothing important right now', 'Switch to All to see every story in this section.'];
     feed.innerHTML = `<div class="empty"><h2>${msg[0]}</h2><p>${msg[1]}</p></div>`;
   } else {
     const cards = [];
@@ -881,7 +883,7 @@ function settingsSheet() {
     <textarea id="backupText" aria-label="Backup text">${esc(JSON.stringify({ boosted: prefs.boosted, muted: prefs.muted, hidden: prefs.hidden, saved: prefs.saved }))}</textarea>
     <div class="btns"><button class="btn" data-act="copyBackup">Copy backup</button><button class="btn" data-act="restore">Restore from text</button></div>
     <h4>How it works</h4>
-    <p class="muted">Glow color shows importance: red for breaking or high, gold for medium, cyan for low. Brand-new stories from trusted outlets show straight away marked JUST IN, before other outlets confirm them. Stories rise when many outlets cover them, when outlets put them in their top stories, and when they contain big-event words. The Forex tab shows only news likely to move gold, the US dollar or the Nasdaq (conflicts, the Fed and US data, big-company earnings, trade, US politics, oil shocks, banking stress), not reports of moves that already happened. Each story forecasts all three with a 1–10 confidence score from simple rules, capped at 9 because nothing in markets is certain.</p>
+    <p class="muted">Glow color shows importance: red for breaking or high, gold for medium, cyan for low. Brand-new stories from major newsrooms land in the Just in tab within minutes. They move into the other tabs only once they prove important. Stories rise when many outlets cover them, when outlets put them in their top stories, and when they contain big-event words. The Forex tab shows only news likely to move gold, the US dollar or the Nasdaq (conflicts, the Fed and US data, big-company earnings, trade, US politics, oil shocks, banking stress), not reports of moves that already happened. Each story forecasts all three with a 1–10 confidence score from simple rules, capped at 9 because nothing in markets is certain.</p>
     ${mk ? `<p class="muted">Prices: ${esc(mk)}.</p>` : ''}
     <h4>Sources</h4>${srcs}`);
 }
