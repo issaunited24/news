@@ -282,7 +282,7 @@ for (const st of stories) {
 //    TradingView's calendar has the actual numbers within minutes of each release, so it's checked every
 //    ~10 minutes, and every run while a recent release is still waiting for its actual. ForexFactory is the backup.
 let calendar = prevState.calendar;
-const fmtVal = (v, e) => (v == null || v === '' ? null : `${Math.round(v * 1000) / 1000}${e.scale || ''}${e.unit && e.unit !== e.scale ? e.unit : ''}`);
+const fmtVal = (v, e) => (v == null || v === '' ? null : `${Math.round(v * 1000) / 1000}${e.scale || ''}${e.unit === '%' ? '%' : ''}`);
 async function tvCalendar() {
   const from = new Date(now - 2 * 864e5).toISOString(), to = new Date(now + 8 * 864e5).toISOString();
   const res = await fetch(`https://economic-calendar.tradingview.com/events?from=${from}&to=${to}&countries=US`, { headers: { Origin: 'https://www.tradingview.com', Referer: 'https://www.tradingview.com/', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } });
@@ -307,6 +307,17 @@ if (!FIXTURES && (!calendar || (calendar.src !== 'tv' && now - calendar.fetched 
   } catch (e) {
     calendar = { ...(calendar || { events: [] }), ok: false, error: String(e.message || e).slice(0, 120), fetched: calendar?.fetched ?? 0 };
   }
+}
+
+// 4b. Bank holidays (from ForexFactory, at most once an hour). Thin markets on these days matter for gold and the dollar.
+if (!FIXTURES && calendar && (!calendar.holidaysAt || now - calendar.holidaysAt > 55 * 60e3)) {
+  try {
+    const res = await fetch(CAL_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; personal-news-reader/1.0)' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const hol = (await res.json()).filter(e => /holiday/i.test(e.impact) || /bank holiday/i.test(e.title));
+    calendar.holidays = hol.map(e => ({ title: e.title, currency: e.country, time: e.date }));
+    calendar.holidaysAt = now;
+  } catch {}
 }
 
 // 5. Gold, US dollar and Nasdaq prices for the mini charts (every ~30 min)
