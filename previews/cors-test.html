@@ -2,14 +2,9 @@
 <script>
 // Checks which free live price sources a web page is allowed to read (used once to pick a source)
 const tests = {
-  tvScanGold: ['https://scanner.tradingview.com/symbol?symbol=OANDA:XAUUSD&fields=close,change,change_abs', {}],
-  tvScanPost: ['https://scanner.tradingview.com/global/scan', { method: 'POST', body: JSON.stringify({ symbols: { tickers: ['OANDA:XAUUSD', 'TVC:DXY', 'OANDA:NAS100USD'] }, columns: ['close', 'change', 'change_abs'] }) }],
-  tvScanCfd: ['https://scanner.tradingview.com/cfd/scan', { method: 'POST', body: JSON.stringify({ symbols: { tickers: ['OANDA:XAUUSD', 'TVC:DXY', 'OANDA:NAS100USD'] }, columns: ['close', 'change'] }) }],
-  goldApi: ['https://api.gold-api.com/price/XAU', {}],
-  swissGold: ['https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD', {}],
-  swissEur: ['https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/EUR/USD', {}],
-  binancePaxg: ['https://api.binance.com/api/v3/ticker/price?symbol=PAXGUSDT', {}],
-  yahooProxy: ['https://corsproxy.io/?url=' + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/NQ=F?range=1d&interval=5m'), {}],
+  ndqCandidates: ['https://scanner.tradingview.com/global/scan', { method: 'POST', body: JSON.stringify({ symbols: { tickers: ['OANDA:NAS100USD', 'PEPPERSTONE:NAS100', 'CAPITALCOM:US100', 'FOREXCOM:NSXUSD', 'NASDAQ:NDX', 'CME_MINI:NQ1!', 'TVC:NDQ', 'FX:NAS100', 'ICMARKETS:US100', 'BLACKBULL:NAS100'] }, columns: ['close', 'change', 'description'] }) }],
+  oandaNasGet: ['https://scanner.tradingview.com/symbol?symbol=OANDA:NAS100USD&fields=close,change', {}],
+  pepNasGet: ['https://scanner.tradingview.com/symbol?symbol=PEPPERSTONE:NAS100&fields=close,change', {}],
 };
 (async () => {
   const out = [];
