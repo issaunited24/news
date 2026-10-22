@@ -9,7 +9,7 @@ import { cluster, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJ
 
 const ROOT = new URL('../', import.meta.url);
 const WINDOW_H = 36;           // keep stories from the last 36 hours
-const MAX_ITEMS = 2500;
+const MAX_ITEMS = 9000;          // enough for the whole 36-hour window from ~170 sources
 const CAL_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 const FIXTURES = process.env.FIXTURES; // local testing: folder of saved feeds
 
@@ -173,7 +173,7 @@ const fresh = (await pool(config.sources, 8, async (src, i) => {
 
 // 2. Merge with what we saw before (keeps stories around after they drop off a feed, and remembers when we first saw them)
 const byId = new Map();
-for (const it of prevState.items) if (now - it.time <= WINDOW_H * 3600e3 && !isJunkOutlet(it.outlet) && !notEnglish(it.title)) byId.set(it.id, { ...it, outlet: normOutlet(it.outlet), biz: it.biz || (it.cats || []).includes('business') || it.category === 'business', cats: (it.cats || [it.category]).map(c => (c === 'business' ? 'forex' : c)) });
+for (const it of prevState.items) if (now - it.time <= WINDOW_H * 3600e3 && !isJunkOutlet(it.outlet) && !notEnglish(it.title)) byId.set(it.id, { ...it, summary: now - it.time > 3 * 3600e3 ? (it.summary || '').slice(0, 300) : it.summary, outlet: normOutlet(it.outlet), biz: it.biz || (it.cats || []).includes('business') || it.category === 'business', cats: (it.cats || [it.category]).map(c => (c === 'business' ? 'forex' : c)) });
 for (const it of fresh) {
   const old = byId.get(it.id);
   byId.set(it.id, { ...it, seen: old?.seen ?? now, cats: [...new Set([...(old?.cats || []), it.category])] });
@@ -453,11 +453,13 @@ const scorecard = {
 // 6. Save
 await mkdir(new URL('data/', ROOT), { recursive: true });
 const okCount = status.filter(s => s.ok).length;
+// Older small stories (one outlet, minor, not market-moving) are left out after 12 hours to keep the app's download light
+const keep = stories.filter(st => now - st.updatedAt < 12 * 3600e3 || st.fx || st.top || st.tier !== 'minor' || st.sources.length >= 1 || st.likes);
 const out = {
   updated: now,
   stats: { sources: status.length, working: okCount, items: items.length, stories: stories.length, justIn: stories.filter(s => s.justIn).length },
   categories: config.categories,
-  stories,
+  stories: keep,
   calendar,
   markets,
   scorecard,

@@ -28,7 +28,7 @@ export function cluster(items) {
     const counts = new Map();
     for (const t of toks[i]) {
       const list = index.get(t);
-      if (list.length > 60) continue; // very common word, not useful for matching
+      if (list.length > Math.max(60, items.length / 40)) continue; // very common word, not useful for matching
       for (const j of list) if (j > i) counts.set(j, (counts.get(j) || 0) + 1);
     }
     for (const [j, inter] of counts) {
