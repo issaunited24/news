@@ -163,6 +163,7 @@ button.title { text-align: left; width: 100%; cursor: pointer; }
 .fx-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .fx-body .title { margin-top: 0; font-size: 15px; }
 .why { font-size: 12px; line-height: 1.38; color: #8f89a3; }
+.drv { display: inline-block; font: 700 10.5px var(--label); letter-spacing: .12em; color: var(--ink-2); padding: 1px 6px; margin-right: 6px; border-radius: 4px; background: rgba(0,0,0,.4); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
 .curs { display: flex; gap: 4px; flex-wrap: wrap; }
 .cur { font: 600 10px var(--mono); padding: 2px 5px; border-radius: 4px; background: rgba(0,0,0,.35); color: var(--flat); }
 .cur.up { color: var(--up); }
@@ -364,6 +365,7 @@ const isNew = s => prevVisit && s.firstSeen > prevVisit;
 const isSaved = id => prefs.saved.some(x => x.id === id);
 
 /* ---------- Mini charts ---------- */
+const DRIVER = { war: 'CONFLICT', peace: 'PEACE', fed: 'FED / US DATA', earnings: 'EARNINGS', trade: 'TRADE', politics: 'US POLITICS', oil: 'OIL SHOCK', banking: 'BANKING', sanctions: 'SANCTIONS', bigtech: 'BIG TECH' };
 const DIR = { up: { c: 'var(--up)', hex: '#3ff5b0', a: '▲' }, down: { c: 'var(--down)', hex: '#ff5c86', a: '▼' }, flat: { c: 'var(--flat)', hex: '#8d86a8', a: '–' } };
 let chartId = 0;
 function sparkline(points, dir, conf) {
@@ -437,15 +439,14 @@ function card(s, tab, i) {
   const lv = level(s, tab);
   const vars = `--rgb: var(--${lv.k}); --t: var(--${lv.k}-t); animation-delay: ${Math.min(i, 8) * 40}ms`;
   if (tab === 'forex' && s.fx) {
-    const curs = (s.fx.currencies || []).filter(c => c.code !== 'USD' && c.code !== 'XAU' && c.dir !== 'unclear').map(c => `<span class="cur ${c.dir === 'up' ? 'up' : c.dir === 'down' ? 'down' : ''}">${esc(c.code)} ${DIR[c.dir]?.a || '–'}</span>`).join('');
+    const drv = DRIVER[s.fx.driver];
     return `<div class="mw ${lv.pulse ? 'pulse' : ''}" style="${vars}" data-id="${s.id}"><span class="under"></span>
       <article class="mc fx"><span class="bleed"></span><span class="seam"></span>
         <div class="lcd">${chartsFor(s.fx)}</div>
         <div class="fx-body">
           ${head(s, lv)}
           <button class="title" data-act="preview">${esc(s.title)}</button>
-          ${curs ? `<div class="curs">${curs}</div>` : ''}
-          <div class="why">${esc(s.fx.why)}</div>
+          <div class="why">${drv ? `<span class="drv">${drv}</span>` : ''}${esc(s.fx.why)}</div>
           ${foot(s, 'Forex')}
         </div>
       </article></div>`;
@@ -462,7 +463,7 @@ function card(s, tab, i) {
 /* ---------- Forex top: countdown, markets, calendar ---------- */
 function nextEvent() {
   const now = Date.now();
-  return (data?.calendar?.events || []).map(e => ({ ...e, t: Date.parse(e.time) })).filter(e => e.impact === 'high' && e.t > now).sort((a, b) => a.t - b.t)[0];
+  return (data?.calendar?.events || []).map(e => ({ ...e, t: Date.parse(e.time) })).filter(e => e.currency === 'USD' && e.impact === 'high' && e.t > now).sort((a, b) => a.t - b.t)[0];
 }
 function countdownText(t) {
   const s = Math.max(0, Math.round((t - Date.now()) / 1000));
@@ -487,7 +488,7 @@ function forexTop() {
     return `<div class="mkt"><span class="mkt-k">${label}</span><span class="mkt-v">${fmtPrice(key, it.last)}</span><span class="mkt-c" style="color:${col}">${ch == null ? 'no data' : `${ch > 0 ? '+' : ''}${ch.toFixed(2)}% · ${it.span?.startsWith('5') ? '5d' : '30d'}`}</span></div>`;
   }).join('');
   const now = Date.now();
-  const evs = (data?.calendar?.events || []).map(x => ({ ...x, t: Date.parse(x.time) })).filter(x => !Number.isNaN(x.t) && x.t > now - 3 * 3600e3 && (prefs.calAll || x.impact === 'high')).sort((a, b) => a.t - b.t).slice(0, prefs.calAll ? 40 : 8);
+  const evs = (data?.calendar?.events || []).map(x => ({ ...x, t: Date.parse(x.time) })).filter(x => x.currency === 'USD' && !Number.isNaN(x.t) && x.t > now - 3 * 3600e3 && (prefs.calAll || x.impact === 'high')).sort((a, b) => a.t - b.t).slice(0, prefs.calAll ? 40 : 8);
   const rows = evs.map(x => {
     const d = new Date(x.t);
     const nums = [x.actual ? `Act ${x.actual}` : '', x.forecast ? `Fcst ${x.forecast}` : '', x.previous ? `Prev ${x.previous}` : ''].filter(Boolean).join(' · ');
@@ -500,15 +501,15 @@ function forexTop() {
         <circle class="ring-dash" cx="23" cy="23" r="13" fill="none" stroke="rgba(255,204,102,.25)" stroke-width="1" stroke-dasharray="2 3"/>
       </svg>
       <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
-        <span class="next-k">${e ? 'NEXT HIGH-IMPACT EVENT' : 'CALENDAR'}</span>
-        <span class="next-t">${e ? `${esc(e.currency)} ${esc(e.title)}` : 'No more big events this week'}</span>
+        <span class="next-k">${e ? 'NEXT HIGH-IMPACT US EVENT' : 'US CALENDAR'}</span>
+        <span class="next-t">${e ? `${esc(e.currency)} ${esc(e.title)}` : 'No more big US events this week'}</span>
         <span class="next-s">${e ? [e.forecast ? `Forecast ${esc(e.forecast)}` : '', e.previous ? `Previous ${esc(e.previous)}` : ''].filter(Boolean).join(' · ') || `${dayFmt.format(new Date(e.t))} ${timeFmt.format(new Date(e.t))}` : 'Tap to see the week'}${e ? ' · tap for calendar' : ''}</span>
       </span>
       ${e ? `<span class="next-c" id="countdown" data-t="${e.t}">${countdownText(e.t)}</span>` : ''}
     </button>
     ${prefs.calOpen ? `<div class="cal">${rows || '<div class="ev"><span style="grid-column:1/-1" class="muted">Nothing left on the calendar this week.</span></div>'}<button class="cal-tog" id="calTog">${prefs.calAll ? 'Show high impact only' : 'Show medium impact too'}</button></div>` : ''}
     <div class="mkts">${mk}</div>
-    <p class="note">Charts: recent prices, then a dashed forecast from each story. Confidence is from simple rules, never a sure thing, and not financial advice.</p>`;
+    <p class="note">Only news likely to move gold, the dollar or the Nasdaq: conflicts, the Fed and US data, big earnings, trade, US politics, oil shocks. Charts show recent prices, then a dashed forecast. Confidence comes from simple rules, is never a sure thing, and isn't financial advice.</p>`;
 }
 
 /* ---------- Render ---------- */
@@ -628,7 +629,7 @@ function previewSheet(id) {
     ${head(s, lv)}
     <h2 class="pv-title">${esc(s.title)}</h2>
     ${s.summary ? `<p class="pv-sum">${esc(s.summary)}${s.summaryFrom ? ` <small>Summary via ${esc(s.summaryFrom)}</small>` : ''}</p>` : ''}
-    ${s.fx && tab === 'forex' ? `<div class="lcd wide">${chartsFor(s.fx)}</div><p class="pv-why">${esc(s.fx.why)}</p>` : ''}
+    ${s.fx && tab === 'forex' ? `<div class="lcd wide">${chartsFor(s.fx)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>` : ''}
     ${others.length ? `<div class="pv-k">Also covering · ${others.length}</div><div class="pv-chips">${chips}</div>` : ''}
     <div class="pv-actions">
       <button class="sq ${sv ? 'saved' : ''}" data-act="pvsave" data-id="${s.id}" aria-label="${sv ? 'Remove from saved' : 'Save story'}">${sv ? ICON.saved : ICON.save}</button>
@@ -653,7 +654,7 @@ function settingsSheet() {
     <textarea id="backupText" aria-label="Backup text">${esc(JSON.stringify({ boosted: prefs.boosted, muted: prefs.muted, hidden: prefs.hidden, saved: prefs.saved }))}</textarea>
     <div class="btns"><button class="btn" data-act="copyBackup">Copy backup</button><button class="btn" data-act="restore">Restore from text</button></div>
     <h4>How it works</h4>
-    <p class="muted">Glow color shows importance: red for breaking or high, gold for medium, cyan for low. Stories rise when many outlets cover them, when outlets put them in their top stories, and when they contain big-event words. On Forex, each story forecasts gold, the US dollar and the Nasdaq, with a 1–10 confidence score from simple rules (capped at 9, because nothing in markets is certain).</p>
+    <p class="muted">Glow color shows importance: red for breaking or high, gold for medium, cyan for low. Stories rise when many outlets cover them, when outlets put them in their top stories, and when they contain big-event words. The Forex tab shows only news likely to move gold, the US dollar or the Nasdaq (conflicts, the Fed and US data, big-company earnings, trade, US politics, oil shocks, banking stress), not reports of moves that already happened. Each story forecasts all three with a 1–10 confidence score from simple rules, capped at 9 because nothing in markets is certain.</p>
     ${mk ? `<p class="muted">Prices: ${esc(mk)}.</p>` : ''}
     <h4>Sources</h4>${srcs}`);
 }

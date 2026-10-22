@@ -3,7 +3,8 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { entries, all, first, textOf } from './xml.mjs';
-import { cluster, scoreStory, analyzeFx, calendarEvent, trustRank, isJunkOutlet, notEnglish, qualityAdjust } from './rules.mjs';
+import { marketCatalyst, isPriceRecap } from './markets.mjs';
+import { cluster, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
 const WINDOW_H = 36;           // keep stories from the last 36 hours
@@ -146,12 +147,16 @@ const stories = cluster(items).map(group => {
   const q = qualityAdjust(s.score, lead, new Set(group.map(g => g.outlet.toLowerCase())).size);
   s.score = q.score; s.tier = q.tier; s.reasons.push(...q.why);
   const cats = new Set(group.flatMap(g => g.cats));
-  cats.delete('forex'); // forex is only kept when the rules find a real currency angle (below)
-  const allText = group.map(g => g.title).join(' . ');
-  const fx = analyzeFx(`${lead.title} ${lead.summary}`, s.tier, new Set(group.map(g => g.outlet)).size) || null;
-  const fromFxFeed = group.some(g => g.cats.includes('forex'));
-  if (fx && fx.strong) cats.add('forex');
-  if (fx && cats.has('forex') && fx.impact === 'high' && s.tier === 'minor') s.tier = 'notable';
+  const fromFxFeed = cats.has('forex');
+  cats.delete('forex'); // the Forex tab only gets stories likely to MOVE gold, the dollar or the Nasdaq
+  const outletCount = new Set(group.map(g => g.outlet)).size;
+  const text = `${lead.title} ${lead.summary}`;
+  const fx = marketCatalyst(lead.title, text, { policy: policyOf(text) }, s.tier, outletCount);
+  if (fx) cats.add('forex');
+  if (fx && fx.impact === 'high' && s.tier === 'minor') s.tier = 'notable';
+  // Price recaps and chart pieces from forex sites ("Gold rises...", "EUR/USD forecast") are dropped entirely
+  if (!fx && fromFxFeed && !cats.size && isPriceRecap(lead.title)) return null;
+  if (!fx && fromFxFeed && !cats.size) return null;
   const firstSeen = Math.min(...group.map(g => g.seen ?? now));
   const published = group[0].time;
   const ageMin = (now - Math.min(firstSeen, published)) / 60000;
@@ -162,10 +167,10 @@ const stories = cluster(items).map(group => {
     id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: best.summary, summaryFrom: best.from, image: best.image,
     published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats],
     score: s.score, tier: s.tier, breaking, why: s.reasons, sources: others,
-    fx: cats.has('forex') && fx ? { impact: fx.impact, currencies: fx.currencies, why: fx.why, assets: fx.assets } : null,
-    _all: allText.length,
+    fx: fx ? { impact: fx.impact, why: fx.why, assets: fx.assets, driver: fx.driver } : null,
+    _all: 0,
   };
-}).map(({ _all, ...s }) => s)
+}).filter(Boolean).map(({ _all, ...s }) => s)
   .sort((a, b) => b.updatedAt - a.updatedAt);
 
 // 4. Economic calendar (at most once an hour; that site asks for gentle use)
@@ -174,7 +179,7 @@ if (!FIXTURES && (!calendar || now - calendar.fetched > 55 * 60e3)) {
   try {
     const res = await fetch(CAL_URL, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; personal-news-reader/1.0)' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const events = (await res.json()).filter(e => /high|medium/i.test(e.impact)).map(calendarEvent);
+    const events = (await res.json()).filter(e => /high|medium/i.test(e.impact) && e.country === 'USD').map(calendarEvent);
     calendar = { fetched: now, ok: true, events };
   } catch (e) {
     calendar = { ...(calendar || { events: [] }), ok: false, error: String(e.message || e).slice(0, 120), fetched: calendar?.fetched ?? 0 };

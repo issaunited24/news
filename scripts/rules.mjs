@@ -129,6 +129,14 @@ const OIL_DOWN_RE = /\b(oil|crude|brent|wti)\b(?:\s+\S+){0,2}?\s+(falls|fell|dro
 const HIGH_IMPACT_RE = /\b(rate decision|(raises?|cuts?|hikes?|lowers?|holds?|keeps?) (interest )?rates|rates? (hike|cut)s?|intervention|intervene|nonfarm|non-farm|(?:jobs|payrolls) (?:report|data)|cpi|consumer prices|inflation (data|report|rate)|gdp|emergency meeting)\b/i;
 const MED_IMPACT_RE = /\b(fed|fomc|federal reserve|ecb|european central bank|boe|bank of england|boj|bank of japan|snb|swiss national bank|rba|reserve bank of australia|rbnz|pboc|bank of canada|no (more|further) (rate )?(hikes?|cuts?)|powell|lagarde|bailey|ueda|minutes|pmi|retail sales|jobs|unemployment|jobless|yields?|tariffs?|trade war|opec)\b/i;
 
+export function policyOf(text) {
+  if (NO_MORE_HIKES_RE.test(text)) return 'dovish';
+  if (NO_MORE_CUTS_RE.test(text)) return 'hawkish';
+  if (HOLD_RE.test(text)) return 'hold';
+  const dove = DOVISH_RE.test(text), hawk = HAWKISH_RE.test(text);
+  return dove && hawk ? 'mixed' : dove ? 'dovish' : hawk ? 'hawkish' : null;
+}
+
 export function analyzeFx(text, tier, outlets = 1) {
   const found = new Map(); // code -> { dir, why }
   for (const [code, re] of CURRENCIES) if (re.test(text)) found.set(code, { dir: null, why: null });
