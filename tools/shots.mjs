@@ -6,7 +6,7 @@ const pg = await ctx.newPage();
 await pg.goto('https://issaunited24.github.io/news/?t=' + Date.now(), { waitUntil: 'networkidle' });
 await pg.waitForTimeout(3000);
 console.log('App version:', await pg.evaluate(() => APP_VERSION));
-for (const t of ['top', 'justin', 'world', 'us', 'forex', 'tech', 'sports', 'ent', 'sci']) {
+for (const t of ['forex', 'world', 'us', 'sports']) {
   await pg.click(`#tabs [data-tab=${t}]`); await pg.waitForTimeout(3500);
   await pg.evaluate(() => window.scrollTo(0, 0)); await pg.waitForTimeout(800);
   await pg.screenshot({ path: `out/${t}.png` });

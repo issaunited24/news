@@ -224,7 +224,7 @@ const stories = cluster(items).map(group => {
   const justIn = ageMin <= 90 && justInOk(lead.outlet, lead.title, cats);
   const top = cls.top || (justIn && cls.urgent && trust <= 22);
   if (fx) cats.add('forex');
-  if (!fx && fromBiz && !isPriceRecap(lead.title)) cats.add('forex');
+  // (business news reaches Forex only when it's a real market catalyst)
   // Price recaps and chart pieces from forex sites ("Gold rises...", "EUR/USD forecast") are dropped entirely
   if (!fx && fromFxFeed && !cats.size) return null;
   const seenOutlets = new Set([lead.outlet]);

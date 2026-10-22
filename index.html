@@ -11,6 +11,8 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com">
+<link rel="preconnect" href="https://wsrv.nl">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 /* Briefly · Cinema
@@ -38,24 +40,21 @@ a { color: inherit; text-decoration: none; }
 
 /* The backdrop: the tab's photograph, filling the screen behind everything */
 .bd { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: #0a0f22; }
-.bd img { position: absolute; inset: -4%; width: 108%; height: 108%; object-fit: cover; opacity: 0; transition: opacity 1.1s ease, transform 1.1s ease; transform: scale(1.08); filter: saturate(1.15) brightness(1.05); }
-.bd img.on { opacity: 1; transform: scale(1); animation: pan 30s ease-in-out infinite alternate; }
-@keyframes pan { to { transform: scale(1.08) translate3d(-2%, 1%, 0); } }
-.bd::after { content: ""; position: absolute; inset: 0; transition: background 1s;
+.bd img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .7s ease; }
+.bd img.on { opacity: 1; }
+.bd::after { content: ""; position: absolute; inset: 0;
   background:
-    linear-gradient(180deg, rgba(5,7,15,.42) 0%, rgba(5,7,15,.12) 22%, rgba(5,7,15,.3) 40%, rgba(5,7,15,calc(.62 + var(--s, 0) * .26)) 60%, rgba(5,7,15,.9) 86%),
-    radial-gradient(80% 50% at 50% 34%, rgba(var(--tint),.16), transparent 70%),
-    linear-gradient(0deg, rgba(10,16,40,.6), rgba(10,16,40,0) 60%),
-    linear-gradient(rgba(5,7,15,calc(var(--s, 0) * .74)), rgba(5,7,15,calc(var(--s, 0) * .74))); }
-.grain { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+    linear-gradient(180deg, rgba(5,7,15,.42) 0%, rgba(5,7,15,.12) 22%, rgba(5,7,15,.3) 40%, rgba(5,7,15,.62) 60%, rgba(5,7,15,.9) 86%),
+    linear-gradient(0deg, rgba(10,16,40,.6), rgba(10,16,40,0) 60%); }
+/* darkens the photo as you scroll into the news (only its opacity changes, which is cheap) */
+.dim { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: rgba(5,7,15,.8); opacity: 0; will-change: opacity; }
 .wrap { position: relative; z-index: 2; max-width: 640px; margin: 0 auto; }
 
 /* Top bar */
 .bar { display: flex; align-items: center; gap: 10px; padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px 0 20px; }
 .logo { font: 600 21px var(--serif); letter-spacing: -.02em; }
 .logo i { font-style: italic; color: rgb(var(--tint)); transition: color .8s; }
-.live { display: flex; align-items: center; gap: 6px; font: 500 10px var(--mono); color: var(--ink2); padding: 4px 9px; border-radius: 999px; background: rgba(5,7,15,.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+.live { display: flex; align-items: center; gap: 6px; font: 500 10px var(--mono); color: var(--ink2); padding: 4px 9px; border-radius: 999px; background: rgba(5,7,15,.45); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
 .live.stale { color: #ffc463; }
 .ping { position: relative; width: 6px; height: 6px; border-radius: 50%; background: #ff3d6a; }
 .ping::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #ff3d6a; animation: ping 1.8s cubic-bezier(0,0,.2,1) infinite; }
@@ -66,25 +65,25 @@ a { color: inherit; text-decoration: none; }
 .ib.on { color: #fff; }
 .ib.on::after { content: ""; position: absolute; bottom: 6px; width: 4px; height: 4px; border-radius: 50%; background: rgb(var(--tint)); box-shadow: 0 0 6px rgb(var(--tint)); }
 .ib .badge { position: absolute; top: 6px; right: 5px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: rgb(var(--tint)); color: #05070f; font: 700 9.5px/15px var(--ui); text-align: center; }
-.search { display: flex; align-items: center; gap: 8px; margin: 10px 16px 0; height: 44px; padding: 0 6px 0 12px; border-radius: 14px; background: rgba(5,7,15,.6); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: inset 0 0 0 1px rgba(var(--tint),.45); color: var(--mute); }
+.search { display: flex; align-items: center; gap: 8px; margin: 10px 16px 0; height: 44px; padding: 0 6px 0 12px; border-radius: 14px; background: rgba(5,7,15,.88); box-shadow: inset 0 0 0 1px rgba(var(--tint),.45); color: var(--mute); }
 .search input { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--ink); font: 500 15px var(--ui); }
 .search input::placeholder { color: var(--faint); }
 .search button { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: var(--mute); }
 
 /* The title: the tab's name cut out of its photograph */
-.mast { position: relative; isolation: isolate; padding: 15vh 18px 18px; overflow: hidden; }
-.mast::before { content: ""; position: absolute; left: 0; right: 0; top: 11vh; bottom: 0; z-index: -1; backdrop-filter: blur(5px) brightness(.62) saturate(.9); -webkit-backdrop-filter: blur(5px) brightness(.62) saturate(.9); -webkit-mask-image: linear-gradient(180deg, transparent, #000 30%, #000 75%, transparent); mask-image: linear-gradient(180deg, transparent, #000 30%, #000 75%, transparent); }
+.mast { position: relative; isolation: isolate; padding: 19vh 18px 22px; overflow: hidden; }
+.mast::before { content: ""; position: absolute; left: 0; right: 0; top: 8vh; bottom: 0; z-index: -1; background: radial-gradient(90% 60% at 30% 60%, rgba(5,7,15,.55), rgba(5,7,15,0) 70%); }
 .mast > * { position: relative; }
 .kick { font: 600 10.5px var(--mono); letter-spacing: .22em; color: rgb(var(--tint)); text-transform: uppercase; transition: color .8s; text-shadow: 0 1px 10px rgba(0,0,0,.6); }
 .word { display: block; margin: 6px 0 0 -4px; font: 900 100px/.84 var(--ui); letter-spacing: -.055em; text-transform: uppercase; white-space: nowrap;
   background-size: cover; background-position: center 40%; -webkit-background-clip: text; background-clip: text; color: transparent;
-  -webkit-text-stroke: 1px rgba(255,255,255,.28); filter: brightness(1.5) saturate(1.2) drop-shadow(0 0 1px rgba(0,0,0,.9)) drop-shadow(0 0 22px rgba(var(--tint),.4)) drop-shadow(0 6px 22px rgba(0,0,0,.6)); animation: pour 1s cubic-bezier(.2,.8,.2,1) both; }
+  -webkit-text-stroke: 1px rgba(255,255,255,.28); filter: brightness(1.5) saturate(1.2) drop-shadow(0 4px 16px rgba(0,0,0,.55)); animation: pour 1s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes pour { from { opacity: 0; letter-spacing: .02em; } }
 .mast p { margin: 12px 0 0; max-width: 34ch; color: var(--ink2); font-size: 14px; text-shadow: 0 1px 12px rgba(0,0,0,.7); }
 
 /* Tabs */
 .tabs { position: sticky; top: 0; z-index: 10; display: flex; gap: 22px; padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px 12px; overflow-x: auto; scrollbar-width: none;
-  background: linear-gradient(180deg, rgba(5,7,15,.92), rgba(5,7,15,.62) 75%, rgba(5,7,15,0)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+  background: linear-gradient(180deg, rgba(5,7,15,.97), rgba(5,7,15,.9) 75%, rgba(5,7,15,0)); }
 .tabs::-webkit-scrollbar { display: none; }
 .tab { position: relative; flex: none; padding: 6px 0; font-weight: 600; font-size: 14.5px; color: var(--mute); white-space: nowrap; transition: color .3s; }
 .tab::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 2px; background: rgb(var(--tint)); box-shadow: 0 0 12px rgba(var(--tint),.9); transform: scaleX(0); transition: transform .35s cubic-bezier(.2,.8,.2,1), background .8s; }
@@ -106,16 +105,23 @@ main { touch-action: pan-y; will-change: transform; }
 .feed { padding: 0 20px 10px; }
 .mw { position: relative; animation: up .6s cubic-bezier(.2,.8,.2,1) both; }
 .feed.settled .mw, .feed.settled .poster { animation: none; }
+.feed > .mw { content-visibility: auto; contain-intrinsic-size: auto 150px; }
 @keyframes up { from { opacity: 0; transform: translateY(14px); } }
 .st { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; padding: 14px 0; }
 .st + .st::before, .divider + .st::before { content: ""; position: absolute; top: 0; left: 126px; right: 0; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,.1), transparent); }
 .ph { display: block; width: 112px; height: 84px; border-radius: 12px; overflow: hidden; background: #111833; box-shadow: 0 12px 24px -12px rgba(0,0,0,.9); }
-.ph img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(1.05) contrast(1.03); }
+.ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tx { min-width: 0; }
 .meta { display: flex; flex-wrap: wrap; row-gap: 5px; align-items: center; gap: 8px; font: 500 10.5px var(--mono); color: var(--mute); letter-spacing: .04em; min-width: 0; }
 .meta .o { color: rgb(var(--tint)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; transition: color .8s; }
 .meta .ag { white-space: nowrap; }
 .title { display: block; width: 100%; margin-top: 4px; text-align: left; font: 600 16px/1.26 var(--serif); letter-spacing: -.012em; color: var(--ink); text-wrap: pretty; }
+.title .tl { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+/* Cards stay about the same height: long headlines get a one-line summary, short ones get two */
+.st { min-height: 156px; align-content: start; }
+.st.long .sum, .fx.long .why { -webkit-line-clamp: 1; }
+.fx .why { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fx { min-height: 176px; align-content: start; }
 .sum { margin: 4px 0 0; font-size: 12.5px; line-height: 1.42; color: var(--mute); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .live-b { flex: none; color: #fff; background: #e8324f; padding: 1px 6px; border-radius: 4px; font-weight: 600; box-shadow: 0 0 12px rgba(232,50,79,.7); }
 .pill { flex: none; font: 600 9px var(--mono); letter-spacing: .08em; padding: 2px 6px; border-radius: 4px; color: #05070f; background: #d8d2ff; }
@@ -150,7 +156,7 @@ main { touch-action: pan-y; will-change: transform; }
 
 /* Forex: the market stage (one big chart, switch between gold, dollar and Nasdaq) */
 .prism { margin: 6px 16px 0; padding: 14px; border-radius: 28px;
-  background: linear-gradient(135deg, rgba(255,255,255,.11), rgba(255,255,255,.03)), rgba(10,16,34,.55); backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  background: linear-gradient(135deg, rgba(255,255,255,.11), rgba(255,255,255,.03)), rgba(12,18,40,.88);
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.2), 0 0 50px -16px rgba(var(--c),.55), 0 30px 50px -30px #000; transition: box-shadow .5s; }
 .pick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .pk { padding: 9px 10px; border-radius: 18px; text-align: left; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); transition: .3s; min-width: 0; }
@@ -168,7 +174,7 @@ main { touch-action: pan-y; will-change: transform; }
 
 /* Forex: sessions, next event, calendar, scorecard */
 .fxmods { padding: 10px 16px 0; display: flex; flex-direction: column; gap: 10px; }
-.glass { border-radius: 20px; background: rgba(10,16,34,.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+.glass { border-radius: 20px; background: rgba(10,16,34,.86); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
 .sess { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .ss-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .ss { font: 600 10.5px var(--mono); letter-spacing: .1em; text-align: center; padding: 6px 0; border-radius: 999px; color: var(--faint); background: rgba(255,255,255,.05); }
@@ -208,7 +214,7 @@ main { touch-action: pan-y; will-change: transform; }
 
 /* Forex news: the importance light (red / gold / cyan) lives only here */
 .fx { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; margin: 0 0 12px; padding: 12px 14px 8px 16px; border-radius: 18px;
-  background: linear-gradient(90deg, rgba(var(--g),.12), rgba(12,18,40,.7) 40%), rgba(10,14,32,.75); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  background: linear-gradient(90deg, rgba(var(--g),.12), rgba(12,18,40,.7) 40%), rgba(10,14,32,.9);
   box-shadow: inset 0 0 0 1px rgba(var(--g),.22), 0 0 30px -12px rgba(var(--g),.7); }
 .feed .fx:first-child { margin-top: 10px; }
 .fx::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 3px; background: rgb(var(--g)); box-shadow: 0 0 10px rgb(var(--g)), 0 0 26px rgba(var(--g),.8); }
@@ -327,7 +333,7 @@ textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: va
 </head>
 <body data-view="top">
 <div class="bd" aria-hidden="true"><img id="bdA" alt=""><img id="bdB" alt=""></div>
-<div class="grain" aria-hidden="true"></div>
+<div class="dim" id="dim" aria-hidden="true"></div>
 
 <div class="wrap">
   <div class="bar">
@@ -365,18 +371,18 @@ textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: va
 
 <script>
 const TABS = [
+  { id: 'forex', name: 'Forex' },
   { id: 'top', name: 'Top' },
   { id: 'justin', name: 'Just in' },
   { id: 'world', name: 'World' },
   { id: 'us', name: 'U.S.' },
-  { id: 'forex', name: 'Forex' },
-  { id: 'tech', name: 'Tech & AI' },
-  { id: 'sports', name: 'Sports' },
-  { id: 'ent', name: 'Entertainment' },
   { id: 'sci', name: 'Science' },
+  { id: 'tech', name: 'Tech & AI' },
+  { id: 'ent', name: 'Entertainment' },
+  { id: 'sports', name: 'Sports' },
 ];
-const PAGE = 30;
-const APP_VERSION = '2026-10-22.12';
+const PAGE = 20;
+const APP_VERSION = '2026-10-22.13';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -390,11 +396,11 @@ const hashN = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.cha
 
 /* ---------- Settings saved on this phone ---------- */
 const KEY = 'briefly.v1';
-const defaults = { tab: 'top', important: true, hidden: [], muted: [], boosted: [], calAll: false, saved: [], lastVisit: 0, pick: 'gold' };
+const defaults = { tab: 'forex', important: true, hidden: [], muted: [], boosted: [], calAll: false, saved: [], lastVisit: 0, pick: 'gold' };
 let prefs = { ...defaults };
 try { prefs = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch {} };
-if (!TABS.some(t => t.id === prefs.tab)) prefs.tab = 'top';
+prefs.tab = TABS[0].id; // the app always opens on the first tab (Forex)
 if (!['gold', 'usd', 'ndq'].includes(prefs.pick)) prefs.pick = 'gold';
 const prevVisit = prefs.lastVisit || 0;            // used for the "new since your last visit" marker
 const markVisit = () => { prefs.lastVisit = Date.now(); save(); };
@@ -497,7 +503,7 @@ const TOPICS = [
   [/white house|trump|president|vance|biden|oval office|executive order/i, ['us6', 'wh1', 'jin3']],
 ];
 const CAT_PHOTOS = { top: ['top1', 'top2', 'top3', 'top4'], justin: ['jin1', 'jin2', 'jin3', 'jin4'], world: ['wor1', 'wor2', 'wor3', 'wor4', 'wor5', 'wor6'], us: ['us1', 'us2', 'us4', 'us5', 'us6', 'wh1'], forex: ['fx1', 'fx2', 'fx3', 'fx4', 'fx5', 'fx6'], tech: ['tec1', 'tec2', 'tec3', 'tec4', 'tec5', 'tec6'], sports: ['bb1', 'bb2', 'spt1', 'spt2', 'nfl1'], ent: ['mus1', 'mus2', 'mov1', 'hol1', 'cur1'], sci: ['neb1', 'neb2', 'gal1', 'dna1', 'dna2', 'lab1'] };
-const pic = (key, w) => U(P[key]) + w;
+const pic = (key, w) => U(P[key]) + w + (w <= 600 ? `&h=${Math.round(w * .78)}` : '');
 const heroPic = (view, which, w) => pic((HERO[view] || HERO.top)[which], w);
 const catOf = s => (s.categories || []).find(c => c !== 'forex') || (s.categories || [])[0] || 'world';
 function topicPic(s, w) {
@@ -506,11 +512,18 @@ function topicPic(s, w) {
   const list = t ? t[1] : CAT_PHOTOS[catOf(s)] || CAT_PHOTOS.world;
   return pic(list[h % list.length], w);
 }
+// Outlet photos are often huge; a free image service shrinks them to thumbnail size so they load fast
+const small = (url, w, h) => `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&h=${h}&fit=cover&a=attention&output=webp&q=72`;
 function thumb(s, w = 300) {
   const fb = topicPic(s, w);
-  return s.image ? { src: s.image, fb } : { src: fb, fb: null };
+  return s.image ? { src: small(s.image, w, Math.round(w * .78)), fb } : { src: fb, fb: null };
 }
-const img = (t, cls = '') => `<img class="${cls}" src="${esc(t.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${t.fb ? ` onerror="this.onerror=null;this.src='${esc(t.fb)}'"` : ` onerror="this.style.visibility='hidden'"`}>`;
+// Load every tab's header photos in the background, so switching tabs never waits for them
+function preloadHeroes() {
+  const go = () => TABS.forEach(t => { [0, 1].forEach(i => { const im = new Image(); im.decoding = 'async'; im.src = heroPic(t.id, i, i ? 900 : 1000); }); });
+  'requestIdleCallback' in window ? requestIdleCallback(go, { timeout: 2500 }) : setTimeout(go, 1500);
+}
+const img = (t, cls = '') => `<img class="${cls}" width="240" height="187" src="${esc(t.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${t.fb ? ` onerror="this.onerror=null;this.src='${esc(t.fb)}'"` : ` onerror="this.style.visibility='hidden'"`}>`;
 
 /* ---------- Load ---------- */
 // The robot publishes fresh news to the "live" branch every few minutes; the website copy is an hourly backup.
@@ -552,7 +565,7 @@ function important(s, tab) {
   if (tab === 'top') return !!s.top;
   if (tab === 'us' && s.flags?.some(f => f === 'viral' || f === 'culture' || f === 'crime' || f === 'stream')) return true;
   if (tab === 'world' && s.flags?.includes('disaster') && (s.sources.length >= 1 || s.score >= 25)) return true;
-  if (tab === 'forex') return !!s.fx && s.fx.impact !== 'low' || s.tier === 'major';
+  if (tab === 'forex') return !!s.fx && (s.fx.impact !== 'low' || s.breaking);
   const f = s.flags || [];
   // Sports: NBA, NFL and UFC from known outlets; any other sport only when it's a big moment
   if (tab === 'sports') return (f.includes('big3') && (s.trusted || s.tier !== 'minor')) || f.includes('bigsport') || s.tier === 'major' || prefs.boosted.includes(s.outlet);
@@ -567,6 +580,7 @@ function storiesFor(tab, impOnly) {
   // Just in: every fresh story from a trusted newsroom, newest first. It only reaches the other tabs once it proves important.
   if (tab === 'justin') return list.filter(justIn).sort((a, b) => Math.min(b.published, b.firstSeen) - Math.min(a.published, a.firstSeen));
   if (tab === 'top') list = list.filter(s => s.top || s.tier === 'major' || s.breaking);
+  else if (tab === 'forex') list = list.filter(s => s.fx); // only news that can move gold, the dollar or the Nasdaq
   else list = list.filter(s => s.categories.includes(tab));
   if (impOnly) list = list.filter(s => important(s, tab));
   return tab === 'top' ? [...list].sort((a, b) => rankScore(b) - rankScore(a)) : [...list].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -623,7 +637,7 @@ function forecasts(fx, w = 70, h = 15) {
     const f = a[key] || { dir: 'flat' }, col = DIRC[f.dir] || DIRC.flat, n = f.conf || 0;
     const word = f.dir === 'up' ? 'up' : f.dir === 'down' ? 'down' : 'no clear move';
     return `<div role="img" aria-label="${label} forecast ${word}${n ? `, confidence ${n} of 10` : ''}"><div class="r"><span>${label} <span style="color:${col}">${f.dir === 'up' ? '▲' : f.dir === 'down' ? '▼' : '–'}</span></span><span style="color:${n >= 7 ? '#fff' : n ? 'var(--ink2)' : 'var(--faint)'}">${n ? `${n}/10` : '—'}</span></div>
-      ${spark(m[key]?.points?.map(p => p[1]), { w, h, color: col, dir: f.dir === 'flat' ? null : f.dir, conf: n, n: 22, stroke: 1.2, dotR: 1.4, glow: 1.1, fill: .32 })}</div>`;
+      ${spark(m[key]?.points?.map(p => p[1]), { w, h, color: col, dir: f.dir === 'flat' ? null : f.dir, conf: n, n: 22, stroke: 1.2, dotR: 1.4, glow: 0, fill: .32 })}</div>`;
   }).join('');
 }
 
@@ -653,27 +667,27 @@ function foot(s, cat) {
 }
 const catName = s => (TABS.find(t => t.id === catOf(s)) || { name: catOf(s) }).name;
 function card(s, tab, i) {
-  const delay = `animation-delay:${Math.min(i, 8) * 45}ms`, read = readSet.has(s.id) ? 'read' : '';
+  const delay = `animation-delay:${Math.min(i, 8) * 45}ms`, read = readSet.has(s.id) ? 'read' : '', long = s.title.length > 64 ? 'long' : '';
   if (tab === 'forex' && s.fx) {
     const lv = level(s), drv = DRIVER[s.fx.driver];
-    return `<div class="mw fx ${lv.pulse ? 'pulse' : ''} ${read}" style="--g:var(--${lv.k});${delay}" data-id="${s.id}">
+    return `<div class="mw fx ${lv.pulse ? 'pulse' : ''} ${read} ${long}" style="--g:var(--${lv.k});${delay}" data-id="${s.id}">
       <div class="mini">${forecasts(s.fx)}</div>
       <div class="tx">${meta(s, lv)}
-        <button class="title" data-act="preview">${esc(s.title)}</button>
+        <button class="title" data-act="preview"><span class="tl">${esc(s.title)}</span></button>
         <div class="why">${drv ? `<span class="drv">${drv}</span>` : ''}${esc(s.fx.why)}</div>
         ${foot(s, 'Forex')}
       </div></div>`;
   }
-  return `<div class="mw st ${read}" style="${delay}" data-id="${s.id}">
-    <button class="ph" data-act="preview" aria-label="Open story">${img(thumb(s, 260))}</button>
+  return `<div class="mw st ${read} ${long}" style="${delay}" data-id="${s.id}">
+    <button class="ph" data-act="preview" aria-label="Open story">${img(thumb(s, 240))}</button>
     <div class="tx">${meta(s)}
-      <button class="title" data-act="preview">${esc(s.title)}</button>
+      <button class="title" data-act="preview"><span class="tl">${esc(s.title)}</span></button>
       ${s.summary ? `<p class="sum">${esc(s.summary)}</p>` : ''}
       ${foot(s, catName(s))}
     </div></div>`;
 }
 function poster(s, i) {
-  return `<button class="poster mw ${readSet.has(s.id) ? 'read' : ''}" data-act="preview" data-id="${s.id}" style="animation-delay:${i * 70}ms">${img(thumb(s, 500))}<span class="num">0${i + 1}</span>
+  return `<button class="poster mw ${readSet.has(s.id) ? 'read' : ''}" data-act="preview" data-id="${s.id}" style="animation-delay:${i * 70}ms">${img(thumb(s, 380))}<span class="num">0${i + 1}</span>
     <span class="in"><span class="meta">${s.breaking ? '<span class="live-b">LIVE</span>' : ''}<span class="o">${esc(s.outlet)}</span><span class="ag">${ago(s.published)}</span></span><h3>${esc(s.title)}</h3></span></button>`;
 }
 
@@ -843,7 +857,7 @@ function backdrop(key) {
   if (key === bdKey) return; bdKey = key;
   const a = $(bdFlip ? 'bdA' : 'bdB'), b = $(bdFlip ? 'bdB' : 'bdA');
   a.onload = () => { a.classList.add('on'); b.classList.remove('on'); };
-  a.src = heroPic(key, 0, 1600);
+  a.src = heroPic(key, 0, 1000);
   if (a.complete && a.naturalWidth) a.onload();
   bdFlip = !bdFlip;
 }
@@ -853,20 +867,20 @@ function renderMast(count) {
   backdrop(key);
   document.body.dataset.view = key;
   const name = view === 'feed' ? TABS.find(t => t.id === key).name : view === 'saved' ? 'Saved' : 'Search';
-  const [k, p] = COPY[key];
   const W = Math.min(window.innerWidth, 640) - 30;
   const size = Math.round(Math.min(118, W / (name.length * 0.66)));
-  const ph = heroPic(key, 1, 1400);
-  const html = `<div class="kick">${k}${count != null ? ` · ${count} ${count === 1 ? 'story' : 'stories'}` : ''}</div>
-    <h1 class="word" style="font-size:${size}px;background-image:linear-gradient(180deg, rgba(255,255,255,.34), rgba(var(--tint),.26)), url('${ph}'), linear-gradient(120deg, rgb(var(--tint)), #fff 60%, rgb(var(--tint)))">${esc(name)}</h1>
-    <p>${p}</p>`;
-  if (mastKey === key + count) return;
-  const sameTab = mastKey.startsWith(key);
-  mastKey = key + count;
-  if (sameTab) { const kk = $('mast').querySelector('.kick'); if (kk) { kk.outerHTML = html.split('</div>')[0] + '</div>'; return; } }
+  const ph = heroPic(key, 1, 900);
+  const html = `<h1 class="word" style="font-size:${size}px;background-image:linear-gradient(180deg, rgba(255,255,255,.34), rgba(var(--tint),.26)), url('${ph}'), linear-gradient(120deg, rgb(var(--tint)), #fff 60%, rgb(var(--tint)))">${esc(name)}</h1>`;
+  if (mastKey === key + size) return; // unchanged: don't rebuild (keeps tab switches light)
+  mastKey = key + size;
   $('mast').innerHTML = html;
 }
-addEventListener('scroll', () => document.body.style.setProperty('--s', Math.min(1, scrollY / 500).toFixed(2)), { passive: true });
+// Darken the backdrop as you scroll; at most once per frame, and only the overlay's opacity changes
+let dimQueued = false, dimLast = -1;
+addEventListener('scroll', () => {
+  if (dimQueued) return; dimQueued = true;
+  requestAnimationFrame(() => { dimQueued = false; const v = Math.round(Math.min(1, scrollY / 500) * 50) / 50; if (v !== dimLast) { dimLast = v; $('dim').style.opacity = v; } });
+}, { passive: true });
 
 /* ---------- Render ---------- */
 function renderTabs() {
@@ -1330,6 +1344,7 @@ addEventListener('resize', () => { mastKey = ''; if (data) renderMast(view === '
 render();
 load();
 checkVersion();
+preloadHeroes();
 </script>
 </body>
 </html>
