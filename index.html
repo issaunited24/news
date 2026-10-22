@@ -450,6 +450,7 @@ const P = {
   hlt1: '1519494026892-80bbd2d6fd0d', hlt2: '1576091160550-2173dba999ef',
   rus1: '1513326738677-b964603b136d', rus2: '1547448415-e9f5b28e570d', chn1: '1535356795203-50b2eb73f96c',
   dip1: '1590274853856-f22d5ee3d228', dip2: '1722073650943-fbebd9d244e1',
+  // note: nfl1 is actually a basketball arena (it was chosen for the Sports header)
   bb1: '1765924705648-9a0731ac5202', bb2: '1767016697775-001518392206', bb3: '1533923156502-be31530547c4', ufc1: '1545191050-96042d612b1f', nfl1: '1626003573503-2e088d82c647', nfl2: '1566577739112-5180d4bf9390',
   hol1: '1609924211018-5526c55bad5b', hol2: '1506184106046-1e6e90c0222d', cur1: '1514306191717-452ec28c7814',
   neb1: '1462332420958-a05d1e002413', neb2: '1504333638930-c8787321eee0', gal1: '1610296669228-602fa827fc1f', dna1: '1633167606207-d840b5070fc2', dna2: '1637929476734-bd7f5f78e40a', lab1: '1630959305606-3123a081dada',
@@ -461,8 +462,8 @@ const HERO = { // backdrop, title fill
 };
 // When a story has no photo of its own, pick one that matches what it's about
 const TOPICS = [
-  [/\bnba\b|basketball|lakers|celtics|warriors|knicks|lebron|curry|jokic|wembanyama|giannis|wnba/i, ['bb1', 'bb2', 'bb3']],
-  [/\bnfl\b|super bowl|quarterback|touchdown|chiefs|eagles|cowboys|patriots|packers|49ers|steelers|ravens|bills\b|mahomes/i, ['nfl1', 'nfl2']],
+  [/\bnba\b|basketball|lakers|celtics|warriors|knicks|lebron|curry|jokic|wembanyama|giannis|wnba/i, ['bb1', 'bb2', 'bb3', 'nfl1']],
+  [/\bnfl\b|super bowl|quarterback|touchdown|chiefs|eagles|cowboys|patriots|packers|49ers|steelers|ravens|bills\b|mahomes/i, ['nfl2']],
   [/\bufc\b|\bmma\b|octagon|title fight|knockout|boxing|dana white/i, ['ufc1']],
   [/cricket|innings|test series|football|soccer|\bnba\b|\bnfl\b|\bmlb\b|nhl|grand prix|formula (1|one)|\bf1\b|tennis|golf|olympic|world cup|premier league|champions league|super bowl|playoffs?|quarterback|striker|coach\b|match\b|tournament/i, ['spt1', 'spt2']],
   [/earthquake|quake|tsunami|aftershock/i, ['qk1', 'qk2', 'qk3']],
