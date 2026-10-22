@@ -1,11 +1,11 @@
 // Collects news from every feed in feeds.json, groups and ranks it, and writes data/news.json for the app.
-// Runs on GitHub's free robot (GitHub Actions) every ~10 minutes.
+// Runs on GitHub's free robot (GitHub Actions) every few minutes (see scripts/loop.sh).
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { entries, all, first, textOf } from './xml.mjs';
 import { marketCatalyst, isPriceRecap } from './markets.mjs';
 import { classify } from './categories.mjs';
-import { cluster, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust } from './rules.mjs';
+import { cluster, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust, justInOk } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
 const WINDOW_H = 36;           // keep stories from the last 36 hours
@@ -19,6 +19,11 @@ const readJson = async (p, fallback) => { try { return JSON.parse(await readFile
 
 const config = await readJson('feeds.json');
 const prevState = await readJson('data/state.json', { items: [], calendar: null });
+// Google News searches are asked at most every ~9 minutes so Google doesn't start refusing us;
+// direct feeds and Bluesky are read on every run.
+const GOOGLE_EVERY = 9 * 60e3;
+const lastFetch = prevState.lastFetch || {};
+const srcKey = src => (src.google ? `g:${src.google}` : src.bsky ? `b:${src.bsky}` : `u:${src.url}`);
 const keywords = {
   high: config.keywords.high.map(k => k.toLowerCase()),
   low: config.keywords.low.map(k => k.toLowerCase()),
@@ -59,6 +64,7 @@ function normOutlet(o) {
   if (/^the new york times$/i.test(n)) n = 'New York Times';
   if (/^yahoo!?\s.*finance/i.test(n)) n = 'Yahoo Finance';
   if (/^the daily wire$/i.test(n)) n = 'Daily Wire';
+  if (/^abc news\b/i.test(n)) n = 'ABC News';
   return n;
 }
 
@@ -103,6 +109,29 @@ function parseFeed(xmlText, src) {
   return out;
 }
 
+// Bluesky: big outlets post their headlines there within seconds. Read through the free public API (no key).
+const stripTracking = u => { try { const x = new URL(u); [...x.searchParams.keys()].filter(k => /^(utm_|smid|cmpid|taid|ref$|src$|at_|mc_)/i.test(k)).forEach(k => x.searchParams.delete(k)); x.hash = ''; return x.toString(); } catch { return u; } };
+async function fetchBluesky(src) {
+  const url = `https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=${encodeURIComponent(src.bsky)}&limit=40&filter=posts_no_replies`;
+  const j = JSON.parse(await fetchText(url));
+  const out = [];
+  for (const { post, reason } of j.feed || []) {
+    if (reason) continue; // reposts of other accounts
+    const rec = post.record || {}, emb = post.embed?.external || post.embed?.media?.external;
+    if (!emb?.uri || !/^https?:/.test(emb.uri)) continue; // only posts that link to an article
+    const link = stripTracking(emb.uri);
+    let title = clean(emb.title || '') || clean(rec.text || '').split(/(?<=[.!?])\s/)[0];
+    title = title.replace(/\s+[|–-]\s+[^|–-]{2,40}$/, '').trim();
+    if (!title || title.length < 20 || notEnglish(title)) continue;
+    const time = Date.parse(rec.createdAt || post.indexedAt) || now;
+    if (now - time > WINDOW_H * 3600e3 || time - now > 3600e3) continue;
+    const text = clean(rec.text || '');
+    const summary = clean(emb.description || '') || (text && !text.startsWith(title.slice(0, 30)) ? text : '');
+    out.push({ id: hash(link), title, link, outlet: normOutlet(src.name), summary: summary.slice(0, 900), image: emb.thumb || null, biz: !!src.business, time, category: src.category, top: false });
+  }
+  return out;
+}
+
 async function getPage(url) {
   const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 10000);
   try {
@@ -121,13 +150,23 @@ async function pool(list, n, fn) {
 // 1. Fetch every source
 const status = [];
 const fresh = (await pool(config.sources, 8, async (src, i) => {
-  const url = feedUrl(src);
+  const key = srcKey(src), last = lastFetch[key];
+  const base = { name: src.name, category: src.category, query: src.google || null, bsky: src.bsky || null };
+  if (FIXTURES && src.bsky) return [];
+  if (!FIXTURES && src.google && last && now - last.at < GOOGLE_EVERY) {
+    status.push({ ...base, ok: last.ok, count: last.count, skipped: true, error: last.error });
+    return [];
+  }
   try {
-    const items = parseFeed(await fetchText(url, i), src);
-    status.push({ name: src.name, category: src.category, query: src.google || null, ok: true, count: items.length });
+    const items = src.bsky ? await fetchBluesky(src) : parseFeed(await fetchText(feedUrl(src), i), src);
+    const newest = items.reduce((m, x) => Math.max(m, x.time), 0) || null;
+    status.push({ ...base, ok: true, count: items.length, newest });
+    lastFetch[key] = { at: now, ok: true, count: items.length };
     return items;
   } catch (e) {
-    status.push({ name: src.name, category: src.category, query: src.google || null, ok: false, count: 0, error: String(e.message || e).slice(0, 120) });
+    const error = String(e.message || e).slice(0, 120);
+    status.push({ ...base, ok: false, count: 0, error });
+    lastFetch[key] = { at: now, ok: false, count: 0, error };
     return [];
   }
 })).flat();
@@ -179,6 +218,11 @@ const stories = cluster(items).map(group => {
   // Tabs: World (outside the US) / U.S. / Tech & AI from the classifier; Forex = market-moving news (+ business news)
   const cls = classify(lead.title, lead.summary, feedCats, s.score, s.tier, outletCount, breaking);
   const cats = cls.cats;
+  // "Just in": a fresh story from a trusted outlet shows straight away, before other outlets confirm it.
+  // Top still needs a truly massive event, and then only from a major newsroom or wire.
+  const trust = trustRank(lead.outlet);
+  const justIn = ageMin <= 90 && justInOk(lead.outlet, lead.title, cats);
+  const top = cls.top || (justIn && cls.urgent && trust <= 22);
   if (fx) cats.add('forex');
   if (!fx && fromBiz && !isPriceRecap(lead.title)) cats.add('forex');
   // Price recaps and chart pieces from forex sites ("Gold rises...", "EUR/USD forecast") are dropped entirely
@@ -188,7 +232,7 @@ const stories = cluster(items).map(group => {
   return {
     id: hash(group[0].id), title: lead.title, link: lead.link, outlet: lead.outlet, summary: best.summary, summaryFrom: best.from, image: best.image || undefined, more: more.length ? more : undefined,
     _cand: byTrust.filter(g => !/news\.google\.com/.test(g.link)).slice(0, 2).map(g => ({ id: g.id, link: g.link, outlet: g.outlet })),
-    published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats], top: cls.top || undefined, flags: cls.flags.length ? cls.flags : undefined,
+    published, firstSeen, updatedAt: group[group.length - 1].time, categories: [...cats], top: top || undefined, justIn: justIn || undefined, flags: cls.flags.length ? cls.flags : undefined,
     score: s.score, tier: s.tier, breaking, why: s.reasons, sources: others,
     fx: fx ? { impact: fx.impact, why: fx.why, assets: fx.assets, driver: fx.driver } : null,
     _all: 0,
@@ -354,7 +398,7 @@ await mkdir(new URL('data/', ROOT), { recursive: true });
 const okCount = status.filter(s => s.ok).length;
 const out = {
   updated: now,
-  stats: { sources: status.length, working: okCount, items: items.length, stories: stories.length },
+  stats: { sources: status.length, working: okCount, items: items.length, stories: stories.length, justIn: stories.filter(s => s.justIn).length },
   categories: config.categories,
   stories,
   calendar,
@@ -364,6 +408,6 @@ const out = {
 };
 await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
 await writeFile(new URL('data/charts.json', ROOT), JSON.stringify(charts));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()] }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], lastFetch }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);

@@ -51,8 +51,23 @@ export const tierOf = score => (score >= 50 ? 'major' : score >= 28 ? 'notable' 
 
 /* ---------- Source quality ---------- */
 // Trusted outlets, best first. Used to pick which outlet leads a story and to judge single-source stories.
-const TRUSTED = ['reuters', 'ap news', 'associated press', 'bloomberg', 'bbc', 'financial times', 'the economist', 'wsj', 'wall street journal', 'new york times', 'washington post', 'the guardian', 'al jazeera', 'cnbc', 'fox news', 'fox business', 'daily wire', 'nbc news', 'cbs news', 'abc news', 'sky news', 'axios', 'politico', 'barron', 'marketwatch', 'fortune', 'business insider', 'forbes', 'the verge', 'techcrunch', 'wired', 'ars technica', 'the register', 'venturebeat', 'fxstreet', 'investinglive', 'forexlive', 'forex factory', 'dw.com', 'deutsche welle', 'france 24', 'openai', 'anthropic', 'yahoo finance', 'kitco', 'actionforex', 'fxempire', 'economic times', 'seeking alpha', 'central banking', 'investing.com', 'trading economics', 'ig', 'econoday', 'financial times', 'ft.com'];
+const TRUSTED = ['reuters', 'ap news', 'associated press', 'bloomberg', 'bbc', 'financial times', 'the economist', 'wsj', 'wall street journal', 'new york times', 'washington post', 'the guardian', 'al jazeera', 'cnbc', 'fox news', 'fox business', 'daily wire', 'nbc news', 'cbs news', 'abc news', 'sky news', 'axios', 'politico', 'barron', 'marketwatch', 'fortune', 'business insider', 'forbes', 'the verge', 'techcrunch', 'wired', 'ars technica', 'the register', 'venturebeat', 'fxstreet', 'investinglive', 'forexlive', 'forex factory', 'dw.com', 'deutsche welle', 'france 24', 'openai', 'anthropic', 'yahoo finance', 'kitco', 'actionforex', 'fxempire', 'economic times', 'seeking alpha', 'central banking', 'investing.com', 'trading economics', 'ig', 'econoday', 'financial times', 'ft.com',
+  // added for "Just in": solid outlets whose fresh stories can show before others confirm them
+  'afp', 'agence france', 'cnn', 'npr', 'pbs', 'usa today', 'the hill', 'los angeles times', 'cbc', 'the independent', 'engadget', 'mit technology review', '9to5mac', '9to5google', 'the information', 'variety', 'hollywood reporter', 'deadline'];
 export const trustRank = outlet => { const o = String(outlet).toLowerCase().trim(); const i = TRUSTED.findIndex(t => (t.length <= 3 ? o === t || o.startsWith(t + ' ') : o.includes(t))); return i < 0 ? 99 : i; };
+// "Just in": which outlets may show a story before anyone else confirms it.
+// News desks for every tab; specialist tech outlets only for Tech & AI. Entertainment trades wait for confirmation.
+const NEWSDESK = ['afp', 'agence france', 'cnn', 'npr', 'pbs', 'usa today', 'the hill', 'los angeles times', 'cbc', 'the independent'];
+const TECHDESK = ['the verge', 'techcrunch', 'wired', 'ars technica', 'the register', 'venturebeat', 'engadget', 'mit technology review', 'the information'];
+const FLUFF_RE = /\b(review|guest post|deals?|\$\d+ off|\d+ ?(%|percent) off|on sale|discount|coupon|watch:|watch live|live updates|podcast|newsletter|quiz|crossword|wordle|connections|horoscope|opinion|op-ed|best .{0,30} (to buy|for \d{4})|how to|gift guide|recap|trailer|exclusive)\b|^watch\b/i;
+export function justInOk(outlet, title, cats) {
+  if (FLUFF_RE.test(title)) return false;
+  const o = String(outlet).toLowerCase().trim(), r = trustRank(outlet);
+  if (r <= 22) return true; // wires and major newsrooms (Reuters … Politico)
+  const hit = list => list.some(t => (t.length <= 3 ? o === t || o.startsWith(t + ' ') : o.includes(t)));
+  if (hit(NEWSDESK)) return true;
+  return cats.has('tech') && hit(TECHDESK);
+}
 // Press-release wires, broker marketing and content farms: dropped entirely.
 const JUNK_RE = /newswire|presswire|press release|globenewswire|business wire|accesswire|newsfile|openpr|prweb|einpresswire|stock titan|tech-insider|indexbox|devdiscourse|quantum zeitgeist|tokenpost|tmgm|vt markets|litefinance|forextraders|tradingkey|moomoo|metrobank|biggo|idnfinancials|newsroom|nvidia blog|nvidia developer|google cloud|trendingtopics/i;
 // Outlets focused on Iraq, Arab countries and the wider Middle East (big stories still arrive via world outlets)

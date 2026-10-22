@@ -108,6 +108,7 @@ header.top { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-i
 .mw.pulse .led { animation: blink 1.6s steps(2, start) infinite; }
 .tag { font: 700 12px var(--label); letter-spacing: .14em; color: var(--t); }
 .age { font: 500 10px var(--mono); color: var(--faint); white-space: nowrap; }
+.new.jin { color: #fff; background: #ff4d6d; box-shadow: 0 0 10px rgba(255,77,109,.7); }
 .new { font: 700 9px var(--mono); letter-spacing: .08em; color: #12091f; background: #c9bff5; padding: 1px 5px; border-radius: 4px; box-shadow: 0 0 8px rgba(167,139,250,.6); }
 .outlet { margin-left: auto; font: 600 13px var(--label); letter-spacing: .06em; color: var(--ink-2); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
 .title { display: block; margin-top: 7px; font: 600 16px/1.26 var(--head); color: #f3f2f7; text-wrap: pretty; }
@@ -382,7 +383,7 @@ const TABS = [
   { id: 'tech', name: 'Tech & AI' },
 ];
 const PAGE = 30;
-const APP_VERSION = '2026-10-22.3';
+const APP_VERSION = '2026-10-22.4';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -420,11 +421,18 @@ const dayFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
 const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
 /* ---------- Load ---------- */
+const LIVE_URL = 'https://raw.githubusercontent.com/issaunited24/news/live/news.json';
 async function load(manual) {
   try {
-    const res = await fetch(`data/news.json?t=${Date.now()}`, { cache: 'no-store' });
-    if (!res.ok) throw new Error(res.status);
-    data = await res.json();
+    // The robot publishes fresh news to the "live" branch every few minutes; the website copy is an hourly backup.
+    let fresh = null;
+    try { const r = await fetch(`${LIVE_URL}?t=${Date.now()}`, { cache: 'no-store' }); if (r.ok) fresh = await r.json(); } catch {}
+    if (!fresh?.stories) {
+      const res = await fetch(`data/news.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(res.status);
+      fresh = await res.json();
+    }
+    if (!data || !data.updated || fresh.updated >= data.updated) data = fresh;
     if (manual) toast('Up to date');
   } catch {
     if (manual) toast(data ? "Couldn't refresh. Check your connection." : 'No news yet');
@@ -451,6 +459,7 @@ function visible(s) {
 }
 function important(s, tab) {
   if (tab === 'top') return !!s.top;
+  if (s.justIn && tab !== 'forex') return true; // fresh story from a trusted outlet, shown before others confirm it
   if (tab === 'us' && s.flags?.some(f => f === 'viral' || f === 'culture' || f === 'crime' || f === 'stream')) return true;
   if (tab === 'world' && s.flags?.includes('disaster') && (s.sources.length >= 1 || s.score >= 25)) return true;
   if (tab === 'forex') return !!s.fx && s.fx.impact !== 'low' || s.tier === 'major';
@@ -458,7 +467,7 @@ function important(s, tab) {
   if (tab === 'forex' && s.fx && s.fx.impact !== 'low') return true;
   return prefs.boosted.includes(s.outlet);
 }
-const rankScore = s => s.score + (prefs.boosted.includes(s.outlet) ? 12 : 0) + (s.breaking ? 25 : 0) - (Date.now() - s.updatedAt) / 3600e3 * 4;
+const rankScore = s => s.score + (prefs.boosted.includes(s.outlet) ? 12 : 0) + (s.breaking ? 25 : 0) + (s.justIn ? 10 : 0) - (Date.now() - s.updatedAt) / 3600e3 * 4;
 function storiesFor(tab, impOnly) {
   if (!data) return [];
   let list = data.stories.filter(visible);
@@ -476,6 +485,7 @@ function searchResults(q) {
   }).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 const isNew = s => prevVisit && s.firstSeen > prevVisit;
+const justIn = s => s.justIn && Date.now() - Math.min(s.published, s.firstSeen) < 90 * 60e3;
 const isSaved = id => prefs.saved.some(x => x.id === id);
 
 /* ---------- Mini charts ---------- */
@@ -538,7 +548,7 @@ const ICON = {
 function head(s, lv) {
   const f = s.flags || [];
   const badge = f.includes('disaster') ? '<span class="flag">DISASTER</span>' : f.includes('viral') ? '<span class="flag">VIRAL</span>' : f.includes('stream') ? '<span class="flag">STREAMERS</span>' : f.includes('crime') ? '<span class="flag">CRIME</span>' : f.includes('culture') ? '<span class="flag">POP CULTURE</span>' : '';
-  return `<div class="head"><span class="led"></span><span class="tag">${lv.tag}</span><span class="age">${ago(s.published)}</span>${isNew(s) ? '<span class="new">NEW</span>' : ''}${badge}<span class="outlet">${esc(s.outlet)}</span></div>`;
+  return `<div class="head"><span class="led"></span><span class="tag">${lv.tag}</span><span class="age">${ago(s.published)}</span>${justIn(s) ? '<span class="new jin">JUST IN</span>' : isNew(s) ? '<span class="new">NEW</span>' : ''}${badge}<span class="outlet">${esc(s.outlet)}</span></div>`;
 }
 function foot(s, cat) {
   const others = s.sources.filter(o => !prefs.muted.includes(o.outlet));
@@ -871,7 +881,7 @@ function settingsSheet() {
     <textarea id="backupText" aria-label="Backup text">${esc(JSON.stringify({ boosted: prefs.boosted, muted: prefs.muted, hidden: prefs.hidden, saved: prefs.saved }))}</textarea>
     <div class="btns"><button class="btn" data-act="copyBackup">Copy backup</button><button class="btn" data-act="restore">Restore from text</button></div>
     <h4>How it works</h4>
-    <p class="muted">Glow color shows importance: red for breaking or high, gold for medium, cyan for low. Stories rise when many outlets cover them, when outlets put them in their top stories, and when they contain big-event words. The Forex tab shows only news likely to move gold, the US dollar or the Nasdaq (conflicts, the Fed and US data, big-company earnings, trade, US politics, oil shocks, banking stress), not reports of moves that already happened. Each story forecasts all three with a 1–10 confidence score from simple rules, capped at 9 because nothing in markets is certain.</p>
+    <p class="muted">Glow color shows importance: red for breaking or high, gold for medium, cyan for low. Brand-new stories from trusted outlets show straight away marked JUST IN, before other outlets confirm them. Stories rise when many outlets cover them, when outlets put them in their top stories, and when they contain big-event words. The Forex tab shows only news likely to move gold, the US dollar or the Nasdaq (conflicts, the Fed and US data, big-company earnings, trade, US politics, oil shocks, banking stress), not reports of moves that already happened. Each story forecasts all three with a 1–10 confidence score from simple rules, capped at 9 because nothing in markets is certain.</p>
     ${mk ? `<p class="muted">Prices: ${esc(mk)}.</p>` : ''}
     <h4>Sources</h4>${srcs}`);
 }

@@ -16,6 +16,9 @@ const TECH_RE = /\b(ai|a\.i\.|artificial intelligence|openai|anthropic|deepmind|
 // Truly massive: shown in Top
 const MASSIVE_RE = /\b(declares? war|war (breaks out|erupts)|invasion|invades?|launches? (attack|strikes|offensive|invasion)|nuclear|coup|assassinat\w*|killed (dozens|hundreds|scores)|dozens (killed|dead)|hundreds (killed|dead)|\d{2,} (killed|dead)|death toll|massacre|explosion|blast|earthquake|tsunami|hurricane|typhoon|cyclone|wildfires?|landfall|plane crash|crash kills|terror(ist)? attack|mass shooting|state of emergency|martial law|pandemic|outbreak|elected|wins? (election|presidency|vote)|election (results?|victory)|landslide|resigns|ousted|impeach\w*|dies|dead at|died|ceasefire|peace (deal|agreement)|market crash|stocks plunge|rate (cut|hike)|default|collapse|historic|unprecedented|record)\b/i;
 
+// Stricter: big enough to put a story on Top the moment one major newsroom reports it
+const URGENT_RE = /\b(declares? war|war (breaks out|erupts)|invasion|invades?|launches? (attack|strikes|offensive|invasion)|nuclear (strike|attack|test|weapon)|coup|assassinat\w*|killed (dozens|hundreds|scores)|dozens (killed|dead)|hundreds (killed|dead)|\d{2,} (killed|dead)|death toll|massacre|earthquake|tsunami|makes landfall|plane crash|terror(ist)? attack|mass shooting|martial law|state of emergency|ceasefire|peace (deal|agreement)|market crash|stocks (plunge|crash))\b/i;
+
 const DISASTER_RE = /\b(earthquake|quake|tsunami|volcan\w*|eruption|hurricane|typhoon|cyclone|tornado(es)?|floods?|flooding|landslide|wildfires?|bushfires?|heatwave|blizzard|avalanche|famine|epidemic|outbreak|plane crash|train (crash|derailment)|ferry (sinks|capsizes)|building collapse|explosion|blast)\b/i;
 
 const has = (re, t) => re.test(t);
@@ -53,5 +56,5 @@ export function classify(title, summary, feedCats, score, tier, outletCount, bre
   const massive = has(MASSIVE_RE, t);
   const top = (score >= 55 && outletCount >= 3) || (score >= 50 && outletCount >= 5) || (breaking && outletCount >= 2) || (massive && score >= 40 && outletCount >= 2);
 
-  return { cats, flags, top };
+  return { cats, flags, top, massive, urgent: has(URGENT_RE, t) };
 }

@@ -1,12 +1,15 @@
 name: Collect news
 
+# One run keeps collecting every ~3.5 minutes for about 2 hours (scripts/loop.sh).
+# The schedule below is only a safety net: if no run is going, it starts one.
+# While a run is going, the next one waits in line and starts the moment it finishes.
 on:
   schedule:
-    - cron: "3-59/10 * * * *"   # about every 10 minutes (GitHub may run it a little late)
-  workflow_dispatch:            # lets you run it by hand from the Actions tab
+    - cron: "*/15 * * * *"
+  workflow_dispatch:            # lets you start it by hand from the Actions tab
   push:
     branches: [main]
-    paths: ["feeds.json", "scripts/**", ".github/workflows/collect.yml"]
+    paths: [".github/workflows/collect.yml", "scripts/loop.sh"]
 
 permissions:
   contents: write
@@ -18,23 +21,15 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 125
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Collect and rank news
-        run: node scripts/collect.mjs
-      - name: Save the latest news
+      - name: Collect and rank news, every few minutes
         run: |
-          git config user.name "briefly-bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data
-          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
-          git commit -m "Update news" -q
-          for i in 1 2 3; do
-            git pull --rebase -q -X ours origin main && git push -q && exit 0
-            sleep 5
-          done
-          exit 1
+          cp scripts/loop.sh "$RUNNER_TEMP/loop.sh"
+          bash "$RUNNER_TEMP/loop.sh"
