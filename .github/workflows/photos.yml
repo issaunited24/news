@@ -13,7 +13,7 @@ permissions:
 jobs:
   sheets:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Download and make contact sheets
@@ -23,9 +23,10 @@ jobs:
           grep -v '^#' tools/photos.txt | while read -r label id; do
             [ -z "$id" ] && continue
             # whole photo (not cropped), with yellow lines at every 10% so a focus point can be read off
-            if curl -sfL "https://images.unsplash.com/photo-$id?auto=format&q=60&w=420&fm=jpg" -o "img/$label.jpg"; then
-              convert "img/$label.jpg" -fill none -stroke 'rgba(255,230,0,0.55)' -strokewidth 1 \
-                -draw "$(identify -format '%w %h' "img/$label.jpg" | awk '{for(i=1;i<10;i++){x=$1*i/10;y=$2*i/10;printf "line %d,0 %d,%d line 0,%d %d,%d ",x,x,$2,y,$1,y}}')" "img/$label.jpg"
+            echo "get $label"
+            if timeout 30 curl -sfL --max-time 25 "https://images.unsplash.com/photo-$id?auto=format&q=60&w=420&fm=jpg" -o "img/$label.jpg" </dev/null; then
+              timeout 30 convert "img/$label.jpg" -fill none -stroke 'rgba(255,230,0,0.55)' -strokewidth 1 \
+                -draw "$(identify -format '%w %h' "img/$label.jpg" | awk '{for(i=1;i<10;i++){x=$1*i/10;y=$2*i/10;printf "line %d,0 %d,%d line 0,%d %d,%d ",x,x,$2,y,$1,y}}')" "img/$label.jpg" </dev/null
               echo "ok $label $(identify -format '%wx%h' "img/$label.jpg")" | tee -a out/sizes.txt
             else echo "MISSING $label $id" | tee -a out/missing.txt; fi
           done
