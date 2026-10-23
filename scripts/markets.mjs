@@ -83,7 +83,7 @@ const DRIVERS = [
   {
     name: 'oil',
     test: t => {
-      if (/\b(opec\+? (cuts?|curbs?)|strait of hormuz|attacks? on (oil|energy|tankers?|refiner\w*)|oil (field|facility|pipeline|tanker) (attack|struck|hit|fire)|oil supply (shock|disruption))\b/i.test(t))
+      if (/\b(opec\+? (cuts?|curbs?)|opec\+?\b.{0,40}\b(output|production|supply) cuts?|(output|production) cuts?\b.{0,30}\boil|strait of hormuz|attacks? on (oil|energy|tankers?|refiner\w*)|oil (field|facility|pipeline|tanker) (attack|struck|hit|fire)|oil supply (shock|disruption))\b/i.test(t))
         return { why: 'An oil supply shock feeds inflation fears: gold tends to rise and stocks to fall.', gold: 'up', usd: 'flat', ndq: 'down', base: { gold: 4, ndq: 4 }, fxc: { CAD: 'up', NOK: 'up', JPY: 'down' } };
       if (/\b(opec\+? (raises?|boosts?|hikes?|increases?) (output|production)|oil (glut|oversupply))\b/i.test(t))
         return { why: 'More oil supply eases inflation pressure, which tends to help stocks.', gold: 'flat', usd: 'flat', ndq: 'up', base: { ndq: 3 }, fxc: { CAD: 'down' } };
@@ -151,7 +151,11 @@ export function marketCatalyst(title, text, ctx, tier, outlets) {
   const bump = (tier === 'major' ? 1 : 0) + (outlets >= 3 ? 1 : 0);
   const cap = n => Math.max(1, Math.min(9, Math.round(n)));
   const assets = {};
-  for (const key of ['gold', 'usd', 'ndq']) {
+  // WTI crude oil: wars and sanctions lift it, peace and new supply lower it, trade fights and financial stress hit demand
+  const OIL = { war: h => h.gold === 'up' ? ['up', h.usd === 'up' ? 6 : 3] : null, peace: () => ['down', 4], oil: h => h.ndq === 'down' ? ['up', 7] : ['down', 6],
+    trade: h => h.ndq === 'down' ? ['down', 4] : ['up', 3], banking: () => ['down', 4], sanctions: () => ['up', 4] };
+  for (const h of hits) if (h.oil === undefined && OIL[h.name]) { const r = OIL[h.name](h); if (r) { h.oil = r[0]; h.base = { ...h.base, oil: r[1] }; } }
+  for (const key of ['gold', 'usd', 'ndq', 'oil']) {
     let best = null;
     for (const h of hits) {
       const dir = h[key];

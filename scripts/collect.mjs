@@ -325,6 +325,7 @@ const MARKETS = [
   { key: 'gold', name: 'Gold', yahoo: 'GC=F', stooq: 'xauusd' },
   { key: 'usd', name: 'US Dollar Index', yahoo: 'DX-Y.NYB', stooq: 'dx.f' },
   { key: 'ndq', name: 'Nasdaq 100', yahoo: 'NQ%3DF', stooq: '%5Endx' }, // Nasdaq 100 futures (moves with NAS100 on TradingView)
+  { key: 'oil', name: 'WTI Crude Oil', yahoo: 'CL%3DF', stooq: 'cl.f' }, // WTI crude futures
 ];
 async function getText(url) {
   const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 15000);
@@ -424,7 +425,7 @@ for (const e of calendar?.events || []) {
 }
 for (const st of stories) {
   if (!st.fx?.assets || now - st.firstSeen > 6 * 3600e3) continue;
-  for (const k of ['gold', 'usd', 'ndq']) {
+  for (const k of ['gold', 'usd', 'ndq', 'oil']) {
     const a = st.fx.assets[k], key = `${st.id}:${k}`;
     if (!a || a.dir === 'flat' || !a.conf || forecasts.has(key)) continue;
     const p0 = priceAt(k, st.firstSeen);
@@ -444,7 +445,7 @@ const judged = [...forecasts.values()].filter(f => f.result === 'hit' || f.resul
 const tally = list => ({ hit: list.filter(f => f.result === 'hit').length, miss: list.filter(f => f.result === 'miss').length });
 const scorecard = {
   horizonH: 4, days: 7,
-  assets: { gold: tally(judged.filter(f => f.asset === 'gold')), usd: tally(judged.filter(f => f.asset === 'usd')), ndq: tally(judged.filter(f => f.asset === 'ndq')) },
+  assets: { gold: tally(judged.filter(f => f.asset === 'gold')), usd: tally(judged.filter(f => f.asset === 'usd')), ndq: tally(judged.filter(f => f.asset === 'ndq')), oil: tally(judged.filter(f => f.asset === 'oil')) },
   all: tally(judged), high: tally(judged.filter(f => f.conf >= 7)), news: tally(judged.filter(f => !f.cal)), cal: tally(judged.filter(f => f.cal)),
   pending: [...forecasts.values()].filter(f => !f.result).length,
   recent: judged.sort((a, b) => b.at - a.at).slice(0, 6).map(f => ({ title: f.title, asset: f.asset, dir: f.dir, conf: f.conf, result: f.result, chg: Math.round(f.chg * 100) / 100, at: f.at, cal: f.cal || undefined })),

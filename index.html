@@ -87,7 +87,7 @@ a { color: inherit; text-decoration: none; }
 .brief .bk { font: 600 10.5px var(--mono); letter-spacing: .18em; color: #ffcc66; text-transform: uppercase; }
 .brief .bs { margin: 3px 0 10px; font-size: 12.5px; color: var(--mute); }
 .brief .bx { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--mute); }
-.br-mv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.br-mv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .br-mv div { padding: 8px 9px; border-radius: 13px; background: rgba(255,255,255,.04); }
 .br-mv b { display: block; font: 600 11px var(--mono); color: rgb(var(--pc)); letter-spacing: .06em; }
 .br-mv span { font: 600 15px var(--mono); }
@@ -178,8 +178,8 @@ main { touch-action: pan-y; will-change: transform; }
 .prism { margin: 6px 16px 0; padding: 14px; border-radius: 28px;
   background: linear-gradient(135deg, rgba(255,255,255,.11), rgba(255,255,255,.03)), rgba(12,18,40,.88);
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.2), 0 0 50px -16px rgba(var(--c),.55), 0 30px 50px -30px #000; transition: box-shadow .5s; }
-.pick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.pk { padding: 9px 10px; border-radius: 18px; text-align: left; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); transition: .3s; min-width: 0; }
+.pick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.pk { padding: 9px 8px; border-radius: 18px; text-align: left; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); transition: .3s; min-width: 0; }
 .pk .n { font: 700 11px var(--ui); color: var(--mute); }
 .pk .v { font: 800 15px var(--ui); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pk .c { font: 600 10px var(--mono); color: var(--up); } .pk .c.dn { color: var(--down); }
@@ -248,7 +248,7 @@ main { touch-action: pan-y; will-change: transform; }
 .sc { padding: 12px 14px; }
 .sc-h { display: flex; justify-content: space-between; gap: 8px; font: 500 9.5px var(--mono); letter-spacing: .12em; color: var(--mute); }
 .sc-h span:last-child { color: var(--faint); letter-spacing: 0; }
-.sc-g { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.sc-g { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
 .sc-c { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 0; border-radius: 12px; background: rgba(255,255,255,.04); }
 .sc-k { font: 600 9.5px var(--mono); letter-spacing: .1em; color: var(--mute); }
 .sc-v { font: 600 16px var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -425,7 +425,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-23.7';
+const APP_VERSION = '2026-10-23.8';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -444,7 +444,7 @@ let prefs = { ...defaults };
 try { prefs = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch {} };
 prefs.tab = TABS[0].id; // the app always opens on the first tab (Forex)
-if (!['gold', 'usd', 'ndq'].includes(prefs.pick)) prefs.pick = 'gold';
+if (!['gold', 'usd', 'ndq', 'oil'].includes(prefs.pick)) prefs.pick = 'gold';
 const prevVisit = prefs.lastVisit || 0;            // used for the "new since your last visit" marker
 const markVisit = () => { prefs.lastVisit = Date.now(); save(); };
 document.addEventListener('visibilitychange', () => { if (document.hidden) markVisit(); });
@@ -720,7 +720,7 @@ function spark(points, o = {}) {
 // Gold / USD / Nasdaq forecast for one Forex story
 function forecasts(fx, w = 70, h = 15) {
   const a = fx?.assets || {}, m = data?.markets?.items || {};
-  return [['GOLD', 'gold'], ['USD', 'usd'], ['NDQ', 'ndq']].map(([label, key]) => {
+  return [['GOLD', 'gold'], ['USD', 'usd'], ['NDQ', 'ndq'], ['OIL', 'oil']].map(([label, key]) => {
     const f = a[key] || { dir: 'flat' }, col = DIRC[f.dir] || DIRC.flat, n = f.conf || 0;
     const word = f.dir === 'up' ? 'up' : f.dir === 'down' ? 'down' : 'no clear move';
     return `<div role="img" aria-label="${label} forecast ${word}${n ? `, confidence ${n} of 10` : ''}"><div class="r"><span>${label} <span style="color:${col}">${f.dir === 'up' ? '▲' : f.dir === 'down' ? '▼' : '–'}</span></span><span style="color:${n >= 7 ? '#fff' : n ? 'var(--ink2)' : 'var(--faint)'}">${n ? `${n}/10` : '—'}</span></div>
@@ -779,15 +779,15 @@ function poster(s, i) {
 }
 
 /* ---------- Forex: market stage ---------- */
-const MK = { gold: { c: '255,200,87', name: 'Gold', sym: 'XAU/USD', short: 'Gold' }, usd: { c: '77,225,255', name: 'US Dollar Index', sym: 'DXY', short: 'Dollar' }, ndq: { c: '255,92,200', name: 'Nasdaq', sym: 'NASDAQ', short: 'Nasdaq' } };
+const MK = { gold: { c: '255,200,87', name: 'Gold', sym: 'XAU/USD', short: 'Gold' }, usd: { c: '77,225,255', name: 'US Dollar Index', sym: 'DXY', short: 'Dollar' }, ndq: { c: '255,92,200', name: 'Nasdaq', sym: 'NASDAQ', short: 'Nasdaq' }, oil: { c: '255,150,70', name: 'WTI Crude Oil', sym: 'WTI', short: 'Oil' } };
 function fmtPrice(key, v) {
   if (v == null) return '—';
-  return key === 'usd' ? v.toFixed(2) : v.toLocaleString(undefined, { maximumFractionDigits: key === 'gold' ? 1 : 0 });
+  return key === 'usd' || key === 'oil' ? v.toFixed(2) : v.toLocaleString(undefined, { maximumFractionDigits: key === 'gold' ? 1 : 0 });
 }
 /* Live prices straight from TradingView's own price service, so they match tradingview.com.
    Every 3 seconds while you're on Forex or the chart is open, otherwise once a minute. */
 // Nasdaq: the Nasdaq 100 futures (trade almost 24 hours like NAS100); the cash index is the backup
-const TV = { gold: ['OANDA:XAUUSD'], usd: ['TVC:DXY'], ndq: ['CME_MINI:NQ1!', 'NASDAQ:NDX'] };
+const TV = { gold: ['OANDA:XAUUSD'], usd: ['TVC:DXY'], ndq: ['CME_MINI:NQ1!', 'NASDAQ:NDX'], oil: ['NYMEX:CL1!', 'TVC:USOIL'] };
 const live = {}; // asset -> { p: price, pct: today's % change, abs: today's change }
 let liveTimer = null;
 async function pollLive() {
@@ -939,7 +939,7 @@ function scorecardHTML() {
   const total = sc.all.hit + sc.all.miss;
   return `<div class="sc glass">
     <div class="sc-h"><span>FORECAST SCORECARD</span><span>${sc.horizonH}h after the news · last ${sc.days} days</span></div>
-    ${total ? `<div class="sc-g">${cell('GOLD', sc.assets.gold)}${cell('USD', sc.assets.usd)}${cell('NASDAQ', sc.assets.ndq)}${cell('CONF 7+', sc.high)}</div>`
+    ${total ? `<div class="sc-g">${cell('GOLD', sc.assets.gold)}${cell('USD', sc.assets.usd)}${cell('NASDAQ', sc.assets.ndq)}${cell('OIL', sc.assets.oil || { hit: 0, miss: 0 })}${cell('CONF 7+', sc.high)}</div>`
       : `<p class="sc-empty">Collecting results. Each call is checked ${sc.horizonH} hours after the news${sc.pending ? ` · ${sc.pending} waiting` : ''}.</p>`}
     ${sc.cal ? `<p class="sc-empty">Includes calendar calls (a beat or miss checked 1 hour after the release): ${sc.cal.hit + sc.cal.miss ? `${pct(sc.cal)} right, ${sc.cal.hit}/${sc.cal.hit + sc.cal.miss}` : 'waiting for the next release'}.</p>` : ''}
   </div>`;

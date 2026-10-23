@@ -31,7 +31,7 @@ await step('brief', async () => {
 await step('open story', async () => { await click('.tab[data-tab="world"]'); await wait(800); await click('#feed [data-id]'); await wait(1200); });
 await step('close story', async () => { await p.keyboard.press('Escape'); await wait(600); await p.evaluate(() => document.querySelector('[data-close]')?.click()); await wait(600); });
 await step('story menu', async () => { await click('#feed [data-act="menu"]'); await wait(700); await p.keyboard.press('Escape'); await p.evaluate(() => document.querySelector('#scrim')?.click()); await wait(500); });
-await step('forex chart', async () => { await click('.tab[data-tab="forex"]'); await wait(1200); await click('[data-chart]'); await wait(2500); });
+await step('forex chart', async () => { await click('.tab[data-tab="forex"]'); await wait(1200); await click('[data-pick="oil"]'); await wait(1500); await p.screenshot({ path: 'out/oil-stage.png' }); out.push('  oil live price: ' + await p.evaluate(() => live.oil ? live.oil.p : 'none')); await click('[data-chart]'); await wait(2500); });
 for (const r of ['1H', '4H', '1D', '1W', '1M', '1Y', '5Y', 'ALL']) await step('range ' + r, async () => { await p.evaluate(r => [...document.querySelectorAll('#chartPanel button')].find(x => x.textContent.trim().toUpperCase() === r)?.click(), r); await wait(900); });
 await p.screenshot({ path: 'out/chart.png' });
 await step('close chart', async () => { await p.evaluate(() => document.querySelector('#chartPanel [data-close], #chartPanel .close')?.click()); await p.keyboard.press('Escape'); await wait(800); });
