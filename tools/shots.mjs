@@ -19,6 +19,15 @@ for (const t of ['forex', 'top', 'justin', 'world', 'us', 'sci', 'tech', 'ent', 
   if (!n) errs.push(`tab ${t}: no stories shown`);
   await p.mouse.wheel(0, 2500); await wait(800); await p.mouse.wheel(0, -2500); await wait(400);
 });
+await step('brief', async () => {
+  await click('.tab[data-tab="forex"]'); await wait(1000);
+  await p.evaluate(() => { prefs.briefOpen = nyDay(new Date()); prefs.briefHid = ''; renderTop(); scrollTo(0, document.getElementById('top').getBoundingClientRect().top + scrollY - 70); });
+  await wait(1200); await p.screenshot({ path: 'out/brief.png' });
+  out.push('  brief: ' + await p.evaluate(() => { const b = document.getElementById('brief'); return b ? `${b.querySelectorAll('.br-mv div').length} moves, ${b.querySelectorAll('.br-st').length} stories, ${b.querySelectorAll('.br-ev').length} releases` : 'missing'; }));
+  await click('#brief [data-act="briefHide"]'); await wait(600);
+  out.push('  after hide: ' + await p.evaluate(() => document.querySelector('.brief-mini') ? 'small button' : document.getElementById('brief') ? 'still open' : 'gone'));
+  await p.evaluate(() => scrollTo(0, 0));
+});
 await step('open story', async () => { await click('.tab[data-tab="world"]'); await wait(800); await click('#feed [data-id]'); await wait(1200); });
 await step('close story', async () => { await p.keyboard.press('Escape'); await wait(600); await p.evaluate(() => document.querySelector('[data-close]')?.click()); await wait(600); });
 await step('story menu', async () => { await click('#feed [data-act="menu"]'); await wait(700); await p.keyboard.press('Escape'); await p.evaluate(() => document.querySelector('#scrim')?.click()); await wait(500); });

@@ -81,6 +81,26 @@ a { color: inherit; text-decoration: none; }
 @keyframes pour { from { opacity: 0; letter-spacing: .02em; } }
 .mast p { margin: 12px 0 0; max-width: 34ch; color: var(--ink2); font-size: 14px; text-shadow: 0 1px 12px rgba(0,0,0,.7); }
 
+
+/* Morning brief (top of Forex) */
+.brief { position: relative; margin: 0 0 14px; padding: 14px 14px 12px; border-radius: 20px; background: linear-gradient(160deg, rgba(255,190,90,.12), rgba(10,16,34,.9) 45%); box-shadow: inset 0 0 0 1px rgba(255,200,120,.22), 0 0 28px -12px rgba(255,190,90,.5); touch-action: pan-y; transition: transform .25s, opacity .25s; }
+.brief .bk { font: 600 10.5px var(--mono); letter-spacing: .18em; color: #ffcc66; text-transform: uppercase; }
+.brief .bs { margin: 3px 0 10px; font-size: 12.5px; color: var(--mute); }
+.brief .bx { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--mute); }
+.br-mv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.br-mv div { padding: 8px 9px; border-radius: 13px; background: rgba(255,255,255,.04); }
+.br-mv b { display: block; font: 600 11px var(--mono); color: rgb(var(--pc)); letter-spacing: .06em; }
+.br-mv span { font: 600 15px var(--mono); }
+.br-h { margin: 12px 0 5px; font: 600 10px var(--mono); letter-spacing: .16em; color: var(--mute); text-transform: uppercase; }
+.br-st { display: block; width: 100%; text-align: left; padding: 7px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 13.5px; line-height: 1.35; }
+.br-st small { display: block; margin-top: 2px; font: 500 10.5px var(--mono); color: var(--mute); }
+.br-st .ar { font-weight: 700; } .br-st .ar.u { color: var(--up); } .br-st .ar.d { color: var(--down); }
+.br-ev { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+.br-ev time { flex: none; width: 52px; font: 600 11.5px var(--mono); color: #ffcc66; }
+.br-ev .hi { color: #ff6487; } .br-ev em { font-style: normal; font: 500 11px var(--mono); color: var(--mute); margin-left: auto; text-align: right; flex: none; }
+.brief-mini { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 12px; padding: 10px 14px; border-radius: 16px; background: rgba(255,190,90,.08); box-shadow: inset 0 0 0 1px rgba(255,200,120,.18); font: 600 12px var(--mono); color: var(--ink2); text-align: left; }
+.brief-mini b { color: #ffcc66; letter-spacing: .1em; }
+
 /* Tabs */
 .tabs { position: sticky; top: 0; z-index: 10; display: flex; gap: 22px; padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px 12px; overflow-x: auto; scrollbar-width: none;
   background: linear-gradient(180deg, rgba(5,7,15,.97), rgba(5,7,15,.9) 75%, rgba(5,7,15,0)); }
@@ -405,7 +425,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-23.5';
+const APP_VERSION = '2026-10-23.6';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -924,13 +944,68 @@ function scorecardHTML() {
     ${sc.cal ? `<p class="sc-empty">Includes calendar calls (a beat or miss checked 1 hour after the release): ${sc.cal.hit + sc.cal.miss ? `${pct(sc.cal)} right, ${sc.cal.hit}/${sc.cal.hit + sc.cal.miss}` : 'waiting for the next release'}.</p>` : ''}
   </div>`;
 }
+
+/* ---------- Morning brief: what moved since the U.S. close, the stories behind it, and today's releases ---------- */
+// Full card from 3 PM (your wake-up) until the U.S. market opens, unless swiped away; a small button the rest of the time.
+const nyDay = d => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d);
+let closeCache = { at: 0, t: 0 };
+function lastUSClose(now) { // most recent 4:00 PM New York close on a weekday
+  if (now - closeCache.at < 60e3) return closeCache.t;
+  const base = Math.floor(now / 300e3) * 300e3;
+  for (let i = 0; i < 4 * 288; i++) {
+    const d = new Date(base - i * 300e3), n = tzNow('America/New_York', d);
+    if (n.h === 16 && n.m === 0 && n.wd !== 'Sat' && n.wd !== 'Sun') { closeCache = { at: now, t: d.getTime() }; return d.getTime(); }
+  }
+  return now - 16 * 3600e3;
+}
+function briefFull(now) {
+  const d = new Date(now), n = tzNow('America/New_York', d), day = nyDay(d);
+  if (prefs.briefOpen === day) return true;
+  if (prefs.briefHid === day) return false;
+  return n.wd !== 'Sat' && n.wd !== 'Sun' && d.getHours() >= 15 && n.h + n.m / 60 < 9.5;
+}
+function briefMoves(closeT) {
+  return Object.keys(MK).map(k => {
+    const bars = charts?.assets?.[k]?.ranges?.['1W']?.bars; if (!bars?.length) return null;
+    const b = basis(k, bars); let p0 = null;
+    for (const x of bars) { if (x[0] * 1000 <= closeT) p0 = x[4] + b; else break; }
+    const p1 = live[k]?.p ?? bars[bars.length - 1][4] + b;
+    return p0 ? { k, pct: (p1 - p0) / p0 * 100 } : null;
+  }).filter(Boolean);
+}
+const pctTxt = v => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}%`;
+function briefHTML() {
+  const now = Date.now(), closeT = lastUSClose(now), moves = briefMoves(closeT);
+  if (!briefFull(now)) return moves.length ? `<button class="brief-mini" data-act="briefShow"><b>☀ BRIEF</b><span>${moves.map(m => `${MK[m.k].short} ${pctTxt(m.pct)}`).join(' · ')}</span><span style="margin-left:auto;color:var(--mute)">Open</span></button>` : '';
+  const rank = s => ({ high: 300, medium: 200, low: 100 }[s.fx.impact] || 0) + (s.breaking ? 80 : 0) + Math.min(s.sources.length, 8) * 6 + (Object.values(s.fx.assets || {}).some(a => a.dir === 'up' || a.dir === 'down') ? 30 : 0);
+  const stories = (data?.stories || []).filter(s => s.fx && visible(s) && Math.min(s.published, s.firstSeen) >= closeT).sort((a, b) => rank(b) - rank(a)).slice(0, 3);
+  const arrows = s => Object.entries(s.fx.assets || {}).filter(([, a]) => a.dir === 'up' || a.dir === 'down').map(([k, a]) => `<span class="ar ${a.dir === 'up' ? 'u' : 'd'}">${MK[k]?.short || k} ${a.dir === 'up' ? '↑' : '↓'}</span>`).join(' ');
+  const end = now + 14 * 3600e3;
+  const evs = (data?.calendar?.events || []).map(e => ({ ...e, t: Date.parse(e.time) })).filter(e => e.t >= closeT && e.t <= end && (e.impact === 'high' || e.impact === 'medium')).sort((a, b) => a.t - b.t).slice(0, 5);
+  return `<section class="brief" id="brief"><button class="bx" data-act="briefHide" aria-label="Hide the brief">✕</button>
+    <div class="bk">☀ Morning brief</div><div class="bs">Since the U.S. close · ${dayFmt.format(new Date(closeT))} ${timeFmt.format(new Date(closeT))}</div>
+    ${moves.length ? `<div class="br-mv">${moves.map(m => `<div style="--pc:${MK[m.k].c}"><b>${MK[m.k].short.toUpperCase()}</b><span style="color:${m.pct >= 0 ? 'var(--up)' : 'var(--down)'}">${pctTxt(m.pct)}</span></div>`).join('')}</div>` : ''}
+    <div class="br-h">What moved them</div>
+    ${stories.length ? stories.map(s => `<button class="br-st" data-act="preview" data-id="${esc(s.id)}">${esc(s.title)}<small>${esc(s.outlet)} · ${ago(Math.min(s.published, s.firstSeen))} ${arrows(s)}</small></button>`).join('') : '<p class="muted" style="margin:4px 0">A quiet night: no market-moving stories since the close.</p>'}
+    <div class="br-h">Today's key releases</div>
+    ${evs.length ? evs.map(e => `<div class="br-ev"><time>${timeFmt.format(new Date(e.t))}</time><span class="${e.impact === 'high' ? 'hi' : ''}">${esc(e.title)}</span><em>${e.actual ? `${esc(e.actual)}${e.forecast ? ` vs ${esc(e.forecast)}` : ''}` : e.forecast ? `fc ${esc(e.forecast)}` : ''}</em></div>`).join('') : '<p class="muted" style="margin:4px 0">No big U.S. releases today.</p>'}
+  </section>`;
+}
+// Swipe the brief left or right to hide it for today
+let briefX = null;
+addEventListener('touchstart', e => { briefX = e.target.closest?.('#brief') ? e.touches[0].clientX : null; }, { passive: true });
+addEventListener('touchmove', e => { if (briefX == null) return; const dx = e.touches[0].clientX - briefX, el = $('brief'); if (el) { el.style.transform = `translateX(${dx}px)`; el.style.opacity = String(Math.max(.2, 1 - Math.abs(dx) / 300)); } }, { passive: true });
+addEventListener('touchend', e => { if (briefX == null) return; const dx = e.changedTouches[0].clientX - briefX, el = $('brief'); briefX = null; if (!el) return;
+  if (Math.abs(dx) > 90) hideBrief(); else { el.style.transform = ''; el.style.opacity = ''; } });
+function hideBrief() { const day = nyDay(new Date()); prefs.briefHid = day; if (prefs.briefOpen === day) prefs.briefOpen = ''; save(); renderTop(); }
+
 function forexTop() {
   const e = nextEvent();
   let ring = 0;
   if (e) { const span = 24 * 3600e3; ring = Math.max(0.04, Math.min(1, 1 - (e.t - Date.now()) / span)); }
   const C = 2 * Math.PI * 19, now = Date.now();
   const rows = calendarHTML(now);
-  return `${prismHTML()}<div class="fxmods">${sessionsHTML()}
+  return `${briefHTML()}${prismHTML()}<div class="fxmods">${sessionsHTML()}
     <div><button class="next glass" id="nextBtn" aria-expanded="${!!prefs.calOpen}">
       <svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true" style="flex:none">
         <circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/>
@@ -1437,6 +1512,8 @@ document.addEventListener('click', e => {
     const fallback = () => { ta.focus(); ta.select(); toast('Text selected. Tap Copy.'); };
     if (navigator.clipboard?.writeText) navigator.clipboard.writeText(ta.value).then(() => toast('Backup copied'), fallback); else fallback();
   }
+  else if (act === 'briefHide') hideBrief();
+  else if (act === 'briefShow') { prefs.briefOpen = nyDay(new Date()); save(); renderTop(); }
   else if (act === 'install') { if (installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; closeSheet(); }); } }
   else if (act === 'restore') {
     try {
