@@ -83,7 +83,7 @@ a { color: inherit; text-decoration: none; }
 
 
 /* Morning brief (top of Forex) */
-.brief { position: relative; margin: 0 0 14px; padding: 14px 14px 12px; border-radius: 20px; background: linear-gradient(160deg, rgba(255,190,90,.12), rgba(10,16,34,.9) 45%); box-shadow: inset 0 0 0 1px rgba(255,200,120,.22), 0 0 28px -12px rgba(255,190,90,.5); touch-action: pan-y; transition: transform .25s, opacity .25s; }
+.brief { position: relative; margin: 0 16px 14px; padding: 14px 14px 12px; border-radius: 20px; background: linear-gradient(160deg, rgba(255,190,90,.12), rgba(10,16,34,.9) 45%); box-shadow: inset 0 0 0 1px rgba(255,200,120,.22), 0 0 28px -12px rgba(255,190,90,.5); touch-action: pan-y; transition: transform .25s, opacity .25s; }
 .brief .bk { font: 600 10.5px var(--mono); letter-spacing: .18em; color: #ffcc66; text-transform: uppercase; }
 .brief .bs { margin: 3px 0 10px; font-size: 12.5px; color: var(--mute); }
 .brief .bx { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: var(--mute); }
@@ -96,9 +96,9 @@ a { color: inherit; text-decoration: none; }
 .br-st small { display: block; margin-top: 2px; font: 500 10.5px var(--mono); color: var(--mute); }
 .br-st .ar { font-weight: 700; } .br-st .ar.u { color: var(--up); } .br-st .ar.d { color: var(--down); }
 .br-ev { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 13px; }
-.br-ev time { flex: none; width: 52px; font: 600 11.5px var(--mono); color: #ffcc66; }
+.br-ev time { flex: none; min-width: 62px; white-space: nowrap; font: 600 11.5px var(--mono); color: #ffcc66; }
 .br-ev .hi { color: #ff6487; } .br-ev em { font-style: normal; font: 500 11px var(--mono); color: var(--mute); margin-left: auto; text-align: right; flex: none; }
-.brief-mini { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 12px; padding: 10px 14px; border-radius: 16px; background: rgba(255,190,90,.08); box-shadow: inset 0 0 0 1px rgba(255,200,120,.18); font: 600 12px var(--mono); color: var(--ink2); text-align: left; }
+.brief-mini { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 0 16px 12px; padding: 10px 14px; border-radius: 16px; background: rgba(255,190,90,.08); box-shadow: inset 0 0 0 1px rgba(255,200,120,.18); font: 600 12px var(--mono); color: var(--ink2); text-align: left; }
 .brief-mini b { color: #ffcc66; letter-spacing: .1em; }
 
 /* Tabs */
@@ -425,7 +425,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-23.6';
+const APP_VERSION = '2026-10-23.7';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
