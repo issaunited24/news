@@ -40,6 +40,14 @@ await step('scroll speed', async () => {
     t.sort((a, b) => a - b); return { frames: t.length, median: t[t.length >> 1].toFixed(1), p95: t[Math.floor(t.length * .95)].toFixed(1), long: t.filter(x => x > 50).length }; });
   out.push('  scroll frames ' + JSON.stringify(r));
 });
+await step('offline', async () => {
+  await p.reload(); await wait(5000);
+  out.push('  offline worker active: ' + await p.evaluate(() => !!navigator.serviceWorker?.controller));
+  out.push('  installable manifest icons: ' + await p.evaluate(async () => (await (await fetch('manifest.json')).json()).icons.length));
+  await p.context().setOffline(true); await p.reload(); await wait(4000);
+  out.push('  stories shown with no signal: ' + await p.evaluate(() => document.querySelectorAll('[data-id]').length));
+  await p.context().setOffline(false);
+});
 out.push('memory MB ' + await p.evaluate(() => performance.memory ? (performance.memory.usedJSHeapSize / 1e6).toFixed(1) : '?'));
 out.push('nodes ' + await p.evaluate(() => document.getElementsByTagName('*').length));
 await p.screenshot({ path: 'out/end.png' });

@@ -7,8 +7,8 @@
 <meta name="color-scheme" content="dark">
 <title>Briefly</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://images.unsplash.com">
@@ -405,7 +405,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-23.4';
+const APP_VERSION = '2026-10-23.5';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1207,11 +1207,20 @@ function previewSheet(id) {
   const body = $('sheetBody'); body.style.transform = ''; body.style.opacity = ''; body.style.transition = '';
   openSheet(previewHTML(s), true);
 }
+/* ---------- Install as an app, and offline support ---------- */
+let installEvt = null;
+const installed = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+addEventListener('appinstalled', () => { installEvt = null; toast('Briefly installed'); });
+if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 function settingsSheet() {
   const pills = (arr, act) => arr.length ? `<div class="pills">${arr.map(o => `<button data-act="${act}" data-outlet="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : '<p class="muted">None.</p>';
   const srcs = data ? data.sources.map(s => `<div class="srcrow"><span>${esc(s.name)}${s.query ? ` <span class="muted">(${esc(s.query)})</span>` : s.bsky ? ' <span class="muted">(Bluesky)</span>' : ''} · <span class="muted">${esc(s.category)}</span></span>${s.ok ? `<span class="ok">${s.count} new</span>` : '<span class="bad">failing</span>'}</div>`).join('') : '<p class="muted">Loads after the first update.</p>';
   openSheet(`<h2>Settings</h2>
     <p class="muted">Saved stories and settings live on this phone. Use backup to keep a copy.</p>
+    <h4>App</h4>${installed() ? '<p class="muted">Installed on this phone. It opens full screen and works with no signal.</p>'
+      : installEvt ? '<p class="muted">Add Briefly to your home screen: its own icon, full screen, and it works with no signal.</p><div class="btns"><button class="btn" data-act="install">Install app</button></div>'
+      : '<p class="muted">To install: open the Chrome menu (⋮) and tap <b>Install app</b> or <b>Add to home screen</b>.</p>'}
     <h4>Prioritized outlets</h4>${pills(prefs.boosted, 'unboost')}
     <h4>Muted outlets</h4>${pills(prefs.muted, 'unmute')}
     <h4>Hidden stories</h4>
@@ -1428,6 +1437,7 @@ document.addEventListener('click', e => {
     const fallback = () => { ta.focus(); ta.select(); toast('Text selected. Tap Copy.'); };
     if (navigator.clipboard?.writeText) navigator.clipboard.writeText(ta.value).then(() => toast('Backup copied'), fallback); else fallback();
   }
+  else if (act === 'install') { if (installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; closeSheet(); }); } }
   else if (act === 'restore') {
     try {
       const b = JSON.parse($('backupText').value);
