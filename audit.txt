@@ -1,0 +1,46 @@
+open
+version 2026-10-23.8
+tab forex
+tab top
+tab justin
+tab world
+tab us
+tab sci
+tab tech  <- 1 issue(s)
+tab ent
+tab sports
+  brief: 4 moves, 3 stories, 4 releases
+  after hide: small button
+brief
+open story
+close story
+story menu
+  oil live price: 99.88
+forex chart
+range 1H
+range 4H
+range 1D
+range 1W
+range 1M
+range 1Y
+range 5Y
+range ALL
+close chart
+calendar
+search
+saved
+settings
+important/all
+  scroll frames {"frames":61,"median":"16.7","p95":"16.7","long":0}
+scroll speed
+  offline worker active: true
+  installable manifest icons: 4
+  stories shown with no signal: 20
+offline  <- 4 issue(s)
+memory MB 10.0
+nodes 1741
+
+ISSUES (5)
+FAILED net::ERR_BLOCKED_BY_ORB https://wsrv.nl/?url=https%3A%2F%2Fimage.cnbcfm.com%2Fapi%2Fv1%2Fimage%2F108254453-1768932204557-gettyimages-2256714490-US_STOCKS.jpeg%3Fv%3
+FAILED net::ERR_INTERNET_DISCONNECTED https://scanner.tradingview.com/global/scan
+console.error Failed to load resource: net::ERR_INTERNET_DISCONNECTED
