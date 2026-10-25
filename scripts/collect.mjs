@@ -232,7 +232,7 @@ const stories = cluster(items).map(group => {
   // Any other market story needs a known outlet or a second outlet confirming it
   if (fx && !group.some(g => trustRank(g.outlet) < 99) && outletCount < 2) fx = null;
   // Market wraps ("Dollar steady ahead of Fed...") from top market desks: kept, tagged, a couple per day (trimmed below)
-  if (!fx && isPriceRecap(lead.title) && group.some(g => WRAP_DESK.test(g.outlet)) && !TECH_ONLY.test(lead.title))
+  if (!fx && fromFxFeed && !cats.has('sports') && !cats.has('ent') && isPriceRecap(lead.title) && group.some(g => WRAP_DESK.test(g.outlet)) && !TECH_ONLY.test(lead.title))
     fx = { impact: 'medium', assets: { gold: { dir: 'flat', conf: null }, usd: { dir: 'flat', conf: null }, ndq: { dir: 'flat', conf: null }, oil: { dir: 'flat', conf: null } }, why: 'Market wrap: what moved prices and why.', driver: 'wrap', drivers: ['wrap'] };
   if (fx) cats.add('forex');
   // (business news reaches Forex only when it's a real market catalyst)
