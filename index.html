@@ -425,7 +425,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-23.8';
+const APP_VERSION = '2026-10-26.1';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -934,13 +934,14 @@ function playbookHTML(title, forecast) {
 function scorecardHTML() {
   const sc = data?.scorecard;
   if (!sc) return '';
-  const pct = t => (t.hit + t.miss ? `${Math.round(t.hit / (t.hit + t.miss) * 100)}%` : '—');
+  const pct = t => (t.hit + t.miss ? `${t.w ?? Math.round(t.hit / (t.hit + t.miss) * 100)}%` : '—');
   const cell = (label, t) => `<div class="sc-c"><span class="sc-k">${label}</span><span class="sc-v">${pct(t)}</span><span class="sc-n">${t.hit}/${t.hit + t.miss}</span></div>`;
   const total = sc.all.hit + sc.all.miss;
   return `<div class="sc glass">
     <div class="sc-h"><span>FORECAST SCORECARD</span><span>${sc.horizonH}h after the news · last ${sc.days} days</span></div>
     ${total ? `<div class="sc-g">${cell('GOLD', sc.assets.gold)}${cell('USD', sc.assets.usd)}${cell('NASDAQ', sc.assets.ndq)}${cell('OIL', sc.assets.oil || { hit: 0, miss: 0 })}${cell('CONF 7+', sc.high)}</div>`
       : `<p class="sc-empty">Collecting results. Each call is checked ${sc.horizonH} hours after the news${sc.pending ? ` · ${sc.pending} waiting` : ''}.</p>`}
+    ${sc.rules ? '<p class="sc-empty">Weighted by confidence (an 8/10 call counts twice a 4/10). Calls under 5/10 aren\'t scored, and stories repeating the same call count once.</p>' : ''}
     ${sc.cal ? `<p class="sc-empty">Includes calendar calls (a beat or miss checked 1 hour after the release): ${sc.cal.hit + sc.cal.miss ? `${pct(sc.cal)} right, ${sc.cal.hit}/${sc.cal.hit + sc.cal.miss}` : 'waiting for the next release'}.</p>` : ''}
   </div>`;
 }

@@ -423,6 +423,39 @@ for (const e of calendar?.events || []) {
     forecasts.set(key, { key, cal: true, title: `${e.title}: ${e.actual} vs ${e.forecast} forecast`.slice(0, 100), asset: k, dir, conf: 6, at: t, p0, horizon: CAL_HORIZON });
   });
 }
+// Smarter calls, before they're shown or scored:
+//  - Old news: a theme (war, Fed, oil...) that has been in the news for over a day is mostly priced in, so its calls
+//    lose 2 points of confidence, unless the headline signals a real escalation or surprise.
+//  - Trend: a call that goes against how the price moved over the 6 hours before the story loses 2 points;
+//    if that leaves it weak (4 or less), it becomes "no clear move".
+const themes = new Map(Object.entries(prevState.themes || {}));
+for (const st of stories) {
+  const d = st.fx?.driver; if (!d) continue;
+  const t = Math.min(st.published, st.firstSeen), th = themes.get(d);
+  if (!th || t - th.last > 48 * 3600e3) themes.set(d, { start: t, last: t });
+  else themes.set(d, { start: Math.min(th.start, t), last: Math.max(th.last, t) });
+}
+const FRESH_RE = /\b(escalat\w*|surprise\w*|unexpected\w*|shock\w*|first time|for the first|emergency|record|declares?|launch(es|ed)? (attack|strikes|invasion)|invad\w*|collapse\w*|default\w*|resigns?|ousted|ceasefire|peace deal|breakthrough)\b/i;
+const TREND_MIN = { gold: 0.4, usd: 0.2, ndq: 0.5, oil: 0.8 }; // % move over 6 hours that counts as a clear trend
+const toughen = (a, by) => ({ ...a, conf: Math.max(1, (a.conf || 0) - by) });
+for (const st of stories) {
+  if (!st.fx?.assets) continue;
+  const t = Math.min(st.published, st.firstSeen), th = themes.get(st.fx.driver);
+  const stale = th && t - th.start > 24 * 3600e3 && !FRESH_RE.test(st.title);
+  const notes = [];
+  for (const [k, a] of Object.entries(st.fx.assets)) {
+    if (!a.conf || a.dir === 'flat') continue;
+    let b = a;
+    if (stale) b = toughen(b, 2);
+    const p0 = priceAt(k, t - 6 * 3600e3), p1 = priceAt(k, t);
+    const mv = p0 && p1 ? (p1 - p0) / p0 * 100 : 0;
+    const against = Math.abs(mv) >= (TREND_MIN[k] || 0.5) && (mv > 0) !== (b.dir === 'up');
+    if (against) { b = toughen(b, 2); if (b.conf <= 4) b = { dir: 'flat', conf: null }; }
+    if (b !== a) { st.fx.assets[k] = b; if (against) notes.push(k); }
+  }
+  if (stale) st.fx.stale = true;
+  if (notes.length) st.fx.against = notes;
+}
 for (const st of stories) {
   if (!st.fx?.assets || now - st.firstSeen > 6 * 3600e3) continue;
   for (const k of ['gold', 'usd', 'ndq', 'oil']) {
@@ -430,7 +463,7 @@ for (const st of stories) {
     if (!a || a.dir === 'flat' || !a.conf || forecasts.has(key)) continue;
     const p0 = priceAt(k, st.firstSeen);
     if (p0 == null) continue;
-    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, at: st.firstSeen, p0 });
+    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, at: st.firstSeen, p0 });
   }
 }
 for (const f of forecasts.values()) {
@@ -441,13 +474,30 @@ for (const f of forecasts.values()) {
   f.chg = (p1 - f.p0) / f.p0 * 100;
   f.result = Math.abs(f.chg) < 0.05 ? 'flat' : (f.chg > 0) === (f.dir === 'up') ? 'hit' : 'miss';
 }
-const judged = [...forecasts.values()].filter(f => f.result === 'hit' || f.result === 'miss');
-const tally = list => ({ hit: list.filter(f => f.result === 'hit').length, miss: list.filter(f => f.result === 'miss').length });
+// Scoring:
+//  - Weak news calls (under 5/10) still show on the cards but aren't scored.
+//  - One vote per idea: news calls on the same asset, in the same direction, from the same theme within a 4-hour
+//    window count once (the most confident one), so 20 headlines about one event aren't 20 votes.
+//  - Weighted by confidence: an 8/10 call counts twice as much as a 4/10 call.
+const vote = new Map();
+for (const f of forecasts.values()) {
+  if (f.result !== 'hit' && f.result !== 'miss') continue;
+  if (!f.cal && (f.conf || 0) < 5) continue;
+  const k = f.cal ? f.key : `${f.asset}:${f.dir}:${f.driver || ''}:${Math.floor(f.at / HORIZON)}`;
+  const was = vote.get(k);
+  if (!was || (f.conf || 0) > (was.conf || 0)) vote.set(k, f);
+}
+const judged = [...vote.values()];
+const tally = list => {
+  const hit = list.filter(f => f.result === 'hit'), miss = list.filter(f => f.result === 'miss');
+  const w = l => l.reduce((n, f) => n + (f.conf || 5), 0), all = w(hit) + w(miss);
+  return { hit: hit.length, miss: miss.length, w: all ? Math.round(w(hit) / all * 100) : null };
+};
 const scorecard = {
   horizonH: 4, days: 7,
   assets: { gold: tally(judged.filter(f => f.asset === 'gold')), usd: tally(judged.filter(f => f.asset === 'usd')), ndq: tally(judged.filter(f => f.asset === 'ndq')), oil: tally(judged.filter(f => f.asset === 'oil')) },
   all: tally(judged), high: tally(judged.filter(f => f.conf >= 7)), news: tally(judged.filter(f => !f.cal)), cal: tally(judged.filter(f => f.cal)),
-  pending: [...forecasts.values()].filter(f => !f.result).length,
+  pending: [...forecasts.values()].filter(f => !f.result).length, rules: 2,
   recent: judged.sort((a, b) => b.at - a.at).slice(0, 6).map(f => ({ title: f.title, asset: f.asset, dir: f.dir, conf: f.conf, result: f.result, chg: Math.round(f.chg * 100) / 100, at: f.at, cal: f.cal || undefined })),
 };
 
@@ -476,6 +526,6 @@ await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
 // Everything else (older or small stories), in its own file so the app's regular check stays light
 await writeFile(new URL('data/older.json', ROOT), JSON.stringify({ updated: now, stories: keep.filter(st => !isRecent(st)) }));
 await writeFile(new URL('data/charts.json', ROOT), JSON.stringify(charts));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], lastFetch }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), lastFetch }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);
