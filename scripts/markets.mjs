@@ -7,7 +7,7 @@ const MOVE = '(rises?|rose|gains?|gained|jumps?|jumped|climbs?|climbed|rall(?:y|
 const RECAP_RE = new RegExp(`^(?:[\\w'’.-]+\\s){0,3}?${ASSET}\\b(?:[\\s,:–-]+\\S+){0,3}?\\s+${MOVE}\\b`, 'i');
 const TECH_RE = /\b(price (forecast|prediction|analysis)|technical (analysis|outlook)|forecast:|outlook:|support (level|zone)|resistance|fibonacci|elliott wave|pivot|bullish bias|bearish bias|chart of the (day|week)|week ahead|weekly (forecast|outlook)|daily (forecast|outlook)|market wrap|stocks to watch|stocks making|premarket|pre-market|after-hours movers|morning (brief|bid)|trade idea|signals?:|how to trade|what to expect from|live updates?|live:|price today|rate today|to watch|pick of the week|podcast|bitcoin|btc|crypto|(?:gold|oil|silver|crude) prices?|etfs?|what to know|explainer|explained|opinion|analysis:|[A-Z]{3}\/[A-Z]{3})\b/i;
 
-const NOT_WAR_RE = /\b(price war|war on (drugs|crime|terror|cancer|poverty|christmas)|culture wars?|star wars|war chest|console war|talent war|bidding war|streaming war|war of words|war room|war film|war movie|war veteran|world war (i|ii|one|two|1|2)|civil war (film|movie|series)|warcraft|war games?)\b/i;
+const NOT_WAR_RE = /\b(price war|war on (drugs|crime|terror|cancer|poverty|christmas)|culture wars?|star wars|war chest|console war|talent war|bidding war|streaming war|war of words|war room|war film|war movie|war veteran|world war (i|ii|one|two|1|2)|civil war (film|movie|series)|warcraft|war games?|call of duty|battlefield \d|video games?|game edition|tops (sales|box office) charts?|box office|movie|film|tv series|season \d)\b/i;
 const US_CTX_RE = /\b(u\.?s\.?|united states|america|american|washington|white house|congress|senate|house of representatives|trump|vance|biden|republicans?|democrats?|gop|federal|fed|pentagon|treasury)\b/i;
 const BIG_TECH_RE = /\b(apple|microsoft|nvidia|amazon|alphabet|google|meta|facebook|tesla|netflix|broadcom|amd|intel|oracle|salesforce|ibm|tsmc|asml|qualcomm|micron|palantir|openai|anthropic|jpmorgan|goldman sachs|bank of america|morgan stanley|walmart|berkshire)\b/gi;
 const US_RE = /\b(fed|fomc|federal reserve|powell|warsh|u\.?s\.? (cpi|inflation|jobs|payrolls|economy|gdp|retail sales|consumer prices|pce)|nonfarm|non-farm|jobless claims|treasury yields?|us cpi|us inflation)\b/i;
@@ -19,6 +19,7 @@ const DRIVERS = [
   {
     name: 'war',
     test: t => {
+      if (/\b(call of duty|battlefield \d|video games?|game edition|tops (sales|box office) charts?|box office)\b/i.test(t)) return null; // games and films, not real wars
       if (has(NOT_WAR_RE, t) && !/\b(missiles?|airstrikes?|troops|invasion)\b/i.test(t)) return null;
       const kinetic = /\b(airstrikes?|air strikes?|strikes? on|missile (strikes?|attacks?|launch(es)?|barrage)|missiles? (hit|fired|launched|struck|strike)|drone (strikes?|attacks?)|bombing|bombs?|shelling|invasion|invades?|invaded|troops (enter|cross|mass|deploy)|military (strike|operation|action|escalation)|declares? war|war (breaks out|erupts|escalates|widens)|escalat\w+|nuclear (threat|test|strike|weapon)|attacks? on (oil|shipping|tankers?|bases?|embassy|ships?)|vows invasion|retaliat\w+)\b/i;
       const actors = /\b(iran\w*|irgc|israel\w*|russia\w*|ukrain\w*|kyiv|moscow|china|chinese|taiwan|saudi|gulf|hormuz|houthis?|red sea|north korea\w*|nato|pentagon|oil|tankers?|u\.?s\.? (forces|troops|strikes?|military|bases?))\b/i;
@@ -112,9 +113,57 @@ const DRIVERS = [
       return null;
     },
   },
+  {
+    name: 'ai',
+    test: t => {
+      if (!/\b(ai (trade|stocks?|spending|capex|bubble|boom|rally|selloff|sell-off|jitters|fears|doubts|chips?|investment)|artificial intelligence (spending|bubble|stocks)|(capex|capital spending|data cent(er|re) spending|gpu (financing|spending|orders))\b.{0,40}\b(ai|jump|surge|soar|cut|slash|record)|(nvidia|microsoft|alphabet|google|meta|amazon|openai)\b.{0,40}\b(capex|spending|data cent(er|re)s?|gpus?))\b/i.test(t)) return null;
+      const down = /\b(pain|bubble|fears?|jitters|doubts?|selloff|sell-off|slump|rout|worr(y|ies)|crunch|cuts?|slash\w*|overspend\w*|warns?|weigh\w*|pressure)\b/i.test(t);
+      const up = /\b(boom|rally|surges?|soars?|record|beats?|strong demand|raises?|boosts?)\b/i.test(t);
+      if (up === down) return { why: 'AI spending is the main driver of big tech stocks: news on it moves the Nasdaq.', gold: 'flat', usd: 'flat', ndq: 'flat', base: {}, impact: 'medium' };
+      return down
+        ? { why: 'Doubts about AI spending weigh on big tech, which dominates the Nasdaq.', gold: 'flat', usd: 'flat', ndq: 'down', base: { ndq: 5 } }
+        : { why: 'Strong AI spending and demand support big tech, which dominates the Nasdaq.', gold: 'flat', usd: 'flat', ndq: 'up', base: { ndq: 5 } };
+    },
+  },
+  {
+    name: 'yields',
+    test: t => {
+      if (!/\b(treasur(y|ies)|bond) yields?\b|\b10-year (yield|note)\b|\bbond (market )?(selloff|sell-off|rout|rally)\b/i.test(t)) return null;
+      if (/\b(rise|rises|rising|jump\w*|surge\w*|soar\w*|climb\w*|spike\w*|highest|selloff|sell-off|rout)\b/i.test(t))
+        return { why: 'Rising Treasury yields support the dollar and weigh on gold and tech stocks.', gold: 'down', usd: 'up', ndq: 'down', base: { gold: 5, usd: 5, ndq: 5 } };
+      if (/\b(fall|falls|falling|drop\w*|slide\w*|tumble\w*|sink\w*|lowest|rally|ease\w*)\b/i.test(t))
+        return { why: 'Falling Treasury yields weigh on the dollar and help gold and tech stocks.', gold: 'up', usd: 'down', ndq: 'up', base: { gold: 5, usd: 5, ndq: 4 } };
+      return null;
+    },
+  },
+  {
+    name: 'cb',
+    test: t => {
+      const bank = (t.match(/\b(ecb|european central bank|lagarde|bank of japan|boj|ueda|bank of england|boe|bailey|snb|swiss national bank|bank of canada|rba|pboc)\b/i) || [])[1];
+      if (!bank) return null;
+      const yen = /japan|boj|ueda/i.test(bank), boe = /england|boe|bailey/i.test(bank), eur = /ecb|european|lagarde/i.test(bank);
+      const hike = /\b(raises?|hikes?|hiking|tighten\w*|hawkish|rate (hike|rise|increase))\b/i.test(t), cut = /\b(cuts?|cutting|lowers?|eas(e|es|ing)|dovish|rate cut)\b/i.test(t);
+      const ccy = yen ? 'JPY' : boe ? 'GBP' : eur ? 'EUR' : null;
+      if (hike === cut) return /\b(decision|meeting|holds?|keeps? rates|leaves? rates)\b/i.test(t) ? { why: 'A major central bank decision moves its currency against the dollar.', gold: 'flat', usd: 'flat', ndq: 'flat', base: {}, impact: 'medium', fxc: ccy ? { [ccy]: 'watch' } : {} } : null;
+      return hike
+        ? { why: `A tighter ${bank.toUpperCase().length <= 4 ? bank.toUpperCase() : bank} lifts its currency, which pushes the dollar index down.`, gold: 'flat', usd: 'down', ndq: 'flat', base: { usd: (eur || yen) ? 5 : 3 }, fxc: ccy ? { [ccy]: 'up' } : {} }
+        : { why: `Rate cuts from the ${bank.toUpperCase().length <= 4 ? bank.toUpperCase() : bank} weaken its currency, which lifts the dollar index.`, gold: 'flat', usd: 'up', ndq: 'flat', base: { usd: (eur || yen) ? 5 : 3 }, fxc: ccy ? { [ccy]: 'down' } : {} };
+    },
+  },
+  {
+    name: 'china',
+    test: t => {
+      if (!/\b(china|chinese|beijing|pboc)\b/i.test(t) || !/\b(gdp|economy|economic|growth|stimulus|exports?|imports?|factory|pmi|retail sales|deflation|property|yuan)\b/i.test(t)) return null;
+      if (/\b(stimulus|rate cut|support measures|beats?|accelerat\w*|rebound\w*|stronger|surge\w*)\b/i.test(t))
+        return { why: 'Chinese stimulus or strong data lifts demand hopes: good for oil and risk assets.', gold: 'flat', usd: 'flat', ndq: 'up', oil: 'up', base: { ndq: 3, oil: 5 } };
+      if (/\b(slow\w*|weak\w*|miss\w*|contract\w*|deflation|slump\w*|crisis|plunge\w*|shrink\w*)\b/i.test(t))
+        return { why: 'A weaker Chinese economy hurts global demand, especially for oil.', gold: 'flat', usd: 'flat', ndq: 'down', oil: 'down', base: { ndq: 3, oil: 5 } };
+      return null;
+    },
+  },
 ];
 
-const HIGH_DRIVERS = new Set(['war', 'fed', 'banking']);
+const HIGH_DRIVERS = new Set(['war', 'fed', 'banking', 'yields']);
 
 // Turn currency effects into the main pairs: XXX/USD for EUR, GBP, AUD, NZD; USD/XXX for JPY, CHF, CAD, CNH
 const BASE_FIRST = ['EUR', 'GBP', 'AUD', 'NZD'];
@@ -142,7 +191,10 @@ export function isPriceRecap(title) {
 }
 
 // text: headline + summary. ctx: { policy } from the forex rules. Returns null when nothing market-moving is found.
+const PREVIEW_RE = /\b(week ahead|the week ahead|what to watch|things to watch|ahead of (the )?(fed|fomc|cpi|pce|jobs report|payrolls|ecb|boj|earnings)|(fed|fomc|ecb|boj) (decision|meeting) (preview|this week)|key (events|data) (this|next) week|earnings week|big tech earnings (this|next) week)\b/i;
 export function marketCatalyst(title, text, ctx, tier, outlets) {
+  if (PREVIEW_RE.test(title) && /\b(fed|fomc|cpi|pce|inflation|jobs|payrolls|gdp|ecb|boj|earnings|rate)\b/i.test(title))
+    return { impact: 'medium', assets: { gold: { dir: 'flat', conf: null }, usd: { dir: 'flat', conf: null }, ndq: { dir: 'flat', conf: null }, oil: { dir: 'flat', conf: null } }, why: 'A look ahead at the events that will move markets.', driver: 'preview', drivers: ['preview'] };
   if (isPriceRecap(title)) return null;
   const hits = [];
   for (const d of DRIVERS) { const r = d.test(title, ctx); if (r) hits.push({ name: d.name, ...r }); }

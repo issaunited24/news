@@ -9,6 +9,8 @@ import { cluster, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJ
 
 const ROOT = new URL('../', import.meta.url);
 const WINDOW_H = 36;           // keep stories from the last 36 hours
+const WRAP_DESK = /^(reuters|bloomberg|wall street journal|wsj|financial times|cnbc|marketwatch|barron|associated press|ap news|investinglive|forexlive|fxstreet|kitco)/i;
+const TECH_ONLY = /\b(forecast|technical|support|resistance|fibonacci|elliott|pivot|chart|signals?|price prediction)\b/i;
 const MAX_ITEMS = 9000;          // enough for the whole 36-hour window from ~170 sources
 const CAL_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 const FIXTURES = process.env.FIXTURES; // local testing: folder of saved feeds
@@ -209,7 +211,7 @@ const stories = cluster(items).map(group => {
   const fromBiz = group.some(g => g.biz);
   const outletCount = new Set(group.map(g => g.outlet)).size;
   const text = `${lead.title} ${lead.summary}`;
-  const fx = marketCatalyst(lead.title, text, { policy: policyOf(text) }, s.tier, outletCount);
+  let fx = marketCatalyst(lead.title, text, { policy: policyOf(text) }, s.tier, outletCount);
   if (fx && fx.impact === 'high' && s.tier === 'minor') s.tier = 'notable';
   const firstSeen = Math.min(...group.map(g => g.seen ?? now));
   const published = group[0].time;
@@ -223,6 +225,13 @@ const stories = cluster(items).map(group => {
   const trust = trustRank(lead.outlet);
   const justIn = ageMin <= 90 && justInOk(lead.outlet, lead.title, cats);
   const top = cls.top || (justIn && cls.urgent && trust <= 22);
+  // Quality filter: war, peace, politics, sanctions and trade stories only count as market movers when a major
+  // newsroom reports them or several outlets cover them (small sites' takes on ongoing stories don't move markets)
+  const majorDesk = group.some(g => trustRank(g.outlet) <= 22);
+  if (fx && ['war', 'peace', 'politics', 'sanctions', 'trade'].includes(fx.driver) && !majorDesk && outletCount < 3) fx = null;
+  // Market wraps ("Dollar steady ahead of Fed...") from top market desks: kept, tagged, a couple per day (trimmed below)
+  if (!fx && isPriceRecap(lead.title) && group.some(g => WRAP_DESK.test(g.outlet)) && !TECH_ONLY.test(lead.title))
+    fx = { impact: 'medium', assets: { gold: { dir: 'flat', conf: null }, usd: { dir: 'flat', conf: null }, ndq: { dir: 'flat', conf: null }, oil: { dir: 'flat', conf: null } }, why: 'Market wrap: what moved prices and why.', driver: 'wrap', drivers: ['wrap'] };
   if (fx) cats.add('forex');
   // (business news reaches Forex only when it's a real market catalyst)
   // Price recaps and chart pieces from forex sites ("Gold rises...", "EUR/USD forecast") are dropped entirely
@@ -240,6 +249,15 @@ const stories = cluster(items).map(group => {
 }).filter(Boolean).map(({ _all, ...s }) => s)
   .sort((a, b) => b.updatedAt - a.updatedAt);
 
+// Market wraps: at most 2 per day (New York date), the most widely covered ones
+{
+  const byDay = new Map();
+  for (const st of stories.filter(x => x.fx?.driver === 'wrap').sort((a, b) => b.sources.length - a.sources.length || b.published - a.published)) {
+    const day = new Date(st.published - 5 * 3600e3).toISOString().slice(0, 10), n = byDay.get(day) || 0;
+    if (n < 2) { byDay.set(day, n + 1); continue; }
+    st.fx = null; st.categories = st.categories.filter(c => c !== 'forex');
+  }
+}
 // 3b. Fuller summaries: for important stories with a thin summary, read the opening of the article
 //     (its description and first paragraphs) from an outlet that links directly. Cached between runs.
 const extracts = new Map((prevState.extracts || []).filter(e => now - e.at < WINDOW_H * 3600e3).map(e => [e.id, e]));

@@ -425,7 +425,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.1';
+const APP_VERSION = '2026-10-26.2';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -619,7 +619,7 @@ function visible(s) {
   return true;
 }
 // Your picks per tab (from the robot's "likes" tags). Liked stories show a bit more often and a bit higher, never only them.
-const FX_LIKED = ['fed', 'earnings', 'bigtech', 'war', 'peace', 'oil', 'sanctions'];
+const FX_LIKED = ['fed', 'earnings', 'bigtech', 'ai', 'yields', 'cb', 'preview', 'war', 'peace', 'oil', 'sanctions'];
 function liked(s, tab) {
   if (tab === 'forex') return !!s.fx && FX_LIKED.includes(s.fx.driver);
   return !!s.likes && s.likes.some(k => LIKE_TAB[k] === tab);
@@ -685,7 +685,7 @@ const justIn = s => s.justIn && Date.now() - Math.min(s.published, s.firstSeen) 
 const isSaved = id => prefs.saved.some(x => x.id === id);
 
 /* ---------- Mini charts ---------- */
-const DRIVER = { war: 'CONFLICT', peace: 'PEACE', fed: 'FED / US DATA', earnings: 'EARNINGS', trade: 'TRADE', politics: 'US POLITICS', oil: 'OIL SHOCK', banking: 'BANKING', sanctions: 'SANCTIONS', bigtech: 'BIG TECH' };
+const DRIVER = { wrap: 'MARKET WRAP', preview: 'WEEK AHEAD', ai: 'AI / BIG TECH', yields: 'YIELDS', cb: 'CENTRAL BANKS', china: 'CHINA', war: 'CONFLICT', peace: 'PEACE', fed: 'FED / US DATA', earnings: 'EARNINGS', trade: 'TRADE', politics: 'US POLITICS', oil: 'OIL SHOCK', banking: 'BANKING', sanctions: 'SANCTIONS', bigtech: 'BIG TECH' };
 const DIRC = { up: '#3ef0b4', down: '#ff6487', flat: '#8a90a8' };
 let sparkN = 0;
 // Smooth line with a soft glow and gradient fill; an optional dashed tip shows the forecast direction
