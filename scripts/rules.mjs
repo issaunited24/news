@@ -55,7 +55,7 @@ const TRUSTED = ['reuters', 'ap news', 'associated press', 'bloomberg', 'bbc', '
   // added for "Just in": solid outlets whose fresh stories can show before others confirm them
   'afp', 'agence france', 'cnn', 'npr', 'pbs', 'usa today', 'the hill', 'los angeles times', 'cbc', 'the independent', 'engadget', 'mit technology review', '9to5mac', '9to5google', 'the information', 'variety', 'hollywood reporter', 'deadline',
   // sports, science and entertainment desks
-  'espn', 'cbs sports', 'sky sports', 'the athletic', 'yahoo sports', 'mma fighting', 'mma junkie', 'nasa', 'space.com', 'new scientist', 'sciencedaily', 'live science', 'quanta', 'billboard', 'rolling stone', 'collider', 'spaceflight now', 'south china morning post', 'federal reserve', 'ecb', 'bank of japan', 'cmc markets'];
+  'espn', 'cbs sports', 'sky sports', 'the athletic', 'yahoo sports', 'mma fighting', 'mma junkie', 'nasa', 'space.com', 'new scientist', 'sciencedaily', 'live science', 'quanta', 'billboard', 'rolling stone', 'collider', 'spaceflight now', 'south china morning post', 'federal reserve', 'ecb', 'bank of japan', 'cmc markets', 'nikkei', 'times of israel', 'euronews', 'nature', 'scientific american', 'science magazine'];
 export const trustRank = outlet => { const o = String(outlet).toLowerCase().trim(); const i = TRUSTED.findIndex(t => (t.length <= 3 ? o === t || o.startsWith(t + ' ') : o.includes(t))); return i < 0 ? 99 : i; };
 // "Just in": which outlets may show a story before anyone else confirms it.
 // News desks for every tab; specialist tech outlets only for Tech & AI. Entertainment trades wait for confirmation.
