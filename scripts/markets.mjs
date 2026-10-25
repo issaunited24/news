@@ -116,7 +116,7 @@ const DRIVERS = [
   {
     name: 'ai',
     test: t => {
-      if (!/\b(ai (trade|stocks?|spending|capex|bubble|boom|rally|selloff|sell-off|jitters|fears|doubts|chips?|investment)|artificial intelligence (spending|bubble|stocks)|(capex|capital spending|data cent(er|re) spending|gpu (financing|spending|orders))\b.{0,40}\b(ai|jump|surge|soar|cut|slash|record)|(nvidia|microsoft|alphabet|google|meta|amazon|openai)\b.{0,40}\b(capex|spending|data cent(er|re)s?|gpus?))\b/i.test(t)) return null;
+      if (!/\b(ai (trade|stocks?|spending|capex|bubble|boom|rally|selloff|sell-off|jitters|fears|doubts|chips?|investment)|artificial intelligence (spending|bubble|stocks)|(capex|capital spending|data cent(er|re) spending|gpu (financing|spending|orders))\b.{0,40}\b(ai|jump|surge|soar|cut|slash|record)|(nvidia|microsoft|alphabet|google|meta|amazon|openai)\b.{0,40}\b(capex|capital spending|ai spending))\b/i.test(t)) return null;
       const down = /\b(pain|bubble|fears?|jitters|doubts?|selloff|sell-off|slump|rout|worr(y|ies)|crunch|cuts?|slash\w*|overspend\w*|warns?|weigh\w*|pressure)\b/i.test(t);
       const up = /\b(boom|rally|surges?|soars?|record|beats?|strong demand|raises?|boosts?)\b/i.test(t);
       if (up === down) return { why: 'AI spending is the main driver of big tech stocks: news on it moves the Nasdaq.', gold: 'flat', usd: 'flat', ndq: 'flat', base: {}, impact: 'medium' };
@@ -193,7 +193,7 @@ export function isPriceRecap(title) {
 // text: headline + summary. ctx: { policy } from the forex rules. Returns null when nothing market-moving is found.
 const PREVIEW_RE = /\b(week ahead|the week ahead|what to watch|things to watch|ahead of (the )?(fed|fomc|cpi|pce|jobs report|payrolls|ecb|boj|earnings)|(fed|fomc|ecb|boj) (decision|meeting) (preview|this week)|key (events|data) (this|next) week|earnings week|big tech earnings (this|next) week)\b/i;
 export function marketCatalyst(title, text, ctx, tier, outlets) {
-  if (PREVIEW_RE.test(title) && /\b(fed|fomc|cpi|pce|inflation|jobs|payrolls|gdp|ecb|boj|earnings|rate)\b/i.test(title))
+  if (PREVIEW_RE.test(title) && /\b(fed|fomc|cpi|pce|inflation|jobs|payrolls|gdp|ecb|boj|rate decision|big tech|wall street|stocks?|markets?)\b/i.test(title) && !/\b(bitcoin|crypto|kospi|nikkei|asx|sensex|nifty|ftse|dax|cac)\b/i.test(title))
     return { impact: 'medium', assets: { gold: { dir: 'flat', conf: null }, usd: { dir: 'flat', conf: null }, ndq: { dir: 'flat', conf: null }, oil: { dir: 'flat', conf: null } }, why: 'A look ahead at the events that will move markets.', driver: 'preview', drivers: ['preview'] };
   if (isPriceRecap(title)) return null;
   const hits = [];

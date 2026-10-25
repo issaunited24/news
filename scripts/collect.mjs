@@ -10,7 +10,7 @@ import { cluster, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJ
 const ROOT = new URL('../', import.meta.url);
 const WINDOW_H = 36;           // keep stories from the last 36 hours
 const WRAP_DESK = /^(reuters|bloomberg|wall street journal|wsj|financial times|cnbc|marketwatch|barron|associated press|ap news|investinglive|forexlive|fxstreet|kitco)/i;
-const TECH_ONLY = /\b(forecast|technical|support|resistance|fibonacci|elliott|pivot|chart|signals?|price prediction)\b/i;
+const TECH_ONLY = /\b(forecast|technical|support|resistance|fibonacci|elliott|pivot|chart|signals?|price prediction|price today|live (gold )?price|price in [a-z]{3}\b|per ounce today|rates? today)\b/i;
 const MAX_ITEMS = 9000;          // enough for the whole 36-hour window from ~170 sources
 const CAL_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 const FIXTURES = process.env.FIXTURES; // local testing: folder of saved feeds
@@ -229,6 +229,8 @@ const stories = cluster(items).map(group => {
   // newsroom reports them or several outlets cover them (small sites' takes on ongoing stories don't move markets)
   const majorDesk = group.some(g => trustRank(g.outlet) <= 22);
   if (fx && ['war', 'peace', 'politics', 'sanctions', 'trade'].includes(fx.driver) && !majorDesk && outletCount < 3) fx = null;
+  // Any other market story needs a known outlet or a second outlet confirming it
+  if (fx && !group.some(g => trustRank(g.outlet) < 99) && outletCount < 2) fx = null;
   // Market wraps ("Dollar steady ahead of Fed...") from top market desks: kept, tagged, a couple per day (trimmed below)
   if (!fx && isPriceRecap(lead.title) && group.some(g => WRAP_DESK.test(g.outlet)) && !TECH_ONLY.test(lead.title))
     fx = { impact: 'medium', assets: { gold: { dir: 'flat', conf: null }, usd: { dir: 'flat', conf: null }, ndq: { dir: 'flat', conf: null }, oil: { dir: 'flat', conf: null } }, why: 'Market wrap: what moved prices and why.', driver: 'wrap', drivers: ['wrap'] };
