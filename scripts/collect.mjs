@@ -532,7 +532,7 @@ if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
 for (const st of stories) {
   const p = st.fx && preds.get(st.id); if (!p) continue;
   const slim = o => (o ? Object.fromEntries(Object.entries(o).map(([k, a]) => [k, { dir: a.dir, conf: a.conf }])) : undefined);
-  st.fx.assets = slim(p.assets);
+  st.fx.assets = { ...(st.fx.assets || {}), ...(slim(p.assets) || {}) }; // markets the model didn't pass keep the rules' call
   if (p.h1 && Object.keys(p.h1).length) st.fx.h1 = slim(p.h1);
   if (p.d1 && Object.keys(p.d1).length) st.fx.d1 = slim(p.d1);
   st.fx.impact = st.breaking ? 'high' : p.impact;

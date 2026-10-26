@@ -13,6 +13,10 @@ on:
         description: "Quick test run (small data, nothing published)"
         type: boolean
         default: false
+      skip_data:
+        description: "Retrain on the last dataset (skip collecting)"
+        type: boolean
+        default: false
       gnews_minutes:
         description: "Minutes to spend downloading Google News headlines this run"
         default: "150"
@@ -32,6 +36,7 @@ env:
 
 jobs:
   data:
+    if: ${{ !inputs.skip_data }}
     runs-on: ubuntu-latest
     timeout-minutes: 340
     steps:
@@ -98,6 +103,7 @@ jobs:
 
   train:
     needs: data
+    if: ${{ always() && (needs.data.result == 'success' || inputs.skip_data) }}
     runs-on: ubuntu-latest
     timeout-minutes: 340
     steps:
@@ -118,9 +124,17 @@ jobs:
       - name: Install
         run: pip install -q -r scripts/ml/requirements.txt
       - uses: actions/download-artifact@v4
+        if: ${{ !inputs.skip_data }}
         with:
           name: dataset
           path: data/ml/dataset
+      - name: The last dataset (when retraining only)
+        if: ${{ inputs.skip_data }}
+        run: |
+          for id in $(gh run list --workflow train.yml -L 20 --json databaseId,status -q '.[] | select(.status=="completed") | .databaseId'); do
+            if gh run download "$id" -n dataset -D data/ml/dataset 2>/dev/null && [ -f data/ml/dataset/feats.npz ]; then echo "Using the dataset from run $id"; break; fi
+            rm -rf data/ml/dataset
+          done
       - name: The live model's test results (a new model must beat them)
         continue-on-error: true
         run: mkdir -p model && gh release download model -p report.json -D model --clobber

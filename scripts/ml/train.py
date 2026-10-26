@@ -56,9 +56,9 @@ def make_model(kind, C, emb_blocks):
     pre = ColumnTransformer([(f'e{i}', PCA(n_components=EMB_PCA, random_state=0), list(range(a, b))) for i, (a, b) in enumerate(emb_blocks)],
                             remainder='passthrough')
     if kind == 'logistic':
-        return make_pipeline(pre, StandardScaler(), LogisticRegression(C=C, max_iter=3000))
+        return make_pipeline(pre, StandardScaler(), LogisticRegression(C=C, max_iter=3000, class_weight='balanced'))
     return make_pipeline(pre, HistGradientBoostingClassifier(max_iter=250, learning_rate=0.04, max_leaf_nodes=15, l2_regularization=2.0,
-                                                             min_samples_leaf=120, random_state=0))
+                                                             min_samples_leaf=120, random_state=0, class_weight='balanced'))
 
 
 def fit_w(m, X, y, w):
@@ -73,7 +73,13 @@ def labels(meta, prefix, k, hours):
     vol = np.where(np.isfinite(vol) & (vol > 0), vol, np.median(good) if len(good) else 1.0)
     z = r / vol
     ok = np.isfinite(r) & (np.abs(np.nan_to_num(z)) >= 0.1)
-    return ok, (r > 0).astype(int), np.clip(np.abs(np.nan_to_num(z)), 0.1, 3.0), z
+    w = np.clip(np.abs(np.nan_to_num(z)), 0.1, 3.0)
+    # Headlines from the same hour (same day for the 1-day model) all share one outcome; together they count once,
+    # so busy news days can't dominate and the model can't just memorise which way a period drifted
+    bucket = (meta.ts.values // (86400 if prefix == 'rD' else 3600)).astype(np.int64)
+    _, inv, cnt = np.unique(np.where(ok, bucket, -1), return_inverse=True, return_counts=True)
+    w = w / cnt[inv]
+    return ok, (r > 0).astype(int), w, z
 
 
 def folds(ts, n_folds=4, test_frac=0.4, embargo=86400):
@@ -133,35 +139,38 @@ class Frame:
             has = np.isfinite(oof)
             if has.sum() < 100:
                 continue
-            res[k] = {'oof': oof, 'y': y, 'has': has, 'acc': float(np.mean((oof[has] > 0.5) == (y[has] == 1))), 'll': logloss(oof[has], y[has])}
+            pu, yy = oof[has] > 0.5, y[has] == 1
+            bacc = 0.5 * (np.mean(pu[yy]) + np.mean(~pu[~yy])) if yy.any() and (~yy).any() else 0.5
+            res[k] = {'oof': oof, 'y': y, 'has': has, 'acc': float(np.mean(pu == yy)), 'bacc': float(bacc), 'll': logloss(oof[has], y[has])}
         return res
 
 
 def score(res):
+    """Balanced accuracy (fair when the market trended one way during the test) and log-loss, averaged over markets."""
     if not res:
-        return 9.0, 0.0
-    return float(np.mean([r['ll'] for r in res.values()])), float(np.mean([r['acc'] for r in res.values()]))
+        return 0.0, 9.0
+    return float(np.mean([r['bacc'] for r in res.values()])), float(np.mean([r['ll'] for r in res.values()]))
 
 
 def choose_groups(fr, prefix, hours):
     """Start from the base inputs; add each optional group only if it improves the walk-forward test."""
     groups = list(BASE[fr.kind])
-    best_ll, best_acc = score(fr.walk(groups, prefix, hours))
-    steps = [{'groups': list(groups), 'logloss': round(best_ll, 5), 'accuracy': round(best_acc, 4)}]
-    log(f'  base {groups}: log-loss {best_ll:.5f}, accuracy {best_acc:.4f}')
+    best_b, best_ll = score(fr.walk(groups, prefix, hours))
+    steps = [{'groups': list(groups), 'balanced_accuracy': round(best_b, 4), 'logloss': round(best_ll, 5)}]
+    log(f'  base {groups}: balanced accuracy {best_b:.4f}, log-loss {best_ll:.5f}')
     remaining = [g for g in OPTIONAL if not (g == 'opening' and fr.parts['has_x'].mean() < 0.05)]
     while remaining:
         trials = []
         for g in remaining:
-            ll, acc = score(fr.walk(groups + [g], prefix, hours))
-            log(f'    + {g}: log-loss {ll:.5f}, accuracy {acc:.4f}')
-            trials.append((ll, acc, g))
-        ll, acc, g = min(trials)
-        if ll < best_ll - 0.0003 and acc >= best_acc - 0.002:
+            b, ll = score(fr.walk(groups + [g], prefix, hours))
+            log(f'    + {g}: balanced accuracy {b:.4f}, log-loss {ll:.5f}')
+            trials.append((b, -ll, g))
+        b, nll, g = max(trials)
+        if b >= best_b + 0.002 and -nll <= best_ll + 0.002:
             groups.append(g)
             remaining.remove(g)
-            best_ll, best_acc = ll, acc
-            steps.append({'groups': list(groups), 'logloss': round(ll, 5), 'accuracy': round(acc, 4)})
+            best_b, best_ll = b, -nll
+            steps.append({'groups': list(groups), 'balanced_accuracy': round(b, 4), 'logloss': round(-nll, 5)})
             log(f'  kept {g}')
         else:
             break
@@ -170,15 +179,15 @@ def choose_groups(fr, prefix, hours):
 
 def choose_model(fr, groups, prefix, hours):
     """Per asset: the model type and strength of regularisation that test best."""
-    cands = [('logistic', 0.003), ('logistic', 0.01), ('logistic', 0.03), ('boosting', None)]
+    cands = [('logistic', 0.001), ('logistic', 0.003), ('logistic', 0.01), ('boosting', None)]
     results = {c: fr.walk(groups, prefix, hours, kind=c[0], C=c[1] or 1.0) for c in cands}
     chosen = {}
     for k in ASSETS:
-        opts = [(results[c][k]['ll'], c) for c in cands if k in results[c]]
+        opts = [(results[c][k]['bacc'], -results[c][k]['ll'], c) for c in cands if k in results[c]]
         if opts:
-            ll, c = min(opts)
+            b, nll, c = max(opts)
             chosen[k] = (c, results[c][k])
-            log(f'    {k}: {c[0]}{"" if c[1] is None else f" C={c[1]}"}, accuracy {results[c][k]["acc"]:.4f}, log-loss {ll:.5f}')
+            log(f'    {k}: {c[0]}{"" if c[1] is None else f" C={c[1]}"}, balanced accuracy {b:.4f}, accuracy {results[c][k]["acc"]:.4f}')
     return chosen
 
 
@@ -195,7 +204,7 @@ def baselines(fr, prefix, hours, k, has):
     d = fr.parts['rules'][:, ASSETS.index(k) * 2]  # the rulebook's direction for this asset
     m = has & (d != 0)
     rules = float(np.mean((d[m] > 0) == (y[m] == 1))) if m.sum() >= 30 else None
-    return round(float(major), 4), (round(rules, 4) if rules is not None else None), int(m.sum())
+    return round(float(major), 4), (round(rules, 4) if rules is not None else None), int(m.sum()), m
 
 
 def main():
@@ -232,12 +241,20 @@ def main():
         for k, ((kind, C), r) in chosen.items():
             iso, by = calibrate(r)
             ok, y, w, z = labels(fr.meta, prefix, k, hours)
-            final = fit_w(make_model(kind, C or 1.0, emb), X[ok], y[ok], w[ok] * fr.extra[ok])
-            major, rules, n_rules = baselines(fr, prefix, hours, k, r['has'])
-            hb[k] = {'m': final, 'iso': iso}
-            hr[k] = {'model': kind if C is None else f'{kind} C={C}', 'test_accuracy': round(r['acc'], 4), 'test_logloss': round(r['ll'], 5),
-                     'test_count': int(r['has'].sum()), 'baseline_majority': major, 'baseline_rules': rules, 'rules_count': n_rules, 'by_rating': by}
-            log(f'  {h} {k}: tested accuracy {r["acc"]:.4f} (always-the-same-direction {major}, old rules {rules}), by rating {by}')
+            major, rules, n_rules, rmask = baselines(fr, prefix, hours, k, r['has'])
+            # Quality bar: better than a coin flip in a trend-proof test, and at least as good as the old rules
+            # where the rules make a call. Otherwise this market and time frame keeps the rules (or no call).
+            model_on_rules = float(np.mean((r['oof'][rmask] > 0.5) == (r['y'][rmask] == 1))) if rmask.sum() >= 30 else None
+            passed = r['bacc'] >= 0.515 and r['acc'] >= 0.5 and (rules is None or model_on_rules >= rules - 0.005)
+            if passed:
+                final = fit_w(make_model(kind, C or 1.0, emb), X[ok], y[ok], w[ok] * fr.extra[ok])
+                hb[k] = {'m': final, 'iso': iso}
+            hr[k] = {'use': 'model' if passed else ('rules' if h == '4h' else 'none'), 'model': kind if C is None else f'{kind} C={C}',
+                     'test_accuracy': round(r['acc'], 4), 'test_balanced_accuracy': round(r['bacc'], 4), 'test_logloss': round(r['ll'], 5),
+                     'test_count': int(r['has'].sum()), 'baseline_majority': major, 'baseline_rules': rules,
+                     'model_where_rules_call': round(model_on_rules, 4) if model_on_rules is not None else None, 'rules_count': n_rules, 'by_rating': by}
+            log(f'  {h} {k}: {"PASS" if passed else "fail"} - balanced accuracy {r["bacc"]:.4f}, accuracy {r["acc"]:.4f} '
+                f'(always-the-same-direction {major}; old rules {rules} vs model {model_on_rules} on the same news), by rating {by}')
         bundle['horizons'][h] = {'groups': groups, 'models': hb}
         report['horizons'][h] = hr
 
@@ -257,19 +274,22 @@ def main():
     s = np.max(np.vstack(sizes), axis=0)
     bundle['importance'] = {'groups': groups, 'models': mags, 'high': float(np.quantile(s, 0.85)), 'medium': float(np.quantile(s, 0.45))}
 
-    # Only go live if at least as good as the model that's live now
-    mean_acc = lambda rep: float(np.mean([v['test_accuracy'] for v in rep['horizons'].get('4h', {}).values()])) if rep.get('horizons') else None  # noqa: E731
-    new_acc = mean_acc(report)
+    # Only go live if something passed the quality bar, and it tests at least as well as the live model
+    def mean_b(rep):
+        vals = [v.get('test_balanced_accuracy') for v in (rep or {}).get('horizons', {}).get('4h', {}).values() if v.get('use') == 'model']
+        return float(np.mean(vals)) if vals else None
+    report['quality_ok'] = any(v.get('use') == 'model' for hz in report['horizons'].values() for v in hz.values())
     old = None
     if os.path.exists(os.path.join(OUT, 'report.json')):
         try:
             old = json.load(open(os.path.join(OUT, 'report.json')))
         except Exception:
             old = None
-    old_acc = mean_acc(old) if old and old.get('horizons') else None
-    report['deploy'] = old_acc is None or new_acc >= old_acc - 0.005
-    report['compared_with'] = {'previous_4h_accuracy': old_acc, 'new_4h_accuracy': round(new_acc, 4)}
-    log(f'4-hour accuracy: new {new_acc:.4f}, live {old_acc}. {"Deploying." if report["deploy"] else "Keeping the live model."}')
+    new_b, old_b = mean_b(report), mean_b(old) if old and old.get('quality_ok') else None
+    report['deploy'] = bool(report['quality_ok'] and (old_b is None or new_b is None or new_b >= old_b - 0.005))
+    report['compared_with'] = {'previous_4h_balanced_accuracy': old_b, 'new_4h_balanced_accuracy': new_b}
+    passed = [f'{h} {k}' for h, hz in report['horizons'].items() for k, v in hz.items() if v.get('use') == 'model']
+    log(f'Passed the quality bar: {", ".join(passed) or "nothing"}. {"Deploying." if report["deploy"] else "Not deploying."}')
 
     os.makedirs(OUT, exist_ok=True)
     if report['deploy']:
