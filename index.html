@@ -449,7 +449,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.10';
+const APP_VERSION = '2026-10-26.11';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -649,7 +649,6 @@ function liked(s, tab) {
   return !!s.likes && s.likes.some(k => LIKE_TAB[k] === tab);
 }
 const LIKE_TAB = { war: 'world', europe: 'world', asia: 'world', trump: 'us', congress: 'us', crime: 'us', viral: 'us', movies: 'ent', boxoffice: 'ent', music: 'ent', results: 'sports', fight: 'sports', upset: 'sports', ai: 'tech', bigtech: 'tech', chips: 'tech', space: 'sci', health: 'sci', weird: 'sci' };
-const LIKE_LIFT = 45 * 60e3; // a liked story sorts as if it were 45 minutes newer
 // Top: the truly massive stories, plus the day's most-covered news (4+ outlets) from the last 10 hours
 const wideTop = s => s.score >= 45 && s.sources.length >= 4 && Date.now() - s.updatedAt < 10 * 3600e3 && s.categories.some(c => c === 'world' || c === 'us' || c === 'tech' || c === 'forex');
 function important(s, tab) {
@@ -672,7 +671,6 @@ function important(s, tab) {
   if (s.tier !== 'minor') return true;
   return prefs.boosted.includes(s.outlet);
 }
-const rankScore = s => s.score + (prefs.boosted.includes(s.outlet) ? 12 : 0) + (s.breaking ? 25 : 0) + (s.top ? 10 : 0) - (Date.now() - s.updatedAt) / 3600e3 * 4;
 function storiesFor(tab, impOnly) {
   if (!data) return [];
   let list = data.stories.filter(visible);
@@ -682,20 +680,73 @@ function storiesFor(tab, impOnly) {
   else if (tab === 'forex') list = list.filter(s => s.fx); // only news that can move gold, the dollar or the Nasdaq
   else list = list.filter(s => s.categories.includes(tab));
   if (impOnly) list = list.filter(s => important(s, tab));
-  if (tab === 'sports') return mixSports(list);
-  if (tab === 'top') return [...list].sort((a, b) => rankScore(b) - rankScore(a));
-  const key = s => s.updatedAt + (liked(s, tab) ? LIKE_LIFT : 0);
-  return [...list].sort((a, b) => key(b) - key(a));
+  return smartRank(list, tab, { now: Date.now(), liked: s => liked(s, tab), boosted: prefs.boosted, read: readSet });
 }
-// Takes turns between sports so no single league fills the tab: soccer, UFC, NBA, NFL, everything else
-function mixSports(list) {
-  const order = ['soccer', 'ufc', 'nba', 'nfl', 'other'], q = {};
-  const key = s => s.updatedAt + (liked(s, 'sports') ? LIKE_LIFT : 0);
-  for (const s of [...list].sort((a, b) => key(b) - key(a))) (q[s.sport || 'other'] ||= []).push(s);
-  const out = [];
-  for (let more = true; more;) { more = false; for (const k of order) { const s = q[k]?.shift(); if (s) { out.push(s); more = true; } } }
-  return out;
+/* FEEDRANK START: how every tab except Just in is ordered (tools/feedpreview.mjs runs this same code on live news) */
+// 1. Importance: coverage and keywords (the robot's score), trusted outlet, breaking, Top pick, your liked topics and
+//    boosted outlets, and what matters in each tab (Forex impact, sports results and upsets, disasters).
+function importanceOf(s, tab, ctx) {
+  const f = s.flags || [];
+  let I = s.score || 0;
+  if (s.trusted) I += 6;
+  if (s.top) I += 15;
+  if (s.breaking) I += 15;
+  if (ctx.liked(s)) I += 10;
+  if (ctx.boosted.includes(s.outlet)) I += 12;
+  if (f.includes('disaster')) I += 12;
+  if (tab === 'forex' && s.fx) I += { high: 30, medium: 12 }[s.fx.impact] || 0;
+  if (tab === 'sports') {
+    if ((s.likes || []).some(k => k === 'results' || k === 'upset' || k === 'fight')) I += 12;
+    if (f.includes('bigsport')) I += 15;
+    if (f.includes('sportfluff')) I -= 15;
+  }
+  return Math.max(0, I);
 }
+// 2. Rank: importance faded by age. Big stories fade slowly (half after ~8 hours), small ones fast (half after
+//    ~1.5 hours), so a new minor story can't bury this morning's big news, but fresh news still rises quickly.
+//    Age counts from when the story first appeared, so an outlet re-posting it doesn't bump it.
+function smartRank(list, tab, ctx) {
+  const now = ctx.now, H = 3600e3;
+  const rows = list.map(s => {
+    const I = importanceOf(s, tab, ctx), age = Math.max(0, now - Math.min(s.published, s.firstSeen)) / H;
+    const half = 1.5 + 6.5 * Math.min(1, I / 60), fresh = age < 0.5 ? 8 * (1 - age / 0.5) : 0;
+    return { s, I, age, r: (I + 20 + fresh) * Math.pow(0.5, age / half) };
+  }).sort((a, b) => b.r - a.r);
+  // 3. Breaking news first: up to 2 stories still breaking (under 90 minutes old), the most important first
+  // (a headline that only says "breaking" isn't enough: it must be a major story or confirmed by other outlets)
+  const pins = rows.filter(x => x.s.breaking && x.age < 1.5 && (x.s.tier === 'major' || (x.s.sources || []).length >= 2)).sort((a, b) => b.I - a.I).slice(0, 2);
+  const out = [...pins];
+  // 4. Variety: at most 1 small single-outlet story in any 4 cards, at most 2 cards in a row about the same event,
+  //    and in Sports at most 2 in a row from the same league. A card that would break a rule waits for a later spot.
+  const small = x => x.s.tier === 'minor' && !(x.s.sources || []).length && !x.s.breaking && !x.s.top && x.I < 20 && !ctx.liked(x.s);
+  const ok = x => {
+    const n = out.length;
+    if (small(x) && out.slice(-3).some(small)) return false;
+    if (x.s.ev && n >= 2 && out[n - 1].s.ev === x.s.ev && out[n - 2].s.ev === x.s.ev) return false;
+    if (tab === 'sports' && n >= 2 && (out[n - 1].s.sport || 'other') === (x.s.sport || 'other') && (out[n - 2].s.sport || 'other') === (x.s.sport || 'other')) return false;
+    return true;
+  };
+  const pending = rows.filter(x => !pins.includes(x));
+  while (pending.length) {
+    let i = pending.findIndex((x, k) => k < 12 && ok(x));
+    if (i < 0) i = 0;
+    out.push(pending.splice(i, 1)[0]);
+  }
+  // 5. "Earlier": every 5 cards, one important story from the last 3 to 24 hours you haven't opened yet, so big news
+  //    from while you were away isn't missed (up to 3, only if it would otherwise sit further down)
+  const slots = [4, 9, 14];
+  const missed = out.filter(x => x.age >= 3 && x.age < 24 && x.I >= 35 && !ctx.read.has(x.s.id)).sort((a, b) => b.I - a.I);
+  for (const slot of slots) {
+    if (out.length <= slot) break;
+    const m = missed.find(x => out.indexOf(x) > slot + 2);
+    if (!m) continue;
+    missed.splice(missed.indexOf(m), 1);
+    out.splice(out.indexOf(m), 1);
+    out.splice(slot, 0, { ...m, s: { ...m.s, _missed: true } });
+  }
+  return out.map(x => x.s);
+}
+/* FEEDRANK END */
 function searchResults(q) {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length || !data) return [];
@@ -764,7 +815,7 @@ function badges(s) {
   return `${s.breaking ? '<span class="live-b">LIVE</span>' : justIn(s) && prefs.tab !== 'justin' ? '<span class="pill jin">JUST IN</span>' : isNew(s) ? '<span class="pill">NEW</span>' : ''}${flag ? `<span class="pill flag">${flag}</span>` : ''}`;
 }
 function meta(s, lv) {
-  return `<div class="meta">${lv ? `<span class="lvl">${lv.tag}</span>` : badges(s)}<span class="o">${esc(s.outlet)}</span><span class="ag">${ago(s.published)}</span></div>`;
+  return `<div class="meta">${s._missed ? '<span class="pill">EARLIER</span>' : ''}${lv ? `<span class="lvl">${lv.tag}</span>` : badges(s)}<span class="o">${esc(s.outlet)}</span><span class="ag">${ago(s.published)}</span></div>`;
 }
 function foot(s, cat) {
   const others = s.sources.filter(o => !prefs.muted.includes(o.outlet));
@@ -1284,7 +1335,7 @@ function render() {
     feed.innerHTML = `<div class="empty"><h2>${msg[0]}</h2><p>${msg[1]}</p></div>`;
   } else {
     const cards = [];
-    const timeSorted = view === 'feed' && tab !== 'top' && prevVisit;
+    const timeSorted = view === 'feed' && tab === 'justin' && prevVisit; // the other tabs are ranked, not in time order
     rest.slice(0, shown).forEach((s, i) => {
       cards.push(card(s, view === 'feed' ? tab : (s.fx && s.categories?.includes('forex') ? 'forex' : 'top'), i));
       if (timeSorted && isNew(s) && rest[i + 1] && !isNew(rest[i + 1])) cards.push('<div class="divider">↑ NEW SINCE YOUR LAST VISIT</div>');

@@ -18,7 +18,10 @@ export function tokens(title) {
 }
 
 // Group headlines about the same event. Uses an inverted index so it stays fast.
-export function cluster(items) {
+// `same`: optional extra pairs [i, j, similarity] from the meaning model (scripts/ml/similar.py), merged only when
+// they're very close in meaning and pass the safety checks below.
+export const SAME_MIN = 0.8;
+export function cluster(items, same = []) {
   const parent = items.map((_, i) => i);
   const find = i => (parent[i] === i ? i : (parent[i] = find(parent[i])));
   const toks = items.map(it => tokens(it.title));
@@ -40,12 +43,37 @@ export function cluster(items) {
       if (close && ((inter >= 3 && overlap >= 0.6) || jaccard >= 0.5)) parent[find(i)] = find(j);
     }
   }
+  // Headlines that say the same thing in different words. Safety checks: within 18 hours, no clashing scores or
+  // numbers ("2-1" vs "3-0"), and no giant groups (a chain of loose matches can't swallow a whole topic).
+  if (same.length) {
+    const size = new Map();
+    items.forEach((_, i) => { const r = find(i); size.set(r, (size.get(r) || 0) + 1); });
+    for (const [i, j, sim] of same) {
+      if (sim < SAME_MIN || !items[i] || !items[j]) continue;
+      if (Math.abs(items[i].time - items[j].time) > 18 * 3600e3) continue;
+      if (!sameNumbers(items[i].title, items[j].title)) continue;
+      const a = find(i), b = find(j);
+      if (a === b || (size.get(a) || 1) + (size.get(b) || 1) > 40) continue;
+      parent[a] = b; size.set(b, (size.get(a) || 1) + (size.get(b) || 1));
+    }
+  }
   const groups = new Map();
   items.forEach((it, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(it); });
   return [...groups.values()];
 }
+// Two headlines can't be the same story if they give different scores or different key numbers
+const SCORE_RE = /\b(\d{1,3})\s?[-–:]\s?(\d{1,3})\b/g, NUM_RE = /\b\d+(?:[.,]\d+)?\b/g;
+function sameNumbers(a, b) {
+  const sc = t => [...t.matchAll(SCORE_RE)].map(m => `${m[1]}-${m[2]}`);
+  const sa = sc(a), sb = sc(b);
+  if (sa.length && sb.length && !sa.some(x => sb.includes(x) || sb.includes(x.split('-').reverse().join('-')))) return false;
+  const na = new Set(a.replace(SCORE_RE, ' ').match(NUM_RE) || []), nb = new Set(b.replace(SCORE_RE, ' ').match(NUM_RE) || []);
+  if (na.size && nb.size && ![...na].some(x => nb.has(x))) return false;
+  return true;
+}
 
-const BREAKING_RE = /^(breaking|live|urgent|just in|developing)\b|\bbreaking\b/i;
+// "Breaking" at the start or as a label ("BREAKING:"), not anywhere ("Breaking T-shirts", "is breaking records")
+const BREAKING_RE = /^(breaking|live|urgent|just in|developing)\b|\b(breaking( news)?|urgent)\s?[:|–-]/i;
 
 export const tierOf = score => (score >= 50 ? 'major' : score >= 28 ? 'notable' : 'minor');
 
