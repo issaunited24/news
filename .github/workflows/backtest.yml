@@ -37,14 +37,22 @@ jobs:
             gh run download "$id" -n bt-tasks -D bt 2>/dev/null && [ -f bt/tasks.json ] && { echo "Reusing the test set from run $id"; break; }
           done
           if [ ! -f bt/tasks.json ]; then
-            pip install -q pandas numpy
+            pip install -q pandas==2.2.3 numpy==1.26.4   # the same versions that wrote the dataset
             for id in $(gh run list --workflow train.yml -L 20 --json databaseId,status -q '.[] | select(.status=="completed") | .databaseId'); do
               gh run download "$id" -n dataset -D data/ml/dataset 2>/dev/null && [ -f data/ml/dataset/meta.pkl.gz ] && { echo "Dataset from run $id"; break; }
               rm -rf data/ml/dataset
             done
-            python scripts/ml/bt_prep.py
+            python scripts/ml/bt_prep.py 2>&1 | tee bt/prep.log
           fi
-          python -c "import json; print(len(json.load(open('bt/tasks.json'))), 'test headlines')"
+          python -c "import json; print(len(json.load(open('bt/tasks.json'))), 'test headlines')" | tee -a bt/prep.log
+      - name: Publish the prep log (for checking)
+        if: always()
+        run: |
+          mkdir -p btlog && cp bt/prep.log btlog/ 2>/dev/null || echo "no log" > btlog/prep.log
+          ls -la data/ml/dataset >> btlog/prep.log 2>&1 || true
+          cd btlog && git init -q && git checkout -q -b bt-log
+          git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add . && git commit -qm "Backtest prep log" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" bt-log
       - uses: actions/upload-artifact@v4
         with:
           name: bt-tasks
