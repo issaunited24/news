@@ -479,12 +479,16 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.14';
+const APP_VERSION = '2026-10-26.15'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
     const v = (await (await fetch(`version.txt?t=${Date.now()}`, { cache: 'no-store' })).text()).trim();
-    if (v && v !== APP_VERSION && !sessionStorage.getItem(`reloaded-${v}`)) { sessionStorage.setItem(`reloaded-${v}`, '1'); location.reload(); }
+    // only when the published version is newer than this page ("2026-10-26.14" is newer than "2026-10-26.9")
+    const key = x => { const [d, n] = String(x).split('.'); return [d, +n || 0]; };
+    const [vd, vn] = key(v), [ad, an] = key(APP_VERSION);
+    const newer = /^\d{4}-\d\d-\d\d(\.\d+)?$/.test(v) && (vd > ad || (vd === ad && vn > an));
+    if (newer && !sessionStorage.getItem(`reloaded-${v}`)) { sessionStorage.setItem(`reloaded-${v}`, '1'); location.reload(); }
   } catch {}
 }
 const $ = id => document.getElementById(id);
