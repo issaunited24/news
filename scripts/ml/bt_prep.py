@@ -45,6 +45,8 @@ def fred(sid):
 
 def before(s, t):
     """Values up to the last day strictly before the news day."""
+    if s is None or not isinstance(s.index, pd.DatetimeIndex) or not len(s):
+        return pd.Series(dtype=float)
     return s[s.index < t.normalize()]
 
 
@@ -156,10 +158,10 @@ def main():
             labels[k] = {'d1': daily_return(s, float(r.ts)), 'd3': daily_return_n(s, float(r.ts), 3), 'w1': daily_return_n(s, float(r.ts), 5)}
             labels[k] = {h: (None if v is None or not np.isfinite(v) else round(float(v), 4)) for h, v in labels[k].items()}
         tasks.append({'id': hashlib.sha1(f'{r.title}|{r.ts}'.encode()).hexdigest()[:12], 'ts': float(r.ts), 'title': r.title,
-                      'text': (r.text or '')[:2000] if isinstance(r.text, str) else '', 'outlet': r.domain or '', 'recent': recent,
+                      'text': (r.text or '')[:2000] if isinstance(r.text, str) else '', 'outlet': r.domain if isinstance(r.domain, str) else '', 'recent': recent,
                       'snapshot': snapshot(t, px, mac), 'regime': regime(t, px, mac), 'labels': labels})
     os.makedirs('bt', exist_ok=True)
-    json.dump(tasks, open('bt/tasks.json', 'w'))
+    json.dump(tasks, open('bt/tasks.json', 'w'), allow_nan=False)
     print(f'wrote {len(tasks)} tasks', flush=True)
 
 
