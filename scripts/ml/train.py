@@ -245,16 +245,20 @@ def main():
             # Quality bar: better than a coin flip in a trend-proof test, and at least as good as the old rules
             # where the rules make a call. Otherwise this market and time frame keeps the rules (or no call).
             model_on_rules = float(np.mean((r['oof'][rmask] > 0.5) == (r['y'][rmask] == 1))) if rmask.sum() >= 30 else None
-            passed = r['bacc'] >= 0.515 and r['acc'] >= 0.5 and (rules is None or model_on_rules >= rules - 0.005)
+            # ...and it has to hold up in the most recent half of the test too (markets change; a model that faded is out)
+            hz = np.where(r['has'])[0]
+            late = hz[len(hz) // 2:]
+            late_acc = float(np.mean((r['oof'][late] > 0.5) == (r['y'][late] == 1)))
+            passed = r['bacc'] >= 0.515 and r['acc'] >= 0.5 and late_acc >= 0.505 and (rules is None or model_on_rules >= rules - 0.005)
             if passed:
                 final = fit_w(make_model(kind, C or 1.0, emb), X[ok], y[ok], w[ok] * fr.extra[ok])
                 hb[k] = {'m': final, 'iso': iso}
             hr[k] = {'use': 'model' if passed else ('rules' if h == '4h' else 'none'), 'model': kind if C is None else f'{kind} C={C}',
                      'test_accuracy': round(r['acc'], 4), 'test_balanced_accuracy': round(r['bacc'], 4), 'test_logloss': round(r['ll'], 5),
-                     'test_count': int(r['has'].sum()), 'baseline_majority': major, 'baseline_rules': rules,
+                     'test_count': int(r['has'].sum()), 'recent_accuracy': round(late_acc, 4), 'baseline_majority': major, 'baseline_rules': rules,
                      'model_where_rules_call': round(model_on_rules, 4) if model_on_rules is not None else None, 'rules_count': n_rules, 'by_rating': by}
             log(f'  {h} {k}: {"PASS" if passed else "fail"} - balanced accuracy {r["bacc"]:.4f}, accuracy {r["acc"]:.4f} '
-                f'(always-the-same-direction {major}; old rules {rules} vs model {model_on_rules} on the same news), by rating {by}')
+                f'recent {late_acc:.4f} (always-the-same-direction {major}; old rules {rules} vs model {model_on_rules} on the same news), by rating {by}')
         bundle['horizons'][h] = {'groups': groups, 'models': hb}
         report['horizons'][h] = hr
 
