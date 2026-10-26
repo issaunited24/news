@@ -566,6 +566,8 @@ if (!FIXTURES) {
 const modelReport = existsSync(MODEL_REPORT) ? JSON.parse(await readFile(MODEL_REPORT, 'utf8')) : null;
 const modelVersion = modelReport?.quality_ok ? `${modelReport.trained || 'v1'}|scale2` : null; // |scale2: recompute calls made on the old rating scale
 const preds = new Map(Object.entries(prevState.preds || {}).filter(([, v]) => now - v.at < 48 * 3600e3 && v.v === modelVersion));
+// calls from the previous model version stay in use until the new model has read that story (no blank cards after an update)
+const stalePreds = new Map(Object.entries(prevState.preds || {}).filter(([, v]) => now - v.at < 48 * 3600e3 && v.v !== modelVersion));
 if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
   const todo = stories.filter(st => st.fx && !preds.has(st.id)).sort((a, b) => b.firstSeen - a.firstSeen).slice(0, 40) // newest first; the rest next round
     .map(st => ({ id: st.id, title: st.title, text: st.summary || '', ts: Math.min(st.published, st.firstSeen) / 1000, outlet: st.outlet }));
@@ -582,7 +584,7 @@ if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
   }
 }
 for (const st of stories) {
-  const p = st.fx && preds.get(st.id);
+  const p = st.fx && (preds.get(st.id) || stalePreds.get(st.id));
   if (st.fx) st._rules = st.fx.assets; // kept as one input for the AI analyst
   if (st.fx && !p && modelVersion) { st.fx.assets = {}; st.fx.waiting = true; } // the model reads it next round
   if (!p) continue;
@@ -748,6 +750,6 @@ await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
 // Everything else (older or small stories), in its own file so the app's regular check stays light
 await writeFile(new URL('data/older.json', ROOT), JSON.stringify({ updated: now, stories: keep.filter(st => !isRecent(st)) }));
 await writeFile(new URL('data/charts.json', ROOT), JSON.stringify(charts));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries(preds), calPreds: Object.fromEntries(calPreds), bigMoney, lastFetch }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries([...[...stalePreds].filter(([id]) => !preds.has(id)), ...preds]), calPreds: Object.fromEntries(calPreds), bigMoney, lastFetch }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);
