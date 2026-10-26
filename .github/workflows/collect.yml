@@ -29,6 +29,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: scripts/ml/requirements.txt
+      - name: Cache language models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-finbert-minilm-v1
+      - name: Install the forecast model's tools
+        continue-on-error: true   # if this fails, the robot still runs and uses the forex rules
+        run: pip install -q -r scripts/ml/requirements.txt
       - name: Collect and rank news, every few minutes
         run: |
           cp scripts/loop.sh "$RUNNER_TEMP/loop.sh"

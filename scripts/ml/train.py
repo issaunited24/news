@@ -65,6 +65,11 @@ def calibrate(p, y):
     return iso
 
 
+def fit_w(m, X, y, w):
+    """Fits a pipeline with sample weights on its last step."""
+    return m.fit(X, y, **{f'{m.steps[-1][0]}__sample_weight': w})
+
+
 def main():
     t0 = time.time()
     df = pd.read_pickle(DATA).sort_values('ts').reset_index(drop=True)
@@ -74,6 +79,8 @@ def main():
     print(f'Features {X.shape} in {time.time() - t0:.0f}s', flush=True)
 
     n = len(df)
+    # Newer news counts a bit more (markets change), and the app's own checked stories count 3x
+    w_all = (0.6 + 0.8 * np.arange(n) / max(n - 1, 1)) * np.where(df.src.values == 'live', 3.0, 1.0)
     split = int(n * 0.8)
     split_time = float(df.ts.iloc[split])
     report = {'trained': time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime()), 'headlines': n,
@@ -96,7 +103,7 @@ def main():
 
         best = None
         for name, make in candidates().items():
-            m = make().fit(X[tr], y[tr])
+            m = fit_w(make(), X[tr], y[tr], w_all[tr])
             p = m.predict_proba(X[te])[:, 1]
             acc = float(np.mean((p > 0.5) == (y[te] == 1)))
             ll = float(-np.mean(y[te] * np.log(np.clip(p, 1e-6, 1)) + (1 - y[te]) * np.log(np.clip(1 - p, 1e-6, 1))))
@@ -121,11 +128,11 @@ def main():
         reg = make_pipeline(
             ColumnTransformer([('emb', PCA(n_components=48, random_state=0), list(range(3, 3 + N_EMB)))], remainder='passthrough'),
             HistGradientBoostingRegressor(max_iter=200, learning_rate=0.05, max_leaf_nodes=15, min_samples_leaf=80, random_state=0))
-        reg.fit(X[okm], np.log1p(np.abs(r[okm]) * 100))
+        fit_w(reg, X[okm], np.log1p(np.abs(r[okm]) * 100), w_all[okm])
         typical = float(np.median(np.abs(r[okm])))
 
         # final model on everything (the test was only to choose and calibrate)
-        final = candidates()[best['name']]().fit(X[ok], y[ok])
+        final = fit_w(candidates()[best['name']](), X[ok], y[ok], w_all[ok])
         models[k] = {'dir': final, 'iso': iso, 'mag': reg, 'typical': typical}
         report['assets'][k] = {
             'model': best['name'], 'test_accuracy': round(best['acc'], 3), 'test_count': int(te.sum()),

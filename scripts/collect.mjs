@@ -2,6 +2,8 @@
 // Runs on GitHub's free robot (GitHub Actions) every few minutes (see scripts/loop.sh).
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { entries, all, first, textOf } from './xml.mjs';
 import { marketCatalyst, isPriceRecap } from './markets.mjs';
 import { classify } from './categories.mjs';
@@ -443,7 +445,41 @@ for (const e of calendar?.events || []) {
     forecasts.set(key, { key, cal: true, title: `${e.title}: ${e.actual} vs ${e.forecast} forecast`.slice(0, 100), asset: k, dir, conf: 6, at: t, p0, horizon: CAL_HORIZON });
   });
 }
-// Smarter calls, before they're shown or scored:
+// 5a. The trained forecast model (model/forecast.joblib, see scripts/ml/): reads each Forex story and calls
+//     gold, the dollar, the Nasdaq and oil with a 1-10 confidence measured on real past results, plus how big a
+//     move to expect (importance). New stories only; results are kept for 48 hours. Falls back to the rules if
+//     the model can't run.
+const MODEL_FILE = new URL('model/forecast.joblib', ROOT), MODEL_REPORT = new URL('model/report.json', ROOT);
+const modelVersion = existsSync(MODEL_REPORT) ? (JSON.parse(await readFile(MODEL_REPORT, 'utf8')).trained || 'v1') : null;
+const preds = new Map(Object.entries(prevState.preds || {}).filter(([, v]) => now - v.at < 48 * 3600e3 && v.v === modelVersion));
+if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
+  const todo = stories.filter(st => st.fx && !preds.has(st.id)).slice(0, 120).map(st => {
+    const t = Math.min(st.published, st.firstSeen), it = { id: st.id, title: st.title, text: st.summary || '' };
+    for (const k of ['gold', 'usd', 'ndq', 'oil']) {
+      const p0 = priceAt(k, t), p6 = priceAt(k, t - 6 * 3600e3), p24 = priceAt(k, t - 24 * 3600e3);
+      it[`m6_${k}`] = p0 && p6 ? (p0 / p6 - 1) * 100 : 0;
+      it[`m24_${k}`] = p0 && p24 ? (p0 / p24 - 1) * 100 : 0;
+    }
+    return it;
+  });
+  if (todo.length) {
+    const t0 = Date.now();
+    const res = spawnSync('python3', [new URL('scripts/ml/predict.py', ROOT).pathname], { input: JSON.stringify(todo), encoding: 'utf8', timeout: 170000, maxBuffer: 32 * 1024 * 1024 });
+    try {
+      const out = JSON.parse(res.stdout);
+      for (const [id, p] of Object.entries(out.preds || {})) preds.set(id, { v: modelVersion, at: now, ...p });
+      console.log(`Forecast model: ${todo.length} new stories in ${Math.round((Date.now() - t0) / 1000)}s`);
+    } catch { console.log('Forecast model unavailable this round:', (res.stderr || res.error?.message || '').slice(-300)); }
+  }
+}
+for (const st of stories) {
+  const p = st.fx && preds.get(st.id); if (!p) continue;
+  st.fx.assets = Object.fromEntries(Object.entries(p.assets).map(([k, a]) => [k, { dir: a.dir, conf: a.conf }]));
+  st.fx.impact = st.breaking ? 'high' : p.impact;
+  st.fx.model = true;
+}
+
+// Smarter calls, before they're shown or scored (rules only; the trained model already accounts for the trend):
 //  - Old news: a theme (war, Fed, oil...) that has been in the news for over a day is mostly priced in, so its calls
 //    lose 2 points of confidence, unless the headline signals a real escalation or surprise.
 //  - Trend: a call that goes against how the price moved over the 6 hours before the story loses 2 points;
@@ -459,7 +495,7 @@ const FRESH_RE = /\b(escalat\w*|surprise\w*|unexpected\w*|shock\w*|first time|fo
 const TREND_MIN = { gold: 0.4, usd: 0.2, ndq: 0.5, oil: 0.8 }; // % move over 6 hours that counts as a clear trend
 const toughen = (a, by) => ({ ...a, conf: Math.max(1, (a.conf || 0) - by) });
 for (const st of stories) {
-  if (!st.fx?.assets) continue;
+  if (!st.fx?.assets || st.fx.model) continue;
   const t = Math.min(st.published, st.firstSeen), th = themes.get(st.fx.driver);
   const stale = th && t - th.start > 24 * 3600e3 && !FRESH_RE.test(st.title);
   const notes = [];
@@ -483,7 +519,7 @@ for (const st of stories) {
     if (!a || a.dir === 'flat' || !a.conf || forecasts.has(key)) continue;
     const p0 = priceAt(k, st.firstSeen);
     if (p0 == null) continue;
-    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, at: st.firstSeen, p0 });
+    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, model: st.fx.model || undefined, at: st.firstSeen, p0 });
   }
 }
 for (const f of forecasts.values()) {
@@ -546,6 +582,6 @@ await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
 // Everything else (older or small stories), in its own file so the app's regular check stays light
 await writeFile(new URL('data/older.json', ROOT), JSON.stringify({ updated: now, stories: keep.filter(st => !isRecent(st)) }));
 await writeFile(new URL('data/charts.json', ROOT), JSON.stringify(charts));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), lastFetch }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries(preds), lastFetch }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);
