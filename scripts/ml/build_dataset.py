@@ -16,7 +16,7 @@ import pandas as pd
 
 OUT = 'data/ml/dataset.pkl.gz'
 DAYS = int(os.environ.get('ML_DAYS', '365'))
-WINDOW_DAYS = int(os.environ.get('ML_WINDOW_DAYS', '7'))
+WINDOW_DAYS = int(os.environ.get('ML_WINDOW_DAYS', '10'))
 QUICK = os.environ.get('ML_QUICK') == '1'  # small run for testing the pipeline
 UA = {'User-Agent': 'Mozilla/5.0 (compatible; personal-news-reader/1.0)'}
 
@@ -48,14 +48,14 @@ if QUICK:
     QUERIES = QUERIES[:3]
 
 
-def get(url, tries=4, pause=6):
+def get(url, tries=5, pause=20):
     for i in range(tries):
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=40) as r:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
                 return r.read().decode('utf-8', 'replace')
         except Exception as e:
             print(f'  retry {i + 1}: {str(e)[:80]}', flush=True)
-            time.sleep(pause * (i + 1))
+            time.sleep(pause * (2 ** i))  # 20s, 40s, 80s, 160s: GDELT asks callers to slow down
     return None
 
 
@@ -72,7 +72,7 @@ def gdelt_headlines():
                 'startdatetime': t0.strftime('%Y%m%d%H%M%S'), 'enddatetime': t1.strftime('%Y%m%d%H%M%S'), 'sort': 'hybridrel',
             }
             txt = get('https://api.gdeltproject.org/api/v2/doc/doc?' + urllib.parse.urlencode(params))
-            time.sleep(5.5)  # GDELT asks for at most one request every 5 seconds
+            time.sleep(8)  # GDELT asks for at most one request every 5 seconds; stay well under it
             n += 1
             if txt:
                 try:
