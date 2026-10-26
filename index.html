@@ -356,6 +356,31 @@ textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: va
 .pv .mini { flex-direction: row; gap: 10px; margin-top: 14px; padding: 8px 10px; }
 .pv .mini > div { flex: 1; min-width: 0; }
 .pv-why { font-size: 13px; color: var(--mute); margin: 8px 0 0; }
+/* AI analysis panel (story view) */
+.ai { margin-top: 12px; padding: 12px; border-radius: 16px; background: rgba(3,5,14,.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+.ai-load { margin: 0; font-size: 12.5px; color: var(--mute); }
+.ai-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; font: 500 9.5px var(--mono); letter-spacing: .12em; color: var(--mute); }
+.ai-st { padding: 2px 8px; border-radius: 999px; letter-spacing: .04em; background: rgba(255,255,255,.08); color: var(--ink2); white-space: nowrap; }
+.ai-st.confirmed, .ai-st.official { background: rgba(62,240,180,.14); color: #6ff5c7; }
+.ai-st.unverified, .ai-st.speculation, .ai-st.opinion, .ai-st.conflicting { background: rgba(255,196,99,.14); color: #ffc463; }
+.ai-what { margin: 9px 0 4px; font-size: 14px; line-height: 1.4; color: var(--ink); }
+.ai-meta { margin: 4px 0 0; font-size: 12px; line-height: 1.45; color: var(--mute); }
+.ai-meta b, .ai-m p b { color: var(--ink2); font-weight: 600; }
+.ai-m { margin-top: 9px; border-top: 1px solid rgba(255,255,255,.06); padding-top: 8px; }
+.ai-m summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; font: 500 11px var(--mono); min-height: 28px; }
+.ai-m summary::-webkit-details-marker { display: none; }
+.ai-m summary b { letter-spacing: .1em; color: var(--ink); min-width: 64px; }
+.ai-b { color: var(--mute); }
+.ai-b.bullish { color: var(--up); } .ai-b.bearish { color: var(--down); }
+.ai-fin { margin-left: auto; color: var(--mute); white-space: nowrap; } .ai-fin.u { color: var(--up); } .ai-fin.d { color: var(--down); }
+.ai-f { display: grid; grid-template-columns: 1fr auto; gap: 1px 8px; margin: 6px 0 0; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.035); font-size: 12.5px; }
+.ai-f b { font-weight: 600; } .ai-f.u b { color: var(--up); } .ai-f.d b { color: var(--down); }
+.ai-f span { grid-column: 1; color: var(--mute); font-size: 12px; line-height: 1.35; }
+.ai-f i { grid-column: 2; grid-row: 1; font: 500 10px var(--mono); font-style: normal; color: var(--faint); }
+.ai-m p { margin: 6px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--ink2); }
+.ai-note { margin: 10px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--faint); }
+.ai-note span { display: block; margin-top: 3px; font: 500 10px var(--mono); }
+.pill.aip { background: rgba(160,140,255,.16); color: #c4b8ff; }
 .pv-actions { display: grid; grid-template-columns: 50px 50px minmax(0, 1fr); gap: 10px; margin-top: 20px; }
 .pv-actions .sq { height: 50px; border-radius: 16px; background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); color: var(--ink2); display: grid; place-items: center; }
 .pv-actions .sq svg { width: 18px; height: 18px; }
@@ -454,7 +479,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.13';
+const APP_VERSION = '2026-10-26.14';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -821,7 +846,7 @@ function badges(s) {
   return `${s.breaking ? '<span class="live-b">LIVE</span>' : justIn(s) && prefs.tab !== 'justin' ? '<span class="pill jin">JUST IN</span>' : isNew(s) ? '<span class="pill">NEW</span>' : ''}${flag ? `<span class="pill flag">${flag}</span>` : ''}`;
 }
 function meta(s, lv) {
-  return `<div class="meta">${s._missed ? '<span class="pill">EARLIER</span>' : ''}${lv ? `<span class="lvl">${lv.tag}</span>` : badges(s)}<span class="o">${esc(s.outlet)}</span><span class="ag">${ago(s.published)}</span></div>`;
+  return `<div class="meta">${s._missed ? '<span class="pill">EARLIER</span>' : ''}${lv ? `<span class="lvl">${lv.tag}</span>${s.fx?.ai ? '<span class="pill aip">AI</span>' : ''}` : badges(s)}<span class="o">${esc(s.outlet)}</span><span class="ag">${ago(s.published)}</span></div>`;
 }
 function foot(s, cat) {
   const others = s.sources.filter(o => !prefs.muted.includes(o.outlet));
@@ -1022,6 +1047,7 @@ function scorecardHTML() {
     <div class="sc-h"><span>FORECAST SCORECARD</span><span>${sc.horizonH}h after the news · last ${sc.days} days</span></div>
     ${total ? `<div class="sc-g">${cell('GOLD', sc.assets.gold)}${cell('USD', sc.assets.usd)}${cell('NASDAQ', sc.assets.ndq)}${cell('OIL', sc.assets.oil || { hit: 0, miss: 0 })}${cell('CONF 7+', sc.high)}</div>`
       : `<p class="sc-empty">Collecting results. Each call is checked ${sc.horizonH} hours after the news${sc.pending ? ` · ${sc.pending} waiting` : ''}.</p>`}
+    ${sc.ai && sc.ai.hit + sc.ai.miss ? `<p class="sc-empty">AI-analysed calls: ${pct(sc.ai)} right, ${sc.ai.hit}/${sc.ai.hit + sc.ai.miss}.</p>` : ''}
     ${sc.cal ? `<p class="sc-empty">Includes calendar calls (a beat or miss checked 1 hour after the release): ${sc.cal.hit + sc.cal.miss ? `${pct(sc.cal)} right, ${sc.cal.hit}/${sc.cal.hit + sc.cal.miss}` : 'waiting for the next release'}.</p>` : ''}
   </div>`;
 }
@@ -1411,7 +1437,7 @@ function previewHTML(s) {
     <h2 class="pv-title">${esc(s.title)}</h2>
     ${s.summary ? `<p class="pv-sum">${esc(s.summary)}${s.summaryFrom ? ` <small>· ${esc(s.summaryFrom)}</small>` : ''}</p>` : '<p class="pv-sum muted">No summary from the outlets yet. Open the full story below.</p>'}
     ${takes ? `<div class="pv-k">Also reported</div>${takes}` : ''}
-    ${s.fx ? `<div class="mini">${forecasts(s.fx, 90, 18)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>${s.fx.model ? '<p class="pv-why" style="opacity:.75">Calls from the trained model: it read this story and compared it with years of past news and what prices did after. These are next-day calls: where each market should be about 24 hours after the story. Each rating is how often it was right at that level, tested on months it had never seen (1/10 = a coin flip, 10/10 = right 65% of the time or more).</p>' : ''}` : ''}
+    ${s.fx ? `<div class="mini">${forecasts(s.fx, 90, 18)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>${s.fx.ai ? '<div class="ai" id="aiPanel"><p class="ai-load">Loading the AI analysis…</p></div>' : s.fx.model ? '<p class="pv-why" style="opacity:.75">Calls from the trained model: it read this story and compared it with years of past news and what prices did after. These are next-day calls: where each market should be about 24 hours after the story. Each rating is how often it was right at that level, tested on months it had never seen (1/10 = a coin flip, 10/10 = right 65% of the time or more). Important stories also get a full AI analysis.</p>' : ''}` : ''}
     ${others.length ? `<div class="pv-k">Covering · ${others.length}</div><div class="pv-chips">${chipsH}</div>` : ''}
     <div class="pv-actions">
       <button class="sq ${sv ? 'saved' : ''}" data-act="pvsave" data-id="${s.id}" aria-label="${sv ? 'Remove from saved' : 'Save story'}">${sv ? ICON.saved : ICON.save}</button>
@@ -1425,6 +1451,51 @@ function previewSheet(id) {
   pvId = id; markRead(id);
   const body = $('sheetBody'); body.style.transform = ''; body.style.opacity = ''; body.style.transition = '';
   openSheet(previewHTML(s), true);
+  if (s.fx?.ai) fillAI(s);
+}
+/* ---------- AI analysis (story view) ---------- */
+// The AI workers publish their full reasoning to the ai-0/1/2 branches; it's only downloaded when a story is opened.
+const AI_SRC = n => `https://raw.githubusercontent.com/issaunited24/news/ai-${n}/analyses.json`;
+let aiCache = null, aiAt = 0;
+async function getAnalyses() {
+  if (aiCache && Date.now() - aiAt < 3 * 60e3) return aiCache;
+  const parts = await Promise.all([0, 1, 2].map(n => fetch(`${AI_SRC(n)}?t=${Date.now()}`, { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).catch(() => null)));
+  const all = {};
+  for (const p of parts) for (const [id, a] of Object.entries(p?.analyses || {})) all[id] = a;
+  if (parts.some(Boolean)) { aiCache = all; aiAt = Date.now(); }
+  return all;
+}
+const AI_NAMES = { gold: 'GOLD', ndq: 'NASDAQ', usd: 'DOLLAR', oil: 'OIL' };
+const AI_STATUS = { confirmed: 'Confirmed', official: 'Official', reported: 'Reported', unverified: 'Unverified', speculation: 'Speculation', opinion: 'Opinion', conflicting: 'Conflicting reports' };
+function aiTrackText(conf) {
+  const t = data?.scorecard?.aiTrack || {}, b = conf >= 8 ? '8-10' : conf >= 5 ? '5-7' : '1-4', x = t[b];
+  const n = Object.values(t).reduce((m, v) => m + v.n, 0);
+  if (x && x.n >= 100) return `AI calls at ${b}/10 were right ${Math.round(x.hit / x.n * 100)}% of the time (${x.n} checked).`;
+  return `Track record still building (${n} AI calls checked so far), so no probability is shown yet.`;
+}
+async function fillAI(s) {
+  const el = () => (pvId === s.id ? $('aiPanel') : null);
+  const all = await getAnalyses(), a = all[s.id];
+  const box = el(); if (!box) return;
+  if (!a) { box.innerHTML = '<p class="ai-load">The AI analysis isn’t available right now. The calls above already include it.</p>'; return; }
+  const fac = (l, up) => (l || []).map(f => `<div class="ai-f ${up ? 'u' : 'd'}"><b>${up ? '↑' : '↓'} ${esc(f.f)}</b>${f.chain ? `<span>${esc(f.chain)}</span>` : ''}<i>${esc(f.s || '')}</i></div>`).join('');
+  const word = b => ({ bullish: '▲ Bullish', bearish: '▼ Bearish', neutral: '– Neutral', unclear: '? Unclear' }[b] || '?');
+  const mk = ['gold', 'ndq', 'usd', 'oil'].filter(k => a.markets?.[k]).map(k => {
+    const m = a.markets[k], fin = s.fx.assets?.[k];
+    const finTxt = fin && fin.dir !== 'flat' && fin.conf ? `<span class="ai-fin ${fin.dir === 'up' ? 'u' : 'd'}">${fin.dir === 'up' ? '▲' : '▼'} ${fin.conf}/10</span>` : '<span class="ai-fin">no clear move</span>';
+    return `<details class="ai-m"${k === 'gold' ? ' open' : ''}><summary><b>${AI_NAMES[k]}</b><span class="ai-b ${m.bias}">${word(m.bias)} ${m.conviction}/10</span>${finTxt}</summary>
+      ${fac(m.bull, true)}${fac(m.bear, false)}
+      ${m.wins ? `<p><b>What wins:</b> ${esc(m.wins)}</p>` : ''}${m.counter ? `<p><b>Against:</b> ${esc(m.counter)}</p>` : ''}${m.flip ? `<p><b>Would change if:</b> ${esc(m.flip)}</p>` : ''}</details>`;
+  }).join('');
+  const g = s.fx.assets?.gold;
+  box.innerHTML = `<div class="ai-h"><span>AI ANALYSIS · NEXT 24 HOURS</span><span class="ai-st ${esc(a.status)}">${AI_STATUS[a.status] || esc(a.status)}</span></div>
+    ${a.what ? `<p class="ai-what">${esc(a.what)}</p>` : ''}
+    <p class="ai-meta">Credibility ${a.credibility}/5 · importance ${a.importance}/5 · priced in: ${esc(a.priced_in)} · ${a.full ? 'read the full article' : 'summary only'}</p>
+    ${(a.facts || []).length ? `<p class="ai-meta"><b>Facts:</b> ${a.facts.map(esc).join(' · ')}</p>` : ''}
+    ${(a.claims || []).length ? `<p class="ai-meta"><b>Claims, not confirmed:</b> ${a.claims.map(esc).join(' · ')}</p>` : ''}
+    ${mk}
+    ${a.uncertainty ? `<p class="ai-meta"><b>Uncertain:</b> ${esc(a.uncertainty)}</p>` : ''}
+    <p class="ai-note">AI view (left) vs final call (right). The final call blends the AI's reasoning (55%), the trained model's tested history (35%) and the rules (10%), scaled down for weak credibility or news that's already priced in. Confidence is a rating, not a probability. ${aiTrackText(g?.conf || 0)} <span>${esc(a.model || '')} · ${ago(a.at)}</span></p>`;
 }
 /* ---------- Install as an app, and offline support ---------- */
 let installEvt = null;
@@ -1636,7 +1707,7 @@ document.addEventListener('click', e => {
   if (act === 'toggle') { expanded.has(id) ? expanded.delete(id) : expanded.add(id); render(); }
   else if (act === 'menu') storyMenu(id);
   else if (act === 'preview') previewSheet(id);
-  else if (act === 'pvsave') { toggleSave(id); $('sheetBody').innerHTML = previewHTML(findStory(id)); }
+  else if (act === 'pvsave') { toggleSave(id); const st = findStory(id); $('sheetBody').innerHTML = previewHTML(st); if (st?.fx?.ai) fillAI(st); }
   else if (act === 'close') closeSheet();
   else if (act === 'share') {
     const st = findStory(id); if (!st) return;
@@ -1755,7 +1826,7 @@ dragSwipe(document.querySelector('main'), () => document.querySelector('main'), 
 
 const pvIndex = () => currentList.indexOf(pvId);
 const canStory = d => $('sheet').classList.contains('float') && $('sheet').classList.contains('open') && pvIndex() >= 0 && pvIndex() + d >= 0 && pvIndex() + d < currentList.length;
-function commitStory(d) { pvId = currentList[pvIndex() + d]; markRead(pvId); $('sheetBody').innerHTML = previewHTML(findStory(pvId)); $('sheet').scrollTop = 0; }
+function commitStory(d) { pvId = currentList[pvIndex() + d]; markRead(pvId); const st = findStory(pvId); $('sheetBody').innerHTML = previewHTML(st); $('sheet').scrollTop = 0; if (st?.fx?.ai) fillAI(st); }
 function stepPreview(d) { if (canStory(d)) slide($('sheetBody'), d, commitStory); }
 dragSwipe($('sheet'), () => $('sheetBody'), canStory, commitStory);
 document.addEventListener('keydown', e => { if (!$('sheet').classList.contains('float') || !$('sheet').classList.contains('open')) return; if (e.key === 'ArrowRight') stepPreview(1); if (e.key === 'ArrowLeft') stepPreview(-1); });
