@@ -480,7 +480,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.19'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.20'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1480,7 +1480,7 @@ function aiTrackText(conf) {
 }
 async function fillAI(s) {
   const el = () => (pvId === s.id ? $('aiPanel') : null);
-  const all = await getAnalyses(), rec = all[s.id] || (s.fx.ai?.from && all[s.fx.ai.from]);
+  const all = await getAnalyses(), rec = all[s.id];
   const a = rec ? { ...(rec.res || {}), at: rec.at, model: rec.model, full: rec.full, title: rec.title } : null;
   const box = el(); if (!box) return;
   if (!a) { box.innerHTML = '<p class="ai-load">The AI analysis isn’t available right now. The calls above already include it.</p>'; return; }
@@ -1496,7 +1496,6 @@ async function fillAI(s) {
   const g = s.fx.assets?.gold;
   box.innerHTML = `<div class="ai-h"><span>AI ANALYSIS · NEXT 24 HOURS</span><span class="ai-st ${esc(a.status)}">${AI_STATUS[a.status] || esc(a.status)}</span></div>
     ${a.what ? `<p class="ai-what">${esc(a.what)}</p>` : ''}
-    ${s.fx.ai?.from ? `<p class="ai-meta">From the AI's analysis of the same event: “${esc(findStory(s.fx.ai.from)?.title || a.title || 'a related story')}”</p>` : ''}
     <p class="ai-meta">Credibility ${a.credibility}/5 · importance ${a.importance}/5 · priced in: ${esc(a.priced_in)} · ${a.full ? 'read the full article' : 'summary only'}</p>
     ${(a.facts || []).length ? `<p class="ai-meta"><b>Facts:</b> ${a.facts.map(esc).join(' · ')}</p>` : ''}
     ${(a.claims || []).length ? `<p class="ai-meta"><b>Claims, not confirmed:</b> ${a.claims.map(esc).join(' · ')}</p>` : ''}
