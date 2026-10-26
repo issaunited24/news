@@ -10,9 +10,9 @@ const VIRAL_RE = /\b(viral|backlash|outrage|slams|blasts|rips|meltdown|feud|cont
 const CRIME_RE = /\b(trial|verdict|jury|sentenced|indicted|indictment|arrested|charged|convicted|acquitted|shooting|shooter|murder\w*|homicide|stabbing|kidnapp\w*|manhunt|police|fbi raid)\b/i;
 const CULTURE_RE = /\b(box office|flops?|bombs at|opening weekend|concert|tour|album|single|grammys?|oscars?|emmys?|golden globes|super bowl halftime|halftime show|netflix|hbo|disney|marvel|movie|film|trailer|sequel|hollywood|celebrit\w*|rapper|singer|actor|actress|comedian|comedy|stand-up|late-night|talk show|snl|podcast|kanye|ye\b|drake|taylor swift|beyonce|kardashian|diddy|met gala|red carpet|influencer|reality (tv|show)|feud|beef|diss)\b/i;
 const SERIOUS_CRIME_RE = /\b(serial killer|murder\w*|homicide|mass shooting|shooting|shooter|manhunt|kidnapp\w*|trial|verdict|jury|sentenced|convicted|acquitted|indicted|charged with|true crime)\b/i;
-const STREAM_RE = /\b(streamer|twitch|kick|youtuber|tiktok(er)?|influencer|podcast(er)?|livestream\w*)\b/i;
+const STREAM_RE = /\b(streamer|twitch|kick (streamer|stream|star)|on kick|youtuber|tiktok(er)?|influencer|podcast(er)?|livestream\w*)\b/i; // "kick" alone is usually "kick off"
 
-const TECH_RE = /\b(ai|a\.i\.|artificial intelligence|openai|anthropic|deepmind|chatgpt|claude|gemini|grok|xai|llama|mistral|llms?|chatbots?|machine learning|nvidia|tsmc|semiconductors?|chipmakers?|chips? (export|ban|maker|plant|shortage)|gpus?|data cent(er|re)s?|apple|iphone|ipad|google|alphabet|microsoft|windows|meta|instagram|whatsapp|amazon|aws|tesla|spacex|starlink|neuralink|robot\w*|humanoid|quantum|cyber\w*|hack(ed|ers?|ing)?|ransomware|data breach|smartphones?|android|samsung|startup|unicorn|app store|antitrust|big tech|silicon valley|software|cloud|crypto exchange|deepfakes?|autonomous|self-driving|waymo|drones? maker)\b/i;
+const TECH_RE = /\b(ai|a\.i\.|artificial intelligence|openai|anthropic|deepmind|chatgpt|claude|gemini|grok|xai|llama|mistral|llms?|chatbots?|machine learning|nvidia|tsmc|intel|amd|qualcomm|broadcom|asml|micron|arm holdings|semiconductors?|chipmakers?|chips? (export|ban|maker|plant|shortage)|gpus?|data cent(er|re)s?|apple|iphone|ipad|google|alphabet|microsoft|windows|meta|instagram|whatsapp|amazon|aws|tesla|spacex|starlink|neuralink|robot\w*|humanoid|quantum|cyber\w*|hack(ed|ers?|ing)?|ransomware|data breach|smartphones?|android|samsung|startup|unicorn|app store|antitrust|big tech|silicon valley|software|cloud|crypto exchange|deepfakes?|autonomous|self-driving|waymo|drones? maker)\b/i;
 
 // Sports. NBA, NFL and UFC always count; other sports only when it's a big moment.
 const SPORTS_RE = /\b(nba|nfl|ufc|mma|wnba|mlb|nhl|ncaa|super bowl|world series|stanley cup|playoffs?|quarterback|touchdown|wide receiver|running back|point guard|slam dunk|free agen(cy|t)|draft pick|head coach|coach(es|ed)?\b|knockout|title fight|octagon|soccer|football club|premier league|champions league|la liga|serie a|bundesliga|fifa|world cup|grand prix|formula (1|one)|\bf1\b|nascar|tennis|wimbledon|us open|french open|australian open|golf|pga|masters tournament|ryder cup|olympic\w*|boxing|cricket|innings|test series|rugby|marathon|athlete|striker|midfielder|goalkeeper|transfer window|hat-?trick|tournament|championship game|semifinal|quarterfinal|(first|second|third|fourth|fifth) test)\b/i;
@@ -71,6 +71,8 @@ const LIKES = [
 export const LIKE_TAB = { war: 'world', europe: 'world', asia: 'world', trump: 'us', congress: 'us', crime: 'us', viral: 'us', movies: 'ent', boxoffice: 'ent', music: 'ent', results: 'sports', fight: 'sports', upset: 'sports', ai: 'tech', bigtech: 'tech', chips: 'tech', space: 'sci', health: 'sci', weird: 'sci' };
 
 const has = (re, t) => re.test(t);
+const MARKET_RE = /\b(fed|fomc|federal reserve|central banks?|rate (hike|cut|call|decision)s?|interest rates?|futures|stocks?|shares|equit(y|ies)|earnings|bonds?|yields?|treasur(y|ies)|ipo|financing|investment|exports?|imports?|gdp|inflation|tariffs?|oil prices?|wall street|nasdaq|s&p|dow)\b/i;
+const HARD_RE = /\b(election|elections|runoff|vote|voters|president|prime minister|senate|congress|parliament|rally|court|military|army|troops|drills|war|missiles?|strikes?|attack\w*|ceasefire|sanctions|killed|protests?)\b/i;
 
 export function classify(title, summary, feedCats, score, tier, outletCount, breaking) {
   const t = title, ts = `${title} ${summary || ''}`.slice(0, 500);
@@ -100,13 +102,18 @@ export function classify(title, summary, feedCats, score, tier, outletCount, bre
     cats.add('sports');
     if (!has(MASSIVE_RE, t) && !has(VIRAL_RE, t)) { cats.delete('world'); if (!has(FIGURE_RE, t)) cats.delete('us'); }
   }
+  // Hard news (markets, politics, war) only joins Entertainment, Science or Tech when the headline itself is about
+  // that subject, never just because an entertainment, science or tech outlet also covered it
+  const market = has(MARKET_RE, t), hard = market || has(HARD_RE, t);
   // Entertainment: entertainment feeds or clearly entertainment (pop culture also stays in U.S.)
-  if (feedCats.has('ent') || (!sportsHit && (has(ENT_RE, t) || has(STREAM_RE, t)))) cats.add('ent');
+  const entTitle = has(ENT_RE, t) || has(STREAM_RE, t);
+  if ((feedCats.has('ent') && !hard && !sportsHit) || (!sportsHit && entTitle)) cats.add('ent');
   // Science: science feeds or clearly a science, space or health discovery
-  if (feedCats.has('sci') || has(SCI_RE, t)) cats.add('sci');
+  if ((feedCats.has('sci') && !hard) || has(SCI_RE, t)) cats.add('sci');
+  if (cats.has('sci') && market && !/\b(nasa|astronaut|telescope|species|fossil|asteroid|scientists?|researchers)\b/i.test(t)) cats.delete('sci'); // "Genmab shares jump after cancer study" is a market story
 
   // Tech & AI: tech feeds, plus tech stories from anywhere else
-  if (fromTech || has(TECH_RE, t)) cats.add('tech');
+  if ((fromTech && !(hard && !has(TECH_RE, t))) || has(TECH_RE, t)) cats.add('tech');
 
   const flags = [];
   if (has(CULTURE_RE, t)) flags.push('culture');

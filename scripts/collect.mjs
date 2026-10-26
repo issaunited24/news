@@ -230,7 +230,12 @@ const stories = groupsOf.map(group => {
   const ageMin = (now - Math.min(firstSeen, published)) / 60000;
   const breaking = (s.tier === 'major' && ageMin <= 90) || (s.breakingTag && ageMin <= 120);
   // Tabs: World (outside the US) / U.S. / Tech & AI from the classifier; Forex = market-moving news (+ business news)
-  const cls = classify(lead.title, lead.summary, feedCats, s.score, s.tier, outletCount, breaking);
+  // Sections come from the lead outlet's feed or feeds carrying at least a third of the coverage (one stray outlet
+  // from a Science feed doesn't make a Fed story science)
+  const share = new Map();
+  for (const g of group) for (const c of new Set(g.cats.map(c => (c === 'business' ? 'forex' : c)))) share.set(c, (share.get(c) || 0) + 1 / group.length);
+  const mainFeeds = new Set([...(lead.cats || []).map(c => (c === 'business' ? 'forex' : c)), ...[...share].filter(([, v]) => v >= 0.34).map(([c]) => c)]);
+  const cls = classify(lead.title, lead.summary, mainFeeds, s.score, s.tier, outletCount, breaking);
   const cats = cls.cats;
   // "Just in": a fresh story from a trusted outlet shows straight away, before other outlets confirm it.
   // Top still needs a truly massive event, and then only from a major newsroom or wire.
