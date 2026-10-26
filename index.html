@@ -479,7 +479,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.17'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.18'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1479,7 +1479,8 @@ function aiTrackText(conf) {
 }
 async function fillAI(s) {
   const el = () => (pvId === s.id ? $('aiPanel') : null);
-  const all = await getAnalyses(), a = all[s.id] || (s.fx.ai?.from && all[s.fx.ai.from]);
+  const all = await getAnalyses(), rec = all[s.id] || (s.fx.ai?.from && all[s.fx.ai.from]);
+  const a = rec ? { ...(rec.res || {}), at: rec.at, model: rec.model, full: rec.full, title: rec.title } : null;
   const box = el(); if (!box) return;
   if (!a) { box.innerHTML = '<p class="ai-load">The AI analysis isn’t available right now. The calls above already include it.</p>'; return; }
   const fac = (l, up) => (l || []).map(f => `<div class="ai-f ${up ? 'u' : 'd'}"><b>${up ? '↑' : '↓'} ${esc(f.f)}</b>${f.chain ? `<span>${esc(f.chain)}</span>` : ''}<i>${esc(f.s || '')}</i></div>`).join('');

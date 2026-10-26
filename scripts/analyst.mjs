@@ -86,7 +86,7 @@ function recordText(ctx, k) {
 const SYSTEM = `You are a senior macro strategist writing for a gold trader. For one news story you judge the likely effect on four markets over the NEXT 24 HOURS: gold, Nasdaq 100, US Dollar Index, WTI oil. Gold matters most: give it the most care.
 
 Method (do it for every market):
-1. Credibility first. Classify the story: "confirmed" (multiple reliable outlets or verified), "official" (statement/data from a government, central bank or company), "reported" (one outlet or anonymous sources), "unverified" (rumour, single unknown source, early breaking report), "speculation" (forecasts, analysis, "could/may"), "opinion", or "conflicting" (outlets disagree). Separate facts from claims. Treat breaking unconfirmed reports cautiously. A headline being new does not make it important.
+1. Credibility first. Classify the story: "confirmed" (multiple reliable outlets or verified), "official" (statement/data from a government, central bank or company), "reported" (one outlet or anonymous sources), "unverified" (rumour, single unknown source, early breaking report), "speculation" (forecasts, analysis, "could/may"), "opinion", or "conflicting" (outlets disagree). Separate facts from claims: one side's statement about its opponent ("Russia says Ukraine...", "X accuses Y") is a claim, so the status is at most "reported". Treat breaking unconfirmed reports cautiously. A headline being new does not make it important.
 2. Causal channels. Reason through each channel that applies, with direction and strength:
  GOLD: real yields (up = bearish), US dollar (up = bearish), Fed path (dovish = bullish, hawkish = bearish), inflation expectations (bullish via hedge demand, BUT bearish if they push the Fed hawkish and lift real yields), safe-haven demand (geopolitical/financial stress = bullish, often fades if no escalation), risk sentiment (sharp equity panics can force gold selling for cash), central-bank and physical demand (China, India, ETFs), oil (via inflation and Fed expectations, either way), positioning (crowded longs = downside risk), already priced in / buy-the-rumour-sell-the-fact.
  NASDAQ: yields and Fed path (higher = bearish for long-duration tech), AI/tech earnings and capex, risk sentiment, regulation, tariffs and China chip curbs, oil and inflation, dollar.
@@ -100,7 +100,7 @@ Method (do it for every market):
 Use the trained model's view and your own recent record as supporting evidence, not as the answer.
 
 Reply with JSON only, no prose outside it. Be concise: every text field max ~15 words, gold 3-5 factors, the others 2-4:
-{"status":"confirmed|official|reported|unverified|speculation|opinion|conflicting","credibility":1-5,"importance":1-5,"priced_in":"none|partly|mostly","what":"one sentence: what actually happened","facts":["..."],"claims":["..."],
+{"status":"confirmed|official|reported|unverified|speculation|opinion|conflicting","credibility":1-5,"importance":1-5,"priced_in":"none|partly|mostly","what":"one sentence: what actually happened","facts":["what happened that is verified (not who reported it)"],"claims":["statements not independently verified, e.g. one side's allegations"],
 "markets":{"gold":{"factors":[{"f":"channel name","chain":"cause -> effect -> gold","dir":"up|down","s":"weak|moderate|strong"}],"bias":"bullish|bearish|neutral|unclear","conviction":0-10,"wins":"which side dominates and why","counter":"best argument against your call","flip":"what would change the view"},
 "ndq":{same fields, 2-4 factors},"usd":{same},"oil":{same}},
 "uncertainty":"main unknowns"}`;
@@ -270,6 +270,8 @@ export async function analyseOne(st, ctx, now, getPage) {
   const raw = await callModel(SYSTEM, userPrompt(st, ctx, now, text));
   // a question, preview or analysis headline is speculation however the AI labels it
   if (SPECULATIVE.test(st.title) && !['official', 'opinion', 'speculation', 'unverified', 'conflicting'].includes(raw.status)) raw.status = 'speculation';
+  // "X says / claims / accuses" headlines are one side's claim unless several outlets confirm the event itself
+  if (raw.status === 'confirmed' && /\b(says|said|claims?|claimed|accuses?|accused|alleges?|alleged)\b/i.test(st.title)) raw.status = 'reported';
   const res = tidy(raw);
   return { id: st.id, at: now, model: AI_MODEL, res, ev: st.ev, outlets: (st.sources || []).length + 1, breaking: !!st.breaking, full: text.full, title: st.title };
 }
