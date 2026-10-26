@@ -7,7 +7,7 @@ import { existsSync } from 'node:fs';
 import { entries, all, first, textOf } from './xml.mjs';
 import { marketCatalyst, isPriceRecap } from './markets.mjs';
 import { classify } from './categories.mjs';
-import { combine } from './analyst.mjs';
+import { combine, AI_MODEL } from './analyst.mjs';
 import { cluster, isHub, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust, justInOk } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
@@ -609,7 +609,7 @@ if (!FIXTURES) {
       const out = spawnSync('git', ['fetch', '-q', '--depth=1', 'origin', `ai-${n}`], { encoding: 'utf8', timeout: 30000 });
       if (out.status !== 0) continue;
       const j = JSON.parse(spawnSync('git', ['show', 'FETCH_HEAD:analyses.json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).stdout);
-      for (const [id, a] of Object.entries(j.analyses || {})) if (now - a.at < 48 * 3600e3) aiState.analyses[id] = a;
+      for (const [id, a] of Object.entries(j.analyses || {})) if (now - a.at < 48 * 3600e3 && a.model === AI_MODEL) aiState.analyses[id] = a;
     } catch {}
   }
   console.log(`AI analyses available: ${Object.keys(aiState.analyses).length}`);

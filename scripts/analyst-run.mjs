@@ -4,7 +4,7 @@
 // analysis into that story's calls. Each worker takes a fixed share of the stories, so no story is analysed twice.
 import { execFileSync } from 'node:child_process';
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
-import { analyseOne, getMacro, pickStories, priority } from './analyst.mjs';
+import { analyseOne, getMacro, pickStories, priority, AI_MODEL } from './analyst.mjs';
 
 const SHARD = +(process.env.SHARD || 0), SHARDS = +(process.env.SHARDS || 1);
 const END = Date.now() + (+(process.env.MINUTES || 110)) * 60e3;
@@ -43,6 +43,7 @@ function publish(obj) {
 // pick up where the last run of this worker stopped
 let analyses = {};
 try { git('fetch', '-q', '--depth=1', 'origin', BRANCH); analyses = JSON.parse(git('show', 'FETCH_HEAD:analyses.json')).analyses || {}; } catch {}
+for (const [id, a] of Object.entries(analyses)) if (a.model !== AI_MODEL) delete analyses[id]; // only the current model's work is kept
 log(`worker ${SHARD}/${SHARDS}: ${Object.keys(analyses).length} earlier analyses`);
 try { log('engine:', readFileSync('engine.txt', 'utf8').trim().slice(-300)); } catch {}
 publish({ updated: Date.now(), shard: SHARD, analyses, log: logs });
