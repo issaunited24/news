@@ -38,6 +38,7 @@ from calib import RATING_STEPS, caps, check  # noqa: E402
 from features import assemble  # noqa: E402
 from market_data import ASSETS, CONTEXT_KEYS, DAILY_KEYS, daily_return_after, daily_return_n, date_only, fetch_daily  # noqa: E402
 LABELS = 2  # 2: leak-free outcomes for headlines with only a publication date
+GATE = 2  # 2: a model must also beat always betting the usual direction
 from positioning import KEYS as POS_KEYS  # noqa: E402
 
 DATA, OUT = 'data/ml/dataset', 'model'
@@ -236,7 +237,7 @@ def main():
         daily[idx] = True
     log(f'{len(meta)} headlines: {hourly.sum()} for the hourly models, {daily.sum()} for the 1-day model')
 
-    report = {'trained': time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime()), 'headlines': int(len(meta)), 'labels': LABELS, 'horizons': {}}
+    report = {'trained': time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime()), 'headlines': int(len(meta)), 'labels': LABELS, 'gate': GATE, 'horizons': {}}
     bundle = {'version': report['trained'], 'rating_steps': RATING_STEPS, 'horizons': {}}
     frames = {'hourly': Frame(meta, feats, hourly, 'hourly'), 'daily': Frame(meta, feats, daily, 'daily')}
     selected = {}
@@ -314,7 +315,7 @@ def main():
     report['deploy'] = bool(report['quality_ok'] and (old_b is None or new_b is None or new_b >= old_b - 0.005))
     # a live model tested with the old, leaky outcomes is always replaced, even by "nothing passed" (the robot then
     # stops using the trained model), because its test results can't be trusted
-    if old and old.get('labels', 1) != LABELS:
+    if old and (old.get('labels', 1) != LABELS or old.get('gate', 1) != GATE):  # judged by older, looser rules
         report['deploy'] = True
     report['compared_with'] = {'previous_next_day_score': old_b, 'new_next_day_score': new_b}
     passed = [f'{h} {k}' for h, hz in report['horizons'].items() for k, v in hz.items() if v.get('use') == 'model']
