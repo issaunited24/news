@@ -7,7 +7,7 @@ import { existsSync } from 'node:fs';
 import { entries, all, first, textOf } from './xml.mjs';
 import { marketCatalyst, isPriceRecap } from './markets.mjs';
 import { classify } from './categories.mjs';
-import { combine, AI_MODEL } from './analyst.mjs';
+import { combine, gradeBacktest, AI_MODEL } from './analyst.mjs';
 import { cluster, isHub, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust, justInOk } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
@@ -620,10 +620,24 @@ if (!FIXTURES) {
   }
   console.log(`AI analyses available: ${Object.keys(aiState.analyses).length}`);
 }
+// The AI's grade from the backtest on past headlines (branches bt-0 ... bt-9), refreshed every 20 minutes
+let btGrade = prevState.btGrade || null;
+if (!FIXTURES && (!btGrade || now - btGrade.at > 20 * 60e3)) {
+  const all = [];
+  for (let n = 0; n < 10; n++) {
+    try {
+      if (spawnSync('git', ['fetch', '-q', '--depth=1', 'origin', `bt-${n}`], { timeout: 30000 }).status !== 0) continue;
+      const j = JSON.parse(spawnSync('git', ['show', 'FETCH_HEAD:results.json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).stdout);
+      all.push(...Object.values(j.results || {}).filter(r => r.model === AI_MODEL));
+    } catch {}
+  }
+  btGrade = { at: now, ...gradeBacktest(all) };
+  console.log(`AI backtest: ${all.length} past headlines graded; weights ${JSON.stringify(btGrade.weights)}`);
+}
 for (const st of stories) {
   const a = st.fx && aiState.analyses?.[st.id];
   if (a) {
-    st.fx.assets = combine(a.res, st._d1, st._rules);
+    st.fx.assets = combine(a.res, st._d1, st._rules, btGrade?.weights);
     st.fx.ai = { status: a.res.status, cred: a.res.credibility, priced: a.res.priced_in, at: a.at, full: a.full || undefined };
     // the card's one-line reason comes from the AI's gold verdict, so it never contradicts the call shown
     const g = a.res.markets?.gold;
@@ -717,6 +731,7 @@ const scorecard = {
   all: tally(judged), high: tally(judged.filter(f => f.conf >= 7)), news: tally(judged.filter(f => !f.cal)), cal: tally(judged.filter(f => f.cal)),
   pending: [...forecasts.values()].filter(f => !f.result).length, rules: 2,
   ai: tally(judged.filter(f => f.ai)),
+  aiBacktest: btGrade ? { n: btGrade.n, markets: btGrade.markets, weights: btGrade.weights } : undefined,
   // the AI's track record by confidence (all its checked next-day calls, not just 5+): becomes the probability shown
   // on a call once a confidence level has enough checked calls behind it
   aiTrack: (() => {
@@ -757,6 +772,6 @@ await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
 // Everything else (older or small stories), in its own file so the app's regular check stays light
 await writeFile(new URL('data/older.json', ROOT), JSON.stringify({ updated: now, stories: keep.filter(st => !isRecent(st)) }));
 await writeFile(new URL('data/charts.json', ROOT), JSON.stringify(charts));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries([...[...stalePreds].filter(([id]) => !preds.has(id)), ...preds]), calPreds: Object.fromEntries(calPreds), bigMoney, lastFetch }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries([...[...stalePreds].filter(([id]) => !preds.has(id)), ...preds]), calPreds: Object.fromEntries(calPreds), bigMoney, lastFetch, btGrade }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);

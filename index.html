@@ -486,7 +486,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.24'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.25'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1059,6 +1059,7 @@ function scorecardHTML() {
     ${total ? `<div class="sc-g">${cell('GOLD', sc.assets.gold)}${cell('USD', sc.assets.usd)}${cell('NASDAQ', sc.assets.ndq)}${cell('OIL', sc.assets.oil || { hit: 0, miss: 0 })}${cell('CONF 7+', sc.high)}</div>`
       : `<p class="sc-empty">Collecting results. Each call is checked ${sc.horizonH} hours after the news${sc.pending ? ` · ${sc.pending} waiting` : ''}.</p>`}
     ${sc.ai && sc.ai.hit + sc.ai.miss ? `<p class="sc-empty">AI-analysed calls: ${pct(sc.ai)} right, ${sc.ai.hit}/${sc.ai.hit + sc.ai.miss}.</p>` : ''}
+    ${sc.aiBacktest?.markets?.gold?.n >= 30 ? `<p class="sc-empty">AI tested on past news (2025–26): ${['gold', 'ndq', 'usd', 'oil'].filter(k => sc.aiBacktest.markets[k]?.n >= 30).map(k => `${{ gold: 'Gold', ndq: 'NDQ', usd: 'USD', oil: 'Oil' }[k]} ${Math.round(sc.aiBacktest.markets[k].hit / sc.aiBacktest.markets[k].n * 100)}% (${sc.aiBacktest.markets[k].n})`).join(' · ')}.</p>` : ''}
     ${sc.cal ? `<p class="sc-empty">Includes calendar calls (a beat or miss checked 1 hour after the release): ${sc.cal.hit + sc.cal.miss ? `${pct(sc.cal)} right, ${sc.cal.hit}/${sc.cal.hit + sc.cal.miss}` : 'waiting for the next release'}.</p>` : ''}
   </div>`;
 }
@@ -1488,11 +1489,13 @@ async function getAnalyses() {
 }
 const AI_NAMES = { gold: 'GOLD', ndq: 'NASDAQ', usd: 'DOLLAR', oil: 'OIL' };
 const AI_STATUS = { confirmed: 'Confirmed', official: 'Official', reported: 'Reported', unverified: 'Unverified', speculation: 'Speculation', opinion: 'Opinion', conflicting: 'Conflicting reports' };
-function aiTrackText(conf) {
-  const t = data?.scorecard?.aiTrack || {}, b = conf >= 8 ? '8-10' : conf >= 5 ? '5-7' : '1-4', x = t[b];
-  const n = Object.values(t).reduce((m, v) => m + v.n, 0);
-  if (x && x.n >= 100) return `AI calls at ${b}/10 were right ${Math.round(x.hit / x.n * 100)}% of the time (${x.n} checked).`;
-  return `Track record still building (${n} AI calls checked so far), so no probability is shown yet.`;
+function aiTrackText(conv) {
+  // its record on past headlines (the backtest), by how confident it was; then its live record
+  const bt = data?.scorecard?.aiBacktest, g = bt?.markets?.gold, b = conv >= 7 ? '7-10' : conv >= 4 ? '4-6' : '1-3', x = g?.byConv?.[b];
+  const pc = t => Math.round(t.hit / t.n * 100);
+  if (x && x.n >= 50) return `Tested on past headlines (2025–26): when its gold conviction was ${b}/10 it was right ${pc(x)}% of the time (${x.n} calls; 50% = a coin flip).`;
+  if (g && g.n >= 30) return `Tested on past headlines so far: its gold calls were right ${pc(g)}% of the time (${g.n} calls; 50% = a coin flip). More results are coming in.`;
+  return 'Its test on past headlines is running; its track record will show here.';
 }
 async function fillAI(s) {
   const el = () => (pvId === s.id ? $('aiPanel') : null);
@@ -1509,7 +1512,6 @@ async function fillAI(s) {
       ${fac(m.bull, true)}${fac(m.bear, false)}
       ${m.wins ? `<p><b>What wins:</b> ${esc(m.wins)}</p>` : ''}${m.counter ? `<p><b>Against:</b> ${esc(m.counter)}</p>` : ''}${m.flip ? `<p><b>Would change if:</b> ${esc(m.flip)}</p>` : ''}</details>`;
   }).join('');
-  const g = s.fx.assets?.gold;
   box.innerHTML = `<div class="ai-h"><span>AI ANALYSIS · NEXT 24 HOURS</span><span class="ai-st ${esc(a.status)}">${AI_STATUS[a.status] || esc(a.status)}</span></div>
     ${a.what ? `<p class="ai-what">${esc(a.what)}</p>` : ''}
     <p class="ai-meta">Credibility ${a.credibility}/5 · importance ${a.importance}/5 · priced in: ${esc(a.priced_in)} · ${a.full ? 'read the full article' : 'summary only'}</p>
@@ -1517,7 +1519,7 @@ async function fillAI(s) {
     ${(a.claims || []).length ? `<p class="ai-meta"><b>Claims, not confirmed:</b> ${a.claims.map(esc).join(' · ')}</p>` : ''}
     ${mk}
     ${a.uncertainty ? `<p class="ai-meta"><b>Uncertain:</b> ${esc(a.uncertainty)}</p>` : ''}
-    <p class="ai-note">AI view (left) vs final call (right). The final call blends the AI's reasoning (55%), the trained model's tested history (35%) and the rules (10%), scaled down for weak credibility or news that's already priced in. Confidence is a rating, not a probability. ${aiTrackText(g?.conf || 0)} <span>${esc(a.model || '')} · ${ago(a.at)}</span></p>`;
+    <p class="ai-note">AI view (left) vs final call (right). The final call blends the AI's reasoning (55%), the trained model's tested history (35%) and the rules (10%), scaled down for weak credibility or news that's already priced in. Confidence is a rating, not a probability. ${aiTrackText(a.markets?.gold?.conviction || 0)} <span>${esc(a.model || '')} · ${ago(a.at)}</span></p>`;
 }
 /* ---------- Install as an app, and offline support ---------- */
 let installEvt = null;

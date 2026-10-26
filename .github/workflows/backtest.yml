@@ -1,0 +1,101 @@
+name: AI backtest
+
+# Tests the AI analyst on past headlines (2025 onward, after the AI model's knowledge ends): ten workers analyse them
+# with the market picture of that moment and publish their calls with what markets really did (branches bt-0 ... bt-9).
+# The news robot grades the AI from these results and weights it by its proven accuracy. Keeps restarting itself
+# until every test headline is done.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/backtest.yml"]
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: backtest
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Test headlines (reuse the last set if there is one)
+        run: |
+          mkdir -p bt
+          for id in $(gh run list --workflow backtest.yml -L 20 --json databaseId -q '.[].databaseId'); do
+            gh run download "$id" -n bt-tasks -D bt 2>/dev/null && [ -f bt/tasks.json ] && { echo "Reusing the test set from run $id"; break; }
+          done
+          if [ ! -f bt/tasks.json ]; then
+            pip install -q pandas numpy
+            for id in $(gh run list --workflow train.yml -L 20 --json databaseId,status -q '.[] | select(.status=="completed") | .databaseId'); do
+              gh run download "$id" -n dataset -D data/ml/dataset 2>/dev/null && [ -f data/ml/dataset/meta.pkl.gz ] && { echo "Dataset from run $id"; break; }
+              rm -rf data/ml/dataset
+            done
+            python scripts/ml/bt_prep.py
+          fi
+          python -c "import json; print(len(json.load(open('bt/tasks.json'))), 'test headlines')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bt-tasks
+          path: bt/tasks.json
+          retention-days: 30
+
+  worker:
+    needs: prep
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Note the start time
+        run: echo "STARTED=$(date +%s)" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: bt-tasks
+          path: bt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: scripts/ai/requirements.txt
+      - name: Install the AI engine
+        env:
+          CMAKE_ARGS: "-DGGML_NATIVE=OFF -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON"
+        run: pip install -q -r scripts/ai/requirements.txt || pip install -q "llama-cpp-python[server]==0.3.9" --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+      - name: Download the AI model
+        run: |
+          for i in 1 2 3; do python -c "from huggingface_hub import snapshot_download as d; d('Qwen/Qwen2.5-14B-Instruct-GGUF', allow_patterns=['*q4_k_m*'], local_dir='model')" && break; sleep 30; done
+      - name: Analyse past headlines
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: 10
+          MINUTES: 320
+        run: |
+          git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          M=$(ls model/*q4_k_m*.gguf | sort | head -1)
+          python -m llama_cpp.server --model "$M" --n_ctx 5120 --n_threads 4 --n_batch 512 --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+          for i in $(seq 1 150); do curl -sf http://127.0.0.1:8000/v1/models >/dev/null && break; sleep 2; done
+          node scripts/backtest-run.mjs
+      - name: Start the next run while headlines remain (only after a healthy run)
+        if: always() && matrix.shard == 0
+        run: |
+          if [ $(( $(date +%s) - STARTED )) -gt 3600 ] && [ -s out/remaining.txt ] && [ "$(cat out/remaining.txt)" -gt 0 ]; then gh workflow run backtest.yml --ref main && echo "next run started"; else echo "not restarting"; fi

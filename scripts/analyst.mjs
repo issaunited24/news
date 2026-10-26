@@ -268,14 +268,15 @@ function tidy(r) {
 // is weakened. The result is a 1-10 confidence (not a probability) and "no clear move" when it's too weak.
 const CRED = { confirmed: 1, official: 1, reported: 0.85, unverified: 0.55, speculation: 0.5, opinion: 0.45, conflicting: 0.45 };
 const PRICED = { none: 1, partly: 0.85, mostly: 0.6 };
-export function combine(an, d1, rules) {
+// w: the AI's weight per market, set from its backtest accuracy (gradeBacktest); 0.55 until there's enough evidence
+export function combine(an, d1, rules, w = {}) {
   const out = {};
   for (const k of ORDER) {
     const a = an.markets[k];
     const av = a && (a.bias === 'bullish' || a.bias === 'bearish') ? (a.bias === 'bullish' ? 1 : -1) * a.conviction / 10 : 0;
     const ml = d1?.[k], mv = ml && (ml.dir === 'up' || ml.dir === 'down') ? (ml.dir === 'up' ? 1 : -1) * Math.max(0, Math.min(1, ((ml.hit ?? 0.5) - 0.5) / 0.15)) : 0;
     const ru = rules?.[k], rv = ru && ru.conf && (ru.dir === 'up' || ru.dir === 'down') ? (ru.dir === 'up' ? 1 : -1) * ru.conf / 10 : 0;
-    let s = (0.55 * av + 0.35 * mv + 0.10 * rv) * (CRED[an.status] ?? 0.8) * (PRICED[an.priced_in] ?? 0.85);
+    let s = ((w[k] ?? 0.55) * av + 0.35 * mv + 0.10 * rv) * (CRED[an.status] ?? 0.8) * (PRICED[an.priced_in] ?? 0.85);
     if (av && mv && Math.sign(av) !== Math.sign(mv)) s *= 0.6;
     const conf = Math.max(1, Math.min(10, Math.round(Math.abs(s) * 11)));
     out[k] = Math.abs(s) < 0.1 ? { dir: 'flat', conf: null, next: true, ai: true } : { dir: s > 0 ? 'up' : 'down', conf, next: true, ai: true };
@@ -296,6 +297,31 @@ export function pickStories(stories, analyses, now, shard = 0, shards = 1) {
     return !prev.redo && ['unverified', 'reported', 'conflicting'].includes(prev.res.status) && (outlets >= prev.outlets + 2 || (st.breaking && !prev.breaking));
   }).sort((a, b) => priority(b, now) - priority(a, now));
 }
+// Backtest (scripts/backtest-run.mjs): the same analysis on a past headline, with the market picture of that moment
+export async function analysePrepared(task) {
+  const age = new Date(task.ts * 1000).toISOString().slice(0, 16).replace('T', ' ');
+  const user = `STORY
+Headline: ${task.title}
+Published ${age} UTC by ${task.outlet || 'an outlet'} (how many outlets covered it is not known in this test).
+Article text ${task.text ? '(opening of the article)' : '(headline only)'}:
+${task.text || '(headline only)'}
+
+MARKET SNAPSHOT (at that moment)
+${task.snapshot}
+${task.regime || ''}
+
+Recent US releases: not available in this test.
+
+OTHER MARKET HEADLINES (previous 12h, for context and "priced in")
+${(task.recent || []).map(t => `- ${t}`).join('\n') || '(none)'}
+
+SUPPORTING EVIDENCE: not available in this test.`;
+  const raw = await callModel(SYSTEM, user);
+  if (SPECULATIVE.test(task.title) && !['official', 'opinion', 'speculation', 'unverified', 'conflicting'].includes(raw.status)) raw.status = 'speculation';
+  if (raw.status === 'confirmed' && /\b(says|said|claims?|claimed|accuses?|accused|alleges?|alleged)\b/i.test(task.title)) raw.status = 'reported';
+  return tidy(raw);
+}
+
 const SPECULATIVE = /\?\s*(\(|$)|\b(could|might|may|preview|what to expect|what to watch|things to watch|week ahead|outlook|forecast|prediction|opinion|analysis|explainer|why |how )\b/i;
 export async function analyseOne(st, ctx, now, getPage) {
   const text = await articleBody(st, getPage);
@@ -306,4 +332,26 @@ export async function analyseOne(st, ctx, now, getPage) {
   if (raw.status === 'confirmed' && /\b(says|said|claims?|claimed|accuses?|accused|alleges?|alleged)\b/i.test(st.title)) raw.status = 'reported';
   const res = tidy(raw);
   return { id: st.id, at: now, model: AI_MODEL, res, ev: st.ev, outlets: (st.sources || []).length + 1, breaking: !!st.breaking, full: text.full, title: st.title };
+}
+
+/* ---------- Grading the AI on past headlines (results from the backtest workers) ---------- */
+// For each market: how often the AI's bullish/bearish calls matched the next day's move, overall and by how confident
+// it was. The AI's weight in the blend follows: more weight where it has proven right, less where it hasn't.
+export const convBucket = c => (c >= 7 ? '7-10' : c >= 4 ? '4-6' : '1-3');
+export function gradeBacktest(results) {
+  const out = { n: results.length, markets: {}, weights: {} };
+  for (const k of ORDER) {
+    const g = { n: 0, hit: 0, byConv: {} };
+    for (const r of results) {
+      const m = r.markets?.[k], y = r.labels?.[k]?.d1;
+      if (!m || (m.bias !== 'bullish' && m.bias !== 'bearish') || y == null || Math.abs(y) < 0.02) continue;
+      const ok = (m.bias === 'bullish') === (y > 0), b = convBucket(m.conviction);
+      g.n++; g.hit += ok ? 1 : 0;
+      (g.byConv[b] ||= { n: 0, hit: 0 }).n++; if (ok) g.byConv[b].hit++;
+    }
+    out.markets[k] = g;
+    const acc = g.n ? g.hit / g.n : null;
+    out.weights[k] = g.n >= 150 ? Math.max(0.15, Math.min(0.8, 0.55 + (acc - 0.53) * 6)) : 0.55;
+  }
+  return out;
 }
