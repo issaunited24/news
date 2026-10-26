@@ -662,13 +662,16 @@ for (const st of stories) {
   if (!st.fx?.assets || now - st.firstSeen > 6 * 3600e3) continue;
   for (const k of ['gold', 'usd', 'ndq', 'oil']) {
     const a = st.fx.assets[k], key = `${st.id}:${k}`;
-    if (!a || a.dir === 'flat' || !a.conf) continue;
     const had = forecasts.get(key);
-    // a call recorded before the AI analysed the story is replaced by the AI's balanced call (checked from now)
-    if (had && !(a.ai && !had.ai && !had.result && now - had.at < 3 * 3600e3)) continue;
+    // a call recorded before the AI analysed the story is replaced by the AI's balanced call (checked from now),
+    // or dropped if the balanced call is "no clear move", so the scorecard grades what the app shows
+    const replace = !!(had && a?.ai && !had.ai && !had.result && now - had.at < 3 * 3600e3);
+    if (replace && (!a.conf || a.dir === 'flat')) { forecasts.delete(key); continue; }
+    if (!a || a.dir === 'flat' || !a.conf) continue;
+    if (had && !replace) continue;
     const p0 = priceAt(k, st.firstSeen);
     if (p0 == null) continue;
-    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, model: st.fx.model || undefined, ai: a.ai || undefined, at: had ? now : st.firstSeen, p0: had ? (priceAt(k, now) ?? p0) : p0, ...(a.next ? { horizon: NEXT_DAY } : {}) });
+    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, model: st.fx.model || undefined, ai: a.ai || undefined, at: replace ? now : st.firstSeen, p0: replace ? (priceAt(k, now) ?? p0) : p0, ...(a.next ? { horizon: NEXT_DAY } : {}) });
   }
 }
 for (const f of forecasts.values()) {
