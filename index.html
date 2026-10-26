@@ -486,7 +486,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.25'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.26'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1544,7 +1544,7 @@ function settingsSheet() {
     <textarea id="backupText" aria-label="Backup text">${esc(JSON.stringify({ boosted: prefs.boosted, muted: prefs.muted, hidden: prefs.hidden, saved: prefs.saved }))}</textarea>
     <div class="btns"><button class="btn" data-act="copyBackup">Copy backup</button><button class="btn" data-act="restore">Restore from text</button></div>
     <h4>How it works</h4>
-    <p class="muted">Briefly checks its sources every few minutes (tap ↻ next to LIVE to get the newest right away). Brand-new stories from major newsrooms land in Just in first. The other tabs are ranked by importance and freshness together: big stories stay near the top for hours, small ones fade fast, repeats of the same event are merged or spaced out, and important news you haven't opened comes back as EARLIER. The Forex tab shows news likely to move gold, the Nasdaq, the US dollar or oil; its glow shows importance (red high, gold medium, cyan low). Each Forex call is for the next 24 hours. Important stories are read by an AI analyst that weighs every cause and effect (safe haven, yields, the Fed, the dollar, inflation, oil, what's already priced in) and checks how credible the report is; its view is blended with a model trained on years of news and price moves, and with simple rules. Confidence is a rating, not a probability, and every call is checked against what prices did in the scorecard.</p>
+    <p class="muted">Briefly checks its sources every few minutes (tap ↻ next to LIVE to get the newest right away). Brand-new stories from major newsrooms land in Just in first. The other tabs are ranked by importance and freshness together: big stories stay near the top for hours, small ones fade fast, repeats of the same event are merged or spaced out, and important news you haven't opened comes back as EARLIER. The Forex tab shows news likely to move gold, the Nasdaq, the US dollar or oil; its glow shows importance (red high, gold medium, cyan low). Each Forex call is for the next 24 hours. Important stories are read by an AI analyst that weighs every cause and effect (safe haven, yields, the Fed, the dollar, inflation, oil, what's already priced in) and checks how credible the report is; its view is blended with a model trained on years of news and price moves, and with simple rules. The AI's weight for each market follows its record in a test on thousands of past headlines. A story's view also shows the trained model's next 3 days and next week, where it passed its tests. Confidence is a rating, not a probability, and every call is checked against what prices did in the scorecard.</p>
     <h4>Sources</h4>${srcs}`);
 }
 
