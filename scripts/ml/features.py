@@ -73,25 +73,45 @@ def text_of(title, text):
     return f'{title}. {text[:400]}' if text else title
 
 
-def tabular(rules, ctxs):
-    """Rule calls, news type and market mood as a small numeric block."""
+def rules_block(rules):
+    """The forex rulebook's calls as numbers: direction and confidence per asset, type of news, impact (26)."""
     rows = []
-    for r, m in zip(rules, ctxs):
+    for r in rules:
         row = []
         for k in ASSETS:
             row += [r['d'][k], r['d'][k] * r['c'][k] / 9.0]
         row += [1.0 if r['driver'] == d else 0.0 for d in DRIVERS]
         row += [{'none': 0, 'low': 1, 'medium': 2, 'high': 3}.get(r['impact'], 0) / 3.0]
-        row += [float(m.get(k, 0.0) or 0.0) for k in CONTEXT_KEYS]
         rows.append(row)
-    return np.nan_to_num(np.asarray(rows, dtype=np.float32))
+    return np.asarray(rows, dtype=np.float32).reshape(len(rules), 26)
 
 
-def featurize(titles, texts, ctxs):
-    """Full feature matrix: [FinBERT (3) | embedding (384) | rules, news type, market mood]."""
-    full = [text_of(t, x) for t, x in zip(titles, texts)]
-    fb = finbert_scores(full)
-    emb = embeddings(full)
-    rules = rule_features([{'title': t, 'text': x or t} for t, x in zip(titles, texts)])
-    tab = tabular(rules, ctxs)
-    return np.hstack([fb, emb, tab]), rules
+# Groups of inputs. 'base' groups are always used; optional ones are kept only if they make the model better on
+# months it never saw (see train.py). Embedding groups are compressed (PCA) inside the model.
+GROUPS = {
+    'headline': {'parts': ['fb_t', 'em_t'], 'emb': 'em_t'},   # tone + meaning of the headline
+    'rules': {'parts': ['rules']},                            # the forex rulebook's calls
+    'mood': {'parts': ['mood']},                              # market mood (hourly models)
+    'dmood': {'parts': ['dmood']},                            # market mood from daily prices (1-day model)
+    'fresh': {'parts': ['nov']},                              # is it new?
+    'source': {'parts': ['src']},                             # source quality
+    'opening': {'parts': ['has_x', 'fb_x', 'em_x'], 'emb': 'em_x'},  # the article opening
+    'positioning': {'parts': ['pos']},                        # hedge-fund positioning
+}
+PART_WIDTH = {'fb_t': 3, 'em_t': 384, 'rules': 26, 'nov': 5, 'src': 4, 'has_x': 1, 'fb_x': 3, 'em_x': 384}
+
+
+def assemble(parts, groups):
+    """Stacks the chosen groups into one matrix. Returns (X, [(start, end) of each embedding block])."""
+    cols, emb, at = [], [], 0
+    for g in groups:
+        spec = GROUPS[g]
+        for p in spec['parts']:
+            a = np.asarray(parts[p], dtype=np.float32)
+            if a.ndim == 1:
+                a = a[:, None]
+            if p == spec.get('emb'):
+                emb.append((at, at + a.shape[1]))
+            cols.append(a)
+            at += a.shape[1]
+    return np.nan_to_num(np.hstack(cols)), emb

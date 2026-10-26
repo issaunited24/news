@@ -104,3 +104,101 @@ def context_at(px, ts):
                 c[f'{k}_chg24'] = (p0 / p24 - 1) * 100 if k == 'vix' else p0 - p24
     c[_session(t)] = 1.0
     return c
+
+
+# ---------- daily prices, for the 1-day model (years of history) ----------
+DAILY_KEYS = ([f'{p}_{k}' for k in ASSETS for p in ('d5', 'd20', 'dv20')] + ['vix_d', 'tnx_d', 'tnx_d5'])
+
+
+def fetch_daily(range_='10y', tries=5):
+    out = {}
+    for k, sym in SERIES.items():
+        try:
+            r = json.loads(_get(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range={range_}&interval=1d', tries=tries))['chart']['result'][0]
+        except Exception as e:
+            print(f'  {k}: no daily prices ({str(e)[:60]})', flush=True, file=sys.stderr)
+            out[k] = pd.Series(dtype=float)
+            continue
+        s = pd.Series(r['indicators']['quote'][0]['close'], index=pd.to_datetime(r['timestamp'], unit='s', utc=True)).dropna()
+        out[k] = s[~s.index.duplicated()].sort_index()
+    return out
+
+
+def _daily_before(s, t):
+    """Index of the last daily close strictly before the day of t (New York)."""
+    return s.index.searchsorted(t.normalize(), side='left') - 1
+
+
+def daily_context(pxd, ts):
+    t = pd.Timestamp(ts, unit='s', tz='UTC')
+    c = {k: 0.0 for k in DAILY_KEYS}
+    for k in ASSETS:
+        s = pxd.get(k)
+        if s is None or len(s) < 25:
+            continue
+        i = _daily_before(s, t)
+        if i < 21:
+            continue
+        v = s.values
+        c[f'd5_{k}'] = (v[i] / v[i - 5] - 1) * 100
+        c[f'd20_{k}'] = (v[i] / v[i - 20] - 1) * 100
+        c[f'dv20_{k}'] = float(np.std(np.diff(np.log(v[i - 20:i + 1]))) * 100)
+    for k in ('vix', 'tnx'):
+        s = pxd.get(k)
+        if s is None or len(s) < 10:
+            continue
+        i = _daily_before(s, t)
+        if i < 5:
+            continue
+        c[f'{k}_d'] = float(s.values[i])
+        if k == 'tnx':
+            c['tnx_d5'] = float(s.values[i] - s.values[i - 5])
+    return c
+
+
+def daily_return(s, ts):
+    """From the last close before the news day to the close of the next trading day after it (%)."""
+    t = pd.Timestamp(ts, unit='s', tz='UTC')
+    if s is None or len(s) < 3:
+        return np.nan
+    i = _daily_before(s, t)
+    j = s.index.searchsorted(t.normalize() + pd.Timedelta(days=1), side='left')
+    if i < 0 or j >= len(s) or (s.index[j] - t).days > 5:
+        return np.nan
+    return (s.values[j] / s.values[i] - 1) * 100
+
+
+# ---------- 5-minute archive (the "prices" branch, see archive_prices.py) ----------
+def load_fine(folder='data/ml/prices5m'):
+    out = {}
+    if not os.path.isdir(folder):
+        return out
+    for k in SERIES:
+        d = os.path.join(folder, k)
+        if not os.path.isdir(d):
+            continue
+        vals = {}
+        for f in sorted(os.listdir(d)):
+            for line in open(os.path.join(d, f)):
+                a, b = line.strip().split(',')
+                vals[int(a)] = float(b)
+        if vals:
+            out[k] = pd.Series(vals).sort_index()
+            out[k].index = pd.to_datetime(out[k].index, unit='s', utc=True)
+    return out
+
+
+def _fine_at(s, t, tol=600):
+    i = s.index.searchsorted(t, side='right') - 1
+    if i < 0 or (t - s.index[i]).total_seconds() > tol:
+        return None
+    return float(s.iloc[i])
+
+
+def best_forward_return(fine, coarse, t, hours):
+    """Move over the next `hours`, from 5-minute prices when the archive covers it, else from hourly prices."""
+    if fine is not None and len(fine):
+        p0, p1 = _fine_at(fine, t), _fine_at(fine, t + pd.Timedelta(hours=hours))
+        if p0 and p1:
+            return (p1 / p0 - 1) * 100
+    return forward_return(coarse, t, hours)

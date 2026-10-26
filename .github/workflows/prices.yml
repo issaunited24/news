@@ -1,0 +1,29 @@
+name: Archive 5-minute prices
+
+# Every day: adds the last days of 5-minute prices to the "prices" branch (used to train the models precisely).
+on:
+  schedule:
+    - cron: "41 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Update the archive
+        run: |
+          pip install -q numpy pandas
+          mkdir -p arch
+          if git fetch -q --depth=1 origin prices; then git --work-tree=arch checkout FETCH_HEAD -- . && git reset -q; fi
+          python scripts/ml/archive_prices.py arch
+          cd arch && rm -rf .git && git init -q && git checkout -q -b prices
+          git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add . && git commit -qm "5-minute prices $(date -u +%F)" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" prices

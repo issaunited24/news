@@ -114,6 +114,21 @@ a { color: inherit; text-decoration: none; }
 .bi .bm i { position: absolute; top: 0; bottom: 0; left: 50%; border-radius: 4px; background: rgb(var(--bc)); box-shadow: 0 0 8px rgba(var(--bc),.8); }
 .bi small { font: 500 9.5px var(--mono); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+
+/* Big money (top of Forex): how hedge funds are positioned, from the weekly CFTC report */
+.bm-g { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.bmc { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 8px 8px 7px; border-radius: 14px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.bmc b { font: 600 10.5px var(--mono); letter-spacing: .06em; color: rgb(var(--pc)); }
+.bmc .bv { font: 800 13px var(--ui); white-space: nowrap; }
+.bmc .bt { position: relative; height: 4px; border-radius: 4px; background: linear-gradient(90deg, rgba(255,100,135,.55), rgba(255,255,255,.08) 20%, rgba(255,255,255,.08) 80%, rgba(62,240,180,.55)); }
+.bmc .bt i { position: absolute; top: -3px; width: 3px; height: 10px; margin-left: -1.5px; border-radius: 2px; background: #fff; box-shadow: 0 0 6px #fff; }
+.bmc small { font: 500 9.5px var(--mono); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bmc small.hot { color: #ffc463; }
+/* Calls for each time frame (story view) */
+.tf { margin-top: 12px; display: grid; grid-template-columns: auto repeat(4, 1fr); gap: 4px 8px; font: 500 11px var(--mono); color: var(--ink2); }
+.tf .h { color: var(--mute); }
+.tf i { font-style: normal; } .tf i.u { color: var(--up); } .tf i.d { color: var(--down); }
+
 /* Tabs */
 .tabs { position: sticky; top: 0; z-index: 10; display: flex; gap: 22px; padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px 12px; overflow-x: auto; scrollbar-width: none;
   background: linear-gradient(180deg, rgba(5,7,15,.97), rgba(5,7,15,.9) 75%, rgba(5,7,15,0)); }
@@ -438,7 +453,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.7';
+const APP_VERSION = '2026-10-26.8';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1049,13 +1064,37 @@ function biasHTML() {
   return `<section class="bias"><div class="bias-h"><span>Bias</span><span>last ${BIAS_H}h · tap for the top story</span></div><div class="bias-g">${cells}</div></section>`;
 }
 
+
+/* ---------- Big money: hedge-fund positioning (weekly, CFTC) ---------- */
+function bigMoneyHTML() {
+  const bm = data?.bigMoney; if (!bm || !Object.keys(bm).length) return '';
+  const fmtD = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+  const any = Object.values(bm)[0];
+  const cells = Object.keys(MK).map(k => {
+    const m = bm[k]; if (!m) return `<div class="bmc" style="--pc:${MK[k].c}"><b>${MK[k].short.toUpperCase()}</b><span class="bv">—</span></div>`;
+    const col = m.longPct >= 55 ? 'var(--up)' : m.longPct <= 45 ? 'var(--down)' : 'var(--ink)';
+    const crowd = m.pctile >= 90 ? 'Crowded long' : m.pctile <= 10 ? 'Crowded short' : null;
+    return `<div class="bmc" style="--pc:${MK[k].c}" aria-label="${MK[k].name}: hedge funds ${m.longPct}% long, ${m.pctile}th percentile of 3 years${crowd ? `, ${crowd}` : ''}">
+      <b>${MK[k].short.toUpperCase()}</b><span class="bv" style="color:${col}">${m.longPct}% long</span>
+      <span class="bt"><i style="left:${Math.max(2, Math.min(98, m.pctile))}%"></i></span>
+      <small class="${crowd ? 'hot' : ''}">${crowd || `${m.chg >= 0 ? '+' : ''}${m.chg}% this wk`}</small></div>`;
+  }).join('');
+  return `<section class="bias"><div class="bias-h"><span>Big money</span><span>hedge funds · as of ${fmtD.format(new Date(any.date + 'T12:00:00Z'))}</span></div><div class="bm-g">${cells}</div></section>`;
+}
+// The model's calls for 1 hour, 4 hours and the next day (story view)
+function timeframesHTML(fx) {
+  if (!fx?.model || !(fx.h1 || fx.d1)) return '';
+  const row = (label, a) => a ? `<span class="h">${label}</span>${['gold', 'usd', 'ndq', 'oil'].map(k => a[k] ? `<span>${{ gold: 'Gold', usd: 'USD', ndq: 'NDQ', oil: 'Oil' }[k]} <i class="${a[k].dir === 'up' ? 'u' : 'd'}">${a[k].dir === 'up' ? '▲' : '▼'}</i>${a[k].conf}</span>` : '<span></span>').join('')}` : '';
+  return `<div class="tf">${row('1 HOUR', fx.h1)}${row('4 HOURS', fx.assets)}${row('NEXT DAY', fx.d1)}</div>`;
+}
+
 function forexTop() {
   const e = nextEvent();
   let ring = 0;
   if (e) { const span = 24 * 3600e3; ring = Math.max(0.04, Math.min(1, 1 - (e.t - Date.now()) / span)); }
   const C = 2 * Math.PI * 19, now = Date.now();
   const rows = calendarHTML(now);
-  return `${briefHTML()}${biasHTML()}${prismHTML()}<div class="fxmods">${sessionsHTML()}
+  return `${briefHTML()}${biasHTML()}${bigMoneyHTML()}${prismHTML()}<div class="fxmods">${sessionsHTML()}
     <div><button class="next glass" id="nextBtn" aria-expanded="${!!prefs.calOpen}">
       <svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true" style="flex:none">
         <circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/>
@@ -1322,7 +1361,7 @@ function previewHTML(s) {
     <h2 class="pv-title">${esc(s.title)}</h2>
     ${s.summary ? `<p class="pv-sum">${esc(s.summary)}${s.summaryFrom ? ` <small>· ${esc(s.summaryFrom)}</small>` : ''}</p>` : '<p class="pv-sum muted">No summary from the outlets yet. Open the full story below.</p>'}
     ${takes ? `<div class="pv-k">Also reported</div>${takes}` : ''}
-    ${s.fx ? `<div class="mini">${forecasts(s.fx, 90, 18)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>${s.fx.model ? '<p class="pv-why" style="opacity:.75">Calls from the trained model: it read this story and compared it with a year of past news and what prices did after. Each rating is how often it was right at that level on months it had never seen.</p>' : ''}` : ''}
+    ${s.fx ? `<div class="mini">${forecasts(s.fx, 90, 18)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>${timeframesHTML(s.fx)}${s.fx.model ? '<p class="pv-why" style="opacity:.75">Calls from the trained model: it read this story and compared it with years of past news and what prices did after. Each rating is how often it was right at that level, tested on months it had never seen.</p>' : ''}` : ''}
     ${others.length ? `<div class="pv-k">Covering · ${others.length}</div><div class="pv-chips">${chipsH}</div>` : ''}
     <div class="pv-actions">
       <button class="sq ${sv ? 'saved' : ''}" data-act="pvsave" data-id="${s.id}" aria-label="${sv ? 'Remove from saved' : 'Save story'}">${sv ? ICON.saved : ICON.save}</button>

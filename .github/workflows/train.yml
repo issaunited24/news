@@ -1,14 +1,21 @@
 name: Train forecast model
 
-# Builds a year of labelled market headlines, trains the forecast model, tests it on unseen months,
-# and saves it to model/ (the robot uses it from the next round). Runs every Sunday so it keeps learning.
+# Two stages, every Sunday (and on demand):
+#  1. data:  adds new market headlines, article openings, prices and hedge-fund positioning to the store kept between
+#            runs, and prepares the training set.
+#  2. train: tests every input on unseen months, keeps only what helps, trains the 1-hour, 4-hour and next-day models
+#            and the calendar model, and publishes them as the "model" release, but only if they test at least as
+#            well as the models that are live now. The robot picks them up on its next run.
 on:
   workflow_dispatch:
     inputs:
       quick:
-        description: "Quick test run (3 topics, 3 weeks)"
+        description: "Quick test run (small data, nothing published)"
         type: boolean
         default: false
+      gdelt_minutes:
+        description: "Minutes to spend downloading headlines this run"
+        default: "150"
   schedule:
     - cron: "17 3 * * 0"
 
@@ -20,8 +27,11 @@ concurrency:
   group: train
   cancel-in-progress: false
 
+env:
+  GH_TOKEN: ${{ github.token }}
+
 jobs:
-  train:
+  data:
     runs-on: ubuntu-latest
     timeout-minutes: 340
     steps:
@@ -41,41 +51,91 @@ jobs:
           key: hf-finbert-minilm-v1
       - name: Install
         run: pip install -q -r scripts/ml/requirements.txt
-      - name: Reuse the last run's headlines (so only new news has to be downloaded)
+      - name: Restore the store from earlier runs
         continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p data/ml
-          id=$(gh run list --workflow train.yml --status success -L 1 --json databaseId -q '.[0].databaseId')
-          [ -n "$id" ] && gh run download "$id" -n dataset -D prev && mv prev/dataset.pkl.gz data/ml/previous.pkl.gz && echo "Reusing run $id"
-      - name: Build the dataset (a year of headlines and prices)
+          mkdir -p data/ml/store
+          for id in $(gh run list --workflow train.yml -L 20 --json databaseId,status -q '.[] | select(.status=="completed") | .databaseId'); do
+            if gh run download "$id" -n mlstore -D data/ml/store 2>/dev/null; then echo "Restored the store from run $id"; break; fi
+          done
+          ls -la data/ml/store || true
+      - name: 5-minute price archive
+        continue-on-error: true
+        run: |
+          git fetch -q --depth=1 origin prices && mkdir -p data/ml/prices5m && git --work-tree=data/ml/prices5m checkout FETCH_HEAD -- . && git reset -q && echo "archive restored"
+      - name: Build the dataset
         env:
           ML_QUICK: ${{ inputs.quick && '1' || '0' }}
+          ML_GDELT_MIN: ${{ inputs.gdelt_minutes || '150' }}
         run: mkdir -p out && python scripts/ml/build_dataset.py 2>&1 | tee out/dataset.log; test ${PIPESTATUS[0]} -eq 0
-      - name: Keep the dataset (for checking)
+      - name: Keep the log with the dataset
+        if: always()
+        run: mkdir -p data/ml/dataset && cp out/dataset.log data/ml/dataset/ || true
+      - name: Keep the store for the next run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlstore
+          path: data/ml/store
+          retention-days: 60
+      - name: Pass the dataset to the training stage
         uses: actions/upload-artifact@v4
         with:
           name: dataset
-          path: data/ml/dataset.pkl.gz
+          path: data/ml/dataset
           retention-days: 14
-      - name: Train and test
-        run: python scripts/ml/train.py 2>&1 | tee out/train.log; test ${PIPESTATUS[0]} -eq 0
-      - name: Train and test the calendar model
-        run: python scripts/ml/cal_model.py train 2>&1 | tee out/calendar.log; test ${PIPESTATUS[0]} -eq 0
-      - name: Save the model
-        if: ${{ !inputs.quick }}
-        run: |
-          git config user.name "briefly-bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add model/forecast.joblib model/report.json model/calendar.joblib model/calendar_report.json
-          git commit -m "Retrained forecast model" || exit 0
-          for i in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0; sleep 10; done
-          exit 1
-      - name: Publish the logs and report (for checking)
+      - name: Publish the log (for checking)
         if: always()
         run: |
-          mkdir -p out && cp model/report.json model/calendar_report.json out/ 2>/dev/null || true
+          mkdir -p out && cd out && git init -q && git checkout -q -b ml-check
+          git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add . && git commit -qm "Data stage log" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ml-check
+
+  train:
+    needs: data
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: scripts/ml/requirements.txt
+      - name: Cache language models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-finbert-minilm-v1
+      - name: Install
+        run: pip install -q -r scripts/ml/requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: dataset
+          path: data/ml/dataset
+      - name: The live model's test results (a new model must beat them)
+        continue-on-error: true
+        run: mkdir -p model && gh release download model -p report.json -D model --clobber
+      - name: Train and test the news models
+        run: mkdir -p out && python scripts/ml/train.py 2>&1 | tee out/train.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Train and test the calendar model
+        run: python scripts/ml/cal_model.py train 2>&1 | tee out/calendar.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Publish the models
+        if: ${{ !inputs.quick }}
+        run: |
+          gh release view model >/dev/null 2>&1 || gh release create model --title "Forecast model" --notes "Trained forecast models used by the robot. Replaced by the weekly training run."
+          files="model/calendar.joblib model/calendar_report.json"
+          [ -f model/forecast.joblib ] && grep -q '"deploy": true' model/report.json && files="$files model/forecast.joblib model/report.json"
+          gh release upload model $files --clobber
+          echo "Published: $files"
+      - name: Publish the logs and reports (for checking)
+        if: always()
+        run: |
+          mkdir -p out && cp model/*.json out/ 2>/dev/null || true
+          cp data/ml/dataset/dataset.log out/ 2>/dev/null || true
           cd out && git init -q && git checkout -q -b ml-check
           git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add . && git commit -qm "Training logs" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ml-check

@@ -1,1 +1,4 @@
 data/ml/
+model/*.joblib
+__pycache__/
+*.pyc

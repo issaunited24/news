@@ -1,169 +1,172 @@
-"""Builds the training set for the forecast model (runs on GitHub, see .github/workflows/train.yml).
+"""Stage 1 of training (GitHub, .github/workflows/train.yml): collect and prepare everything the models learn from.
 
-1. Market headlines from the past year, from GDELT's free news archive (no key), searched topic by topic.
-2. Hourly prices for gold, the US dollar index, Nasdaq 100 futures and WTI crude from Yahoo Finance.
-3. For each headline: what each asset did over the 4 hours after it was published (the label),
-   and how it moved over the 6 and 24 hours before (the trend going into the news).
-4. The app's own checked calls from the live robot are added too, so the model keeps learning from real results.
+Kept between runs in data/ml/store/ (so each weekly run only adds what's new):
+  headlines.pkl.gz  market headlines from GDELT (topic searches, see gdelt.py)
+  gdelt_done.json   which GDELT searches are already done
+  texts.pkl.gz      the opening of each article (see texts.py)
+  textfeat.pkl      FinBERT tone + meaning (embedding) for every headline and opening already processed
 
-Output: data/ml/dataset.pkl.gz
+Written to data/ml/dataset/ for stage 2:
+  meta.pkl.gz       one row per headline: time, source, labels (what each market did after it), market mood,
+                    daily mood, hedge-fund positioning
+  feats.npz         numbers per headline: tone and meaning of the headline and of the opening, rule calls,
+                    "is it new?" scores, source quality
 """
-import json, os, re, sys, time, urllib.parse, urllib.request
-from datetime import datetime, timedelta, timezone
+import hashlib, json, os, sys, time
 
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from market_data import ASSETS, CONTEXT_KEYS, context_at, fetch, forward_return  # noqa: E402
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import gdelt, positioning, texts  # noqa: E401,E402
+from features import embeddings, finbert_scores, rule_features, rules_block  # noqa: E402
+from market_data import (ASSETS, best_forward_return, context_at, daily_context, daily_return, fetch,  # noqa: E402
+                         fetch_daily, load_fine)
+from novelty import novelty  # noqa: E402
+from sources import source_features, tier_of  # noqa: E402
 
-OUT = 'data/ml/dataset.pkl.gz'
-DAYS = int(os.environ.get('ML_DAYS', '365'))
-WINDOW_DAYS = int(os.environ.get('ML_WINDOW_DAYS', '10'))
-QUICK = os.environ.get('ML_QUICK') == '1'  # small run for testing the pipeline
-UA = {'User-Agent': 'Mozilla/5.0 (compatible; personal-news-reader/1.0)'}
-
-REUSE = os.environ.get('ML_REUSE', 'data/ml/previous.pkl.gz')  # last run's headlines, if available
-HORIZON_H = 4
-
-# Topics that move gold, the dollar, the Nasdaq and oil (GDELT search syntax)
-QUERIES = [
-    '("federal reserve" OR fomc OR powell OR "fed chair")',
-    '(inflation OR "consumer prices" OR cpi OR pce)',
-    '("jobs report" OR payrolls OR "jobless claims" OR unemployment rate)',
-    '("treasury yields" OR "bond yields" OR "10-year yield")',
-    '("gold price" OR "gold prices" OR bullion)',
-    '("dollar index" OR "u.s. dollar" OR greenback OR "currency markets")',
-    '("oil prices" OR opec OR "crude oil" OR brent)',
-    '(nasdaq OR "tech stocks" OR "wall street" OR "stock market")',
-    '(tariffs OR "trade war" OR "trade deal")',
-    '(missile OR airstrike OR invasion OR "military strikes")',
-    '(ceasefire OR "peace talks" OR "peace deal")',
-    '(ecb OR "bank of japan" OR "bank of england" OR "european central bank")',
-    '(china economy OR "china stimulus" OR "chinese economy")',
-    '(earnings nvidia OR apple OR microsoft OR alphabet OR amazon OR meta)',
-    '("ai spending" OR "ai stocks" OR "ai bubble" OR capex)',
-    '(sanctions OR embargo)',
-    '(recession OR "bank collapse" OR "debt ceiling" OR "government shutdown")',
-    '(iran OR israel OR ukraine OR russia) (oil OR gold OR markets)',
-]
-if QUICK:
-    QUERIES = QUERIES[:3]
+STORE, OUT = 'data/ml/store', 'data/ml/dataset'
+QUICK = os.environ.get('ML_QUICK') == '1'
+GDELT_MIN = float(os.environ.get('ML_GDELT_MIN', '150'))
+TEXT_MIN = float(os.environ.get('ML_TEXT_MIN', '70'))
+COLS = ['title', 'url', 'ts', 'domain', 'src']
 
 
-def get(url, tries=5, pause=20):
-    for i in range(tries):
-        try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
-                return r.read().decode('utf-8', 'replace')
-        except Exception as e:
-            print(f'  retry {i + 1}: {str(e)[:80]}', flush=True)
-            time.sleep(pause * (2 ** i))  # 20s, 40s, 80s, 160s: GDELT asks callers to slow down
-    return None
+def log(*a):
+    print(*a, file=sys.stderr, flush=True)
 
 
-def gdelt_headlines(since=None):
-    end = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0) - timedelta(hours=HORIZON_H + 1)
-    start = end - timedelta(days=DAYS if not QUICK else 21)
-    if since is not None:
-        start = max(start, since)
-    rows, n = [], 0
-    for q in QUERIES:
-        t0 = start
-        while t0 < end:
-            t1 = min(t0 + timedelta(days=WINDOW_DAYS), end)
-            params = {
-                'query': f'{q} sourcelang:english', 'mode': 'artlist', 'maxrecords': '250', 'format': 'json',
-                'startdatetime': t0.strftime('%Y%m%d%H%M%S'), 'enddatetime': t1.strftime('%Y%m%d%H%M%S'), 'sort': 'hybridrel',
-            }
-            txt = get('https://api.gdeltproject.org/api/v2/doc/doc?' + urllib.parse.urlencode(params))
-            time.sleep(8)  # GDELT asks for at most one request every 5 seconds; stay well under it
-            n += 1
-            if txt:
-                try:
-                    arts = json.loads(txt).get('articles', [])
-                except Exception:
-                    arts = []
-                for a in arts:
-                    title = (a.get('title') or '').strip()
-                    if len(title) < 25:
-                        continue
-                    try:
-                        ts = datetime.strptime(a['seendate'], '%Y%m%dT%H%M%SZ').replace(tzinfo=timezone.utc)
-                    except Exception:
-                        continue
-                    rows.append({'title': title, 'text': '', 'ts': ts.timestamp(), 'domain': a.get('domain', ''), 'src': 'gdelt'})
-            if n % 25 == 0:
-                print(f'  {n} searches, {len(rows)} headlines', flush=True)
-            t0 = t1
-    df = pd.DataFrame(rows)
-    if df.empty:
-        return df
-    # one row per headline (the earliest time it was seen)
-    df['key'] = df.title.str.lower().str.replace(r'[^a-z0-9 ]', '', regex=True).str.slice(0, 90)
-    df = df.sort_values('ts').drop_duplicates('key').drop(columns='key')
-    return df
+def load_store():
+    os.makedirs(STORE, exist_ok=True)
+    p = lambda n: os.path.join(STORE, n)  # noqa: E731
+    heads = pd.read_pickle(p('headlines.pkl.gz')) if os.path.exists(p('headlines.pkl.gz')) else pd.DataFrame(columns=COLS)
+    done = set(json.load(open(p('gdelt_done.json')))) if os.path.exists(p('gdelt_done.json')) else set()
+    txt = pd.read_pickle(p('texts.pkl.gz')) if os.path.exists(p('texts.pkl.gz')) else {}
+    feat = pd.read_pickle(p('textfeat.pkl')) if os.path.exists(p('textfeat.pkl')) else {}
+    return heads, done, txt, feat
 
 
-def label(df, px):
-    """What each market did over the 4 hours after each headline, plus the market mood going in."""
-    rows = []
-    for ts in df.ts.values:
-        t = pd.Timestamp(float(ts), unit='s', tz='UTC')
-        row = {f'r_{k}': forward_return(px[k], t, HORIZON_H) for k in ASSETS}
-        row.update(context_at(px, float(ts)))
-        rows.append(row)
-    lab = pd.DataFrame(rows, index=df.index)
-    return pd.concat([df[['title', 'text', 'ts', 'domain', 'src']], lab], axis=1)
+def save_store(heads, done, txt, feat):
+    p = lambda n: os.path.join(STORE, n)  # noqa: E731
+    heads.to_pickle(p('headlines.pkl.gz'))
+    json.dump(sorted(done), open(p('gdelt_done.json'), 'w'))
+    pd.to_pickle(txt, p('texts.pkl.gz'))
+    pd.to_pickle(feat, p('textfeat.pkl'))
 
 
 def live_results():
-    """The app's own stories and their checked results, from the live robot's saved state."""
+    """The app's own checked stories, from the live robot's saved state."""
+    import urllib.request
     try:
-        txt = get('https://raw.githubusercontent.com/issaunited24/news/live/state.json', tries=2)
-        st = json.loads(txt)
+        with urllib.request.urlopen('https://raw.githubusercontent.com/issaunited24/news/live/state.json', timeout=60) as r:
+            st = json.loads(r.read())
     except Exception:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=COLS)
     rows = {}
     for f in st.get('forecasts', []):
         if f.get('cal') or not f.get('title'):
             continue
-        rows.setdefault(f['title'], {'title': f['title'], 'text': '', 'ts': f['at'] / 1000, 'domain': 'live', 'src': 'live'})
-    return pd.DataFrame(list(rows.values()))
+        rows.setdefault(f['title'], {'title': f['title'], 'url': '', 'ts': f['at'] / 1000, 'domain': '', 'src': 'live'})
+    return pd.DataFrame(list(rows.values()), columns=COLS)
+
+
+def text_features(strings, cache):
+    """FinBERT tone (3) + meaning (384) for each string, computed once and cached by content."""
+    keys = [hashlib.sha1(s.encode('utf-8')).hexdigest()[:16] if s else '' for s in strings]
+    todo = sorted({(k, s) for k, s in zip(keys, strings) if s and k not in cache})
+    if todo:
+        log(f'  reading {len(todo)} new texts with FinBERT and the meaning model...')
+        ts = [s for _, s in todo]
+        fb, em = finbert_scores(ts), embeddings(ts)
+        for (k, _), f, e in zip(todo, fb, em):
+            cache[k] = (f.astype(np.float16), e.astype(np.float16))
+    fb = np.zeros((len(strings), 3), np.float32)
+    em = np.zeros((len(strings), 384), np.float32)
+    for i, k in enumerate(keys):
+        if k and k in cache:
+            fb[i], em[i] = cache[k][0], cache[k][1]
+    return fb, em
 
 
 def main():
-    os.makedirs('data/ml', exist_ok=True)
-    print('Prices...', flush=True)
-    px = fetch('730d')
-    for k, s in px.items():
-        print(f'  {k}: {len(s)} hourly bars from {s.index[0].date()}', flush=True)
-    old = None
-    if os.path.exists(REUSE) and not QUICK:
-        old = pd.read_pickle(REUSE)
-        old = old[old.src == 'gdelt'][['title', 'text', 'ts', 'domain', 'src']]
-        cutoff = datetime.now(timezone.utc).timestamp() - DAYS * 86400
-        old = old[old.ts >= cutoff]
-        print(f'Reusing {len(old)} headlines from the last run', flush=True)
-    since = datetime.fromtimestamp(float(old.ts.max()), timezone.utc) - timedelta(days=2) if old is not None and len(old) > 1000 else None
-    print('Headlines from GDELT' + (f' since {since.date()}' if since else '') + '...', flush=True)
-    df = gdelt_headlines(since)
-    if old is not None and len(old):
-        df = pd.concat([old, df], ignore_index=True)
-        df['key'] = df.title.str.lower().str.replace(r'[^a-z0-9 ]', '', regex=True).str.slice(0, 90)
-        df = df.sort_values('ts').drop_duplicates('key').drop(columns='key')
-    live = live_results()
-    if not live.empty:
-        df = pd.concat([df, live], ignore_index=True)
-    print(f'{len(df)} headlines ({(df.src == "live").sum() if len(df) else 0} from the app itself)', flush=True)
-    df = label(df, px)
-    have = df[[f'r_{k}' for k in ASSETS]].notna().any(axis=1)
-    df = df[have].reset_index(drop=True)
-    df.to_pickle(OUT)
-    print(f'Saved {len(df)} labelled headlines to {OUT}', flush=True)
+    t0 = time.time()
+    heads, done, txt, feat = load_store()
+    if 'url' not in heads.columns:  # headlines from the first version of this script had no links
+        heads['url'] = ''
+    log(f'Store: {len(heads)} headlines, {len(done)} searches done, {sum(1 for v in txt.values() if v)} openings, {len(feat)} texts read')
+
+    # 1. headlines
+    if QUICK:
+        gdelt.QUERIES[:] = gdelt.QUERIES[:3]
+        gdelt.RECENT_DAYS = 30
+        gdelt.HISTORY_START = pd.Timestamp.utcnow().to_pydatetime() - pd.Timedelta(days=40).to_pytimedelta()
+    heads, done = gdelt.fetch(heads[COLS], done, 12 if QUICK else GDELT_MIN)
+    save_store(heads, done, txt, feat)
+
+    # 2. prices (hourly for 2 years, daily for 10) and hedge-fund positioning
+    log('Prices...')
+    px, pxd, fine = fetch('730d'), fetch_daily('10y'), load_fine()
+    log('  5-minute archive: ' + (', '.join(f'{k} from {v.index[0].date()}' for k, v in fine.items()) or 'not yet'))
     for k in ASSETS:
-        r = df[f'r_{k}'].dropna()
-        print(f'  {k}: {len(r)} labelled, median 4h move {r.abs().median():.3f}%, up {np.mean(r > 0):.1%}', flush=True)
+        log(f'  {k}: {len(px[k])} hourly bars from {px[k].index[0].date() if len(px[k]) else "-"}, '
+            f'{len(pxd[k])} daily from {pxd[k].index[0].date() if len(pxd[k]) else "-"}')
+    try:
+        pos = positioning.history(10)
+        log('  positioning: ' + ', '.join(f'{k} {len(v)} weeks' for k, v in pos.items()))
+    except Exception as e:
+        log(f'  positioning unavailable: {e}')
+        pos = {}
+
+    # 3. rows: GDELT headlines + the app's own checked stories
+    df = pd.concat([heads[COLS], live_results()], ignore_index=True).sort_values('ts').reset_index(drop=True)
+    hourly_from = px['gold'].index[0].timestamp() if len(px['gold']) else 0
+
+    # 4. article openings for the rows the hourly models learn from (best outlets and newest first)
+    recent = df[(df.ts >= hourly_from) & (df.url.fillna('') != '')].copy()
+    recent['tier'] = recent.domain.map(tier_of)
+    urls = recent.sort_values(['tier', 'ts'], ascending=[False, False]).url.tolist()
+    texts.fetch(urls, txt, 5 if QUICK else TEXT_MIN)
+    save_store(heads, done, txt, feat)
+    df['text'] = df.url.map(lambda u: txt.get(u, '') if u else '')
+
+    # 5. labels and mood
+    log('Labels and market mood...')
+    rows = []
+    for ts in df.ts.values:
+        t = pd.Timestamp(float(ts), unit='s', tz='UTC')
+        r = {}
+        for k in ASSETS:
+            r[f'r1_{k}'] = best_forward_return(fine.get(k), px[k], t, 1)
+            r[f'r4_{k}'] = best_forward_return(fine.get(k), px[k], t, 4)
+            r[f'rD_{k}'] = daily_return(pxd[k], float(ts))
+        r.update(context_at(px, float(ts)))
+        r.update(daily_context(pxd, float(ts)))
+        r.update(positioning.at(pos, float(ts)))
+        rows.append(r)
+    meta = pd.concat([df[['title', 'text', 'url', 'ts', 'domain', 'src']].reset_index(drop=True), pd.DataFrame(rows)], axis=1)
+    keep = meta[[f'r4_{k}' for k in ASSETS] + [f'rD_{k}' for k in ASSETS]].notna().any(axis=1).values
+    meta = meta[keep].reset_index(drop=True)
+    log(f'{len(meta)} labelled headlines ({int((meta.ts >= hourly_from).sum())} with hourly labels, {int((meta.src == "live").sum())} from the app)')
+
+    # 6. numbers per headline
+    log('Reading the headlines and openings...')
+    fb_t, em_t = text_features(meta.title.tolist(), feat)
+    fb_x, em_x = text_features(meta.text.fillna('').tolist(), feat)
+    has_x = (meta.text.fillna('').str.len() > 60).values.astype(np.float32)[:, None]
+    save_store(heads, done, txt, feat)
+    log('Rules, "is it new?", sources...')
+    rules = rule_features([{'title': t, 'text': x or t} for t, x in zip(meta.title, meta.text.fillna(''))])
+    nov = novelty(em_t, meta.ts.values.astype(float))
+    src = np.asarray([source_features(d) for d in meta.domain.fillna('')], np.float32)
+    os.makedirs(OUT, exist_ok=True)
+    meta.to_pickle(os.path.join(OUT, 'meta.pkl.gz'))
+    np.savez_compressed(os.path.join(OUT, 'feats.npz'), fb_t=fb_t, em_t=em_t.astype(np.float16), fb_x=fb_x, em_x=em_x.astype(np.float16),
+                        has_x=has_x, rules=rules_block(rules), nov=nov, src=src)
+    for k in ASSETS:
+        a, b = meta[f'r4_{k}'].dropna(), meta[f'rD_{k}'].dropna()
+        log(f'  {k}: {len(a)} with 4-hour labels (median move {a.abs().median():.3f}%), {len(b)} with 1-day labels')
+    log(f'Stage 1 done in {(time.time() - t0) / 60:.0f} min')
 
 
 if __name__ == '__main__':

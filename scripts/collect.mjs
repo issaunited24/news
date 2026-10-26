@@ -408,6 +408,36 @@ if (!FIXTURES) {
   }
 } else charts.assets = prevCharts.assets || {};
 
+// 5c. Big money: how hedge funds are betting (CFTC Commitments of Traders, free, weekly; checked every 6 hours).
+//     Gold and oil: managed money. Nasdaq and the dollar index: leveraged funds. For each: share of their positions
+//     that are long, where their net position sits within the past 3 years, and the change on the week.
+const COT = {
+  gold: ['72hh-3qpy', '088691', 'm_money_positions_long_all', 'm_money_positions_short_all'],
+  oil: ['72hh-3qpy', '067651', 'm_money_positions_long_all', 'm_money_positions_short_all'],
+  ndq: ['gpe5-46if', '209742', 'lev_money_positions_long', 'lev_money_positions_short'],
+  usd: ['gpe5-46if', '098662', 'lev_money_positions_long', 'lev_money_positions_short'],
+};
+let bigMoney = prevState.bigMoney || null;
+if (!FIXTURES && (!bigMoney || now - bigMoney.fetched > 6 * 3600e3)) {
+  const next = { fetched: now, markets: {} };
+  for (const [k, [ds, code, lc, sc]] of Object.entries(COT)) {
+    try {
+      const q = new URLSearchParams({ $where: `cftc_contract_market_code='${code}'`, $order: 'report_date_as_yyyy_mm_dd DESC', $limit: '160', $select: `report_date_as_yyyy_mm_dd,open_interest_all,${lc},${sc}` });
+      const res = await fetch(`https://publicreporting.cftc.gov/resource/${ds}.json?${q}`, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; personal-news-reader/1.0)' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const rows = (await res.json()).map(r => ({ date: r.report_date_as_yyyy_mm_dd.slice(0, 10), long: +r[lc], short: +r[sc], oi: +r.open_interest_all })).filter(r => r.long + r.short > 0);
+      if (rows.length < 2) continue;
+      const [cur, prev] = rows, nets = rows.slice(0, 156).map(r => r.long - r.short), net = cur.long - cur.short;
+      next.markets[k] = {
+        date: cur.date, longPct: Math.round(cur.long / (cur.long + cur.short) * 1000) / 10, net,
+        pctile: Math.round(nets.slice(1).filter(n => n < net).length / Math.max(1, nets.length - 1) * 100),
+        chg: Math.round((net - (prev.long - prev.short)) / cur.oi * 1000) / 10, weeks: nets.length,
+      };
+    } catch (e) { console.log(`Big money ${k}: ${e.message}`); }
+  }
+  if (Object.keys(next.markets).length) bigMoney = next;
+}
+
 // 5b. Forecast scorecard: record each gold / USD / Nasdaq call with the price at the time,
 //     then check the price 4 hours later. Kept for 7 days.
 const HORIZON = 4 * 3600e3, KEEP = 7 * 24 * 3600e3;
@@ -484,10 +514,12 @@ const modelVersion = existsSync(MODEL_REPORT) ? (JSON.parse(await readFile(MODEL
 const preds = new Map(Object.entries(prevState.preds || {}).filter(([, v]) => now - v.at < 48 * 3600e3 && v.v === modelVersion));
 if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
   const todo = stories.filter(st => st.fx && !preds.has(st.id)).slice(0, 120)
-    .map(st => ({ id: st.id, title: st.title, text: st.summary || '', ts: Math.min(st.published, st.firstSeen) / 1000 }));
+    .map(st => ({ id: st.id, title: st.title, text: st.summary || '', ts: Math.min(st.published, st.firstSeen) / 1000, outlet: st.outlet }));
   if (todo.length) {
     const t0 = Date.now();
-    const res = spawnSync('python3', [new URL('scripts/ml/predict.py', ROOT).pathname], { input: JSON.stringify(todo), encoding: 'utf8', timeout: 170000, maxBuffer: 32 * 1024 * 1024 });
+    // the market headlines of the last 24 hours, so the model can tell a fresh event from one everyone already knows
+    const pool = items.filter(it => now - it.time < 24 * 3600e3 && (it.cats || []).includes('forex')).slice(0, 4000).map(it => ({ title: it.title, ts: it.time / 1000 }));
+    const res = spawnSync('python3', [new URL('scripts/ml/predict.py', ROOT).pathname], { input: JSON.stringify({ stories: todo, pool }), encoding: 'utf8', timeout: 170000, maxBuffer: 32 * 1024 * 1024 });
     try {
       const out = JSON.parse(res.stdout);
       for (const [id, p] of Object.entries(out.preds || {})) preds.set(id, { v: modelVersion, at: now, ...p });
@@ -497,8 +529,12 @@ if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
 }
 for (const st of stories) {
   const p = st.fx && preds.get(st.id); if (!p) continue;
-  st.fx.assets = Object.fromEntries(Object.entries(p.assets).map(([k, a]) => [k, { dir: a.dir, conf: a.conf }]));
+  const slim = o => (o ? Object.fromEntries(Object.entries(o).map(([k, a]) => [k, { dir: a.dir, conf: a.conf }])) : undefined);
+  st.fx.assets = slim(p.assets);
+  if (p.h1 && Object.keys(p.h1).length) st.fx.h1 = slim(p.h1);
+  if (p.d1 && Object.keys(p.d1).length) st.fx.d1 = slim(p.d1);
   st.fx.impact = st.breaking ? 'high' : p.impact;
+  if (p.fresh === false) st.fx.old = true;
   st.fx.model = true;
 }
 
@@ -598,6 +634,7 @@ const out = {
   stories: keep.filter(isRecent),
   calendar,
   markets,
+  bigMoney: bigMoney?.markets,
   scorecard,
   sources: status.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)),
 };
@@ -605,6 +642,6 @@ await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
 // Everything else (older or small stories), in its own file so the app's regular check stays light
 await writeFile(new URL('data/older.json', ROOT), JSON.stringify({ updated: now, stories: keep.filter(st => !isRecent(st)) }));
 await writeFile(new URL('data/charts.json', ROOT), JSON.stringify(charts));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries(preds), calPreds: Object.fromEntries(calPreds), lastFetch }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries(preds), calPreds: Object.fromEntries(calPreds), bigMoney, lastFetch }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);

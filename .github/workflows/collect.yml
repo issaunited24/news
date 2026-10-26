@@ -42,6 +42,11 @@ jobs:
       - name: Install the forecast model's tools
         continue-on-error: true   # if this fails, the robot still runs and uses the forex rules
         run: pip install -q -r scripts/ml/requirements.txt
+      - name: Download the forecast models
+        continue-on-error: true   # without them the robot uses the forex rules
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: mkdir -p model && gh release download model -D model --clobber && ls -la model
       - name: Collect and rank news, every few minutes
         run: |
           cp scripts/loop.sh "$RUNNER_TEMP/loop.sh"
