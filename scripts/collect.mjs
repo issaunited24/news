@@ -549,9 +549,18 @@ for (const st of stories) {
   const p = st.fx && preds.get(st.id); if (!p) continue;
   const slim = o => (o ? Object.fromEntries(Object.entries(o).map(([k, a]) => [k, { dir: a.dir, conf: a.conf }])) : undefined);
   st.fx.assets = { ...(st.fx.assets || {}), ...(slim(p.assets) || {}) }; // markets the model didn't pass keep the rules' call
+  // Every market gets a call: where neither the 4-hour model nor the rules have one, the next-day model's direction
+  // is used, rated 1/10 (it wasn't tested for 4 hours, so it gets the lowest rating and isn't scored)
+  for (const [k, a] of Object.entries(p.d1 || {})) {
+    const cur = st.fx.assets[k];
+    if (!cur || cur.dir === 'flat' || !cur.conf) st.fx.assets[k] = { dir: a.dir, conf: 1 };
+  }
   if (p.h1 && Object.keys(p.h1).length) st.fx.h1 = slim(p.h1);
   if (p.d1 && Object.keys(p.d1).length) st.fx.d1 = slim(p.d1);
-  st.fx.impact = st.breaking ? 'high' : p.impact;
+  // Importance: the bigger of the rules' view (major Fed moves, wars, banking stress...) and the model's (how much
+  // prices usually move after news like this), and breaking news is always high
+  const RANK = { low: 0, medium: 1, high: 2 };
+  st.fx.impact = st.breaking ? 'high' : (RANK[p.impact] ?? 0) >= (RANK[st.fx.impact] ?? 0) ? p.impact : st.fx.impact;
   if (p.fresh === false) st.fx.old = true;
   st.fx.model = true;
 }
