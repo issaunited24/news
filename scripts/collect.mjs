@@ -549,11 +549,11 @@ for (const st of stories) {
   const p = st.fx && preds.get(st.id); if (!p) continue;
   const slim = o => (o ? Object.fromEntries(Object.entries(o).map(([k, a]) => [k, { dir: a.dir, conf: a.conf }])) : undefined);
   st.fx.assets = { ...(st.fx.assets || {}), ...(slim(p.assets) || {}) }; // markets the model didn't pass keep the rules' call
-  // Every market gets a call: where neither the 4-hour model nor the rules have one, the next-day model's direction
-  // is used, rated 1/10 (it wasn't tested for 4 hours, so it gets the lowest rating and isn't scored)
+  // Every market gets a call: where neither the 4-hour model nor the rules have one, the next-day model's call is
+  // used with its own tested rating, and it's checked a day later (next: true) instead of after 4 hours
   for (const [k, a] of Object.entries(p.d1 || {})) {
     const cur = st.fx.assets[k];
-    if (!cur || cur.dir === 'flat' || !cur.conf) st.fx.assets[k] = { dir: a.dir, conf: 1 };
+    if (!cur || cur.dir === 'flat' || !cur.conf) st.fx.assets[k] = { dir: a.dir, conf: a.conf || 1, next: true };
   }
   if (p.h1 && Object.keys(p.h1).length) st.fx.h1 = slim(p.h1);
   if (p.d1 && Object.keys(p.d1).length) st.fx.d1 = slim(p.d1);
@@ -605,7 +605,7 @@ for (const st of stories) {
     if (!a || a.dir === 'flat' || !a.conf || forecasts.has(key)) continue;
     const p0 = priceAt(k, st.firstSeen);
     if (p0 == null) continue;
-    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, model: st.fx.model || undefined, at: st.firstSeen, p0 });
+    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, model: st.fx.model || undefined, at: st.firstSeen, p0, ...(a.next ? { horizon: 24 * 3600e3 } : {}) });
   }
 }
 for (const f of forecasts.values()) {
