@@ -1,0 +1,498 @@
+first run (reads every headline): 35s similar: read 7372 new headlines in 33s | similar: 21214 pairs from 9000 headlines in 34s
+second run (remembered): 1s
+9000 headlines: 5864 stories before, 5665 after (199 merged away)
+
+=== 100 NEW MERGES (threshold 0.8) ===
+
+-- 40 headlines from 12 former stories
+   [0.92] Lula Wins Re-election as Bolsonaro Rejects Result (New York Times, 21)
+   [0.88] Brazilian stocks rocked as Lula wins presidential election, Bolsonaro reportedly refuses to concede (CNBC, 1)
+   [0.90] Lula re-elected for fourth term as Bolsonaro refuses to accept Brazil election result – video (The Guardian, 1)
+   [0.94] Brazil election results: Lula re-elected but Bolsonaro refuses to concede (The Times, 1)
+   [0.94] Bolsonaro refuses to concede defeat in Brazil and calls for result to be annulled (EL PAÍS English, 8)
+   [0.94] Lula wins historic Brazil election as Bolsonaro reportedly refuses to concede (CNBC, 1)
+
+-- 40 headlines from 22 former stories
+   [0.94] Brazil’s President Lula secures historic fourth term (Yahoo, 1)
+   [0.89] REACTION: Lula Wins Brazil’s Presidency in Historic Comeback (Americas Quarterly, 1)
+   [0.95] Lula Wins Record Fourth Term in Surprise Brazil Comeback (Bloomberg, 4)
+   [0.97] Lula wins historic fourth term in Brazil, denying Trump a close ally (Lee News Central, 15)
+   [0.91] Brazil’s Lula defeats conservative challenger Bolsonaro for fourth term in office (Washington Times, 1)
+   [0.90] Lula Narrowly Wins Brazil’s Election (The Dispatch, 1)
+
+-- 38 headlines from 31 former stories
+   [1.00] Trump critic Lula wins reelection in Brazil (The Hill, 1)
+   [1.00] Trump critic Lula wins reelection in Brazil (The Hill, 1)
+   [0.88] Update: Lula pulls off election win in Brazil (Financial Times, 1)
+   [0.91] In their words: Global leaders congratulate Trump critic Lula on reelection in Brazil (Union-Bulletin, 1)
+   [1.00] What to Know About Lula’s Election Victory in Brazil, and What Comes Next (New York Times, 1)
+   [1.00] What to Know About Lula’s Election Victory in Brazil, and What Comes Next (New York Times, 1)
+
+-- 31 headlines from 4 former stories
+   [0.86] SoftBank plans $50bn AI investment in Malaysia, PM says (Nikkei Asia, 28)
+   [0.82] SpaceX Reaches $40 Billion Financing Agreement With Apollo-Managed Entity (MarketWatch, 1)
+   [0.81] SpaceX Borrows $40 Billion as Musk Sounds AI Alarm (Barron's, 1)
+   [0.86] Musk says SpaceX landed a $40 billion debt deal — and forecasts doom for some AI rivals (MarketWatch, 1)
+
+-- 30 headlines from 2 former stories
+   [0.81] Flash floods hit Thailand's Phuket after heavy rainfall (The Business Standard, 29)
+   [0.81] Downpours cause flash floods in Phuket — The Hindu (UA.NEWS, 1)
+
+-- 26 headlines from 3 former stories
+   [0.84] China's Communist Party Opens a Four-Day Plenum Aimed at Tightening Discipline (Around Prague, 14)
+   [0.81] Why Xi Is Using China’s Fifth Plenum to Tighten Party Control (Bloomberg, 2)
+   [0.84] What to know about China’s plenum as Xi seeks stronger Communist Party discipline (AP News, 10)
+
+-- 24 headlines from 5 former stories
+   [0.83] Lula Defeats Bolsonaro for Brazil Presidency, in Blow to Latin America’s Right (New York Times, 2)
+   [0.86] Lula wins reelection in Brazil, halting Latin America’s rightward shift (The Washington Post, 2)
+   [0.86] Lula deals Trump a blow with Brazil election victory that ends Latin America’s right-wing streak (The Independent, 1)
+   [0.82] Lula’s win in Brazil bucks a regional shift to the right and denies Trump a powerful ally (The Seattle Times, 18)
+   [0.83] Brazil's Lula Wins 'Historic Victory' Against Right-Wing Trump Ally Flávio Bolsonaro (Common Dreams, 1)
+
+-- 23 headlines from 3 former stories
+   [0.82] US singer Chris Brown avoids jail after guilty plea in UK nightclub incident (South China Morning Post, 3)
+   [0.80] Chris Brown Sentenced to Eight Months, Suspended for 12 Months (Variety, 19)
+   [0.82] US singer Chris Brown spared immediate jail sentence for UK affray charge (Reuters, 1)
+
+-- 23 headlines from 2 former stories
+   [0.86] 'You Can See Everything' to Play at Italy's Torino Film Festival (Variety, 22)
+   [0.86] Clayface earns $43 million worldwide in opening weekend against $44 million production budget (primetimer, 1)
+
+-- 21 headlines from 2 former stories
+   [0.83] India’s Opposition Leader Gandhi Acquitted in Defamation Case (Bloomberg, 2)
+   [0.83] Relief For Rahul Gandhi As Sultanpur Court Dismisses Defamation Case (Open Magazine, 19)
+
+-- 20 headlines from 4 former stories
+   [0.95] Oil Prices Fall As Hopes Of US-Iran De-escalation Ease Supply Fears - (TVC News, 11)
+   [0.82] Oil falls from 6-mth highs as Iran mediation efforts ease supply worries (Investing, 1)
+   [0.95] Oil Prices Fall as Hopes for US-Iran De-Escalation Grow (Caspian Post, 1)
+   [0.86] Oil slips from near six-months highs despite supply concerns (CNBC, 7)
+
+-- 17 headlines from 7 former stories
+   [0.90] Meta announces $95 billion stock offering to fund AI expansion (CNBC, 5)
+   [0.90] Meta to raise up to $95 billion in equity to fund costly AI expansion (Reuters, 6)
+   [0.88] Meta plans $95 billion stock raise as AI spending pressures cash flow (CTech, 1)
+   [0.84] Meta Will Offer Up to $95 Billion in Stock. What That Means for Its Big AI Push. (Barron's, 1)
+   [0.84] Meta launches $35bn share sale to fund its AI spending (The Next Web, 1)
+   [0.86] Meta Plans Up to $95 Billion in Financing to Power its AI Growth (Wall Street Journal, 2)
+
+-- 16 headlines from 3 former stories
+   [0.84] Anthropic faces $41 million lawsuit over Elvis Presley songs (Kursiv Media, 3)
+   [0.85] Elvis Presley's estate is suing Anthropic over copyright infringement (Engadget, 12)
+   [0.85] Elvis Presley estate sues Anthropic over AI use of music catalogue (The Daily Star, 1)
+
+-- 14 headlines from 4 former stories
+   [0.84] Celebrations in Serbia after veteran ruler Vučić loses election to student-led protest movement (BBC, 10)
+   [0.81] Serbia’s political veteran Vucic outplayed all opponents. Then the students came (The Hill, 2)
+   [0.83] Aleksandar Vucic, Serbia’s autocrat, loses to a bunch of students (The Economist, 1)
+   [0.84] Aleksandar Vucic, the Serbian leader brought down by students (Al Jazeera, 1)
+
+-- 14 headlines from 2 former stories
+   [0.82] Trump Calls Bill Maher a ‘Complete and Total Loser,’ Tells Him ‘Don’t Call Anymore’ in Lengthy Truth Social Po (Variety, 11)
+   [0.82] Trump rails against Bill Maher in his longest Truth Social post ever (CNN, 3)
+
+-- 13 headlines from 2 former stories
+   [0.82] Grok's AI-made 'Odyssey' arrives, and it is hard to watch (The Daily Star, 12)
+   [0.82] 'Pure garbage': Elon Musk’s AI-generated 'The Odyssey' clip ridiculed online (Euronews, 1)
+
+-- 12 headlines from 3 former stories
+   [0.84] Singapore Working With Saudi Arabia on Crude Storage to Boost Energy Security -- Update (MarketWatch, 5)
+   [0.88] Singapore to store Saudi oil in underground caverns (Financial Times, 6)
+   [0.88] Saudi Arabia to store oil in Singapore to bolster Asia supply security (Nikkei Asia, 1)
+
+-- 10 headlines from 2 former stories
+   [0.85] Ballon d'Or: Harry Kane favourite to win prestigious award after goal-filled season (Sky News, 9)
+   [0.85] Ballon d’Or 2026 predictions: Yamal, Mbappe and Kane – who will win? (Al Jazeera, 1)
+
+-- 10 headlines from 3 former stories
+   [0.81] Shai Gilgeous-Alexander shares immediate emotion after gruesome Jalen Williams injury (Yahoo Sports, 8)
+   [0.82] Thunder’s Shai Gilgeous-Alexander Makes Bold Promise After 3 Teammates Suffer Injuries (Yahoo Sports, 1)
+   [0.82] Shai Gilgeous-Alexander’s devastating reaction to Thunder teammate leaving Clippers game with injury (Yahoo Sports, 1)
+
+-- 10 headlines from 2 former stories
+   [0.85] Gold Futures Rise on Softer Oil, With Focus on Fed (WSJ, 1)
+   [0.85] Gold gains on softer oil prices; Fed decision in focus (TradingView, 9)
+
+-- 9 headlines from 3 former stories
+   [0.90] Israel braces for national elections seen as a referendum on Netanyahu (France 24, 1)
+   [0.90] A look at the main issues in Israeli elections seen as a referendum on Netanyahu (France 24, 6)
+   [0.83] What to know about the Israeli elections as Netanyahu faces a battle for survival (NBC News, 2)
+
+-- 9 headlines from 3 former stories
+   [0.83] Falcons – 49ers recap: Victory, sweet and pure (Yahoo Sports, 1)
+   [0.83] One major, glaring issue from 49ers Week 7 loss to Falcons (Yahoo Sports, 6)
+   [0.80] NFL power rankings Week 8 see big changes after 49ers, Chiefs losses (Yahoo Sports, 2)
+
+-- 8 headlines from 2 former stories
+   [0.81] Trump intensifies anti-Muslim rhetoric against Abdul El-Sayed at Michigan rally – US politics live (The Guardian, 6)
+   [0.81] Trump dials up Islamophobia against Abdul El-Sayed at Michigan Senate rally (Al Jazeera, 2)
+
+-- 7 headlines from 4 former stories
+   [0.85] ‘You just got to…’ – RB Jonathan Taylor reacts to his wife saying the Colts may trade him (Yahoo Sports, 1)
+   [0.84] Jonathan Taylor's wife knows things so dire family is on 'Colts transaction watch' expecting trades or firing (Fox News, 1)
+   [0.85] Jonathan Taylor Responds to Wife’s Comments Amid Vikings Trade Rumors (Yahoo Sports, 4)
+   [0.84] "Life is Now a Colts Transaction Watch": Jonathan Taylor's Wife Fuels Trade Speculation in Social Media Post B (Yahoo Sports, 1)
+
+-- 7 headlines from 2 former stories
+   [0.84] Trump makes explicit remarks about Nicki Minaj at Michigan midterm rally (Al Jazeera, 2)
+   [0.84] US: Nicki Minaj endorses Trump at Michigan Republican rally (Euronews, 5)
+
+-- 7 headlines from 2 former stories
+   [0.82] India's Infosys falls after cutting revenue growth forecast for fiscal 2027 (Reuters, 6)
+   [0.82] India's Infosys falls after revenue growth view cut flags AI, competitive pressures (Reuters, 1)
+
+-- 7 headlines from 6 former stories
+   [0.81] Brazil's Luiz Inácio Lula da Silva re-elected president (ABC News, 1)
+   [0.95] Brazil’s electoral court declares Lula winner of presidential runoff (Reuters, 2)
+   [1.00] Brazil's Lula wins presidential election in runoff vote (Forex Factory, 1)
+   [0.88] Luiz Inacio Lula da Silva wins Brazil’s presidential runoff (Honolulu Star-Advertiser, 1)
+   [0.94] Brazil’s Lula reelected president in runoff vote (1470 & 100.3 WMBD, 1)
+   [1.00] Brazil's Lula wins presidential election in runoff vote (CNBC, 1)
+
+-- 6 headlines from 6 former stories
+   [0.80] Brazil’s markets set to tumble as investors bet Lula will add to fiscal pain (Financial Times, 1)
+   [0.84] Brazil Markets Set to Plunge on Lula’s Improbable Election Win (Bloomberg, 1)
+   [1.00] Brazil's markets set for sharp selloff after Lula's reelection (The Lufkin Daily News, 1)
+   [1.00] Brazil's markets set for sharp selloff after Lula's reelection (Reuters, 1)
+   [0.84] Brazilian Real Set to Plunge After Lula’s Re-election Win (Trading Economics, 1)
+   [0.80] Brazil stocks plunge after Lula’s re-election. Why investors are worried (Firstpost, 1)
+
+-- 6 headlines from 2 former stories
+   [0.90] European gas prices soar to four-year high over winter supply fears (The Guardian, 5)
+   [0.90] Europe's Natural Gas Prices Soar to Four-Year High as Winter Looms (OilPrice, 1)
+
+-- 6 headlines from 2 former stories
+   [0.80] Germany news: Audi boss faces union fury over Trump rally appearance as Merz and Steinmeier head to Asia (DW, 4)
+   [0.80] German Labor Union Leader Rebukes Audi CEO Over Trump Appearance (Bloomberg, 2)
+
+-- 6 headlines from 4 former stories
+   [0.82] NASCAR Talladega winners, losers as Kyle Larson closes in on Cup championship (Yahoo Sports, 3)
+   [0.81] Dale Earnhardt Jr. Breaks Silence on Kyle Larson’s Controversial Talladega Win (Yahoo Sports, 1)
+   [0.86] Kyle Larson Makes Stunning Admission After Wild Talladega Win (Yahoo Sports, 1)
+   [0.86] Kyle Larson Admits His Wild Talladega Win Made Absolutely No Sense (Yahoo Sports, 1)
+
+-- 5 headlines from 2 former stories
+   [0.81] Anthropic Is Said to Plan Public Filing for Mega-IPO Monday (Bloomberg, 4)
+   [0.81] Anthropic to File IPO Filing as Early as October 26, Aiming for Mid-November Listing (KuCoin, 1)
+
+-- 5 headlines from 3 former stories
+   [0.83] Israel: Arab Israeli voters could prove decisive in the upcoming elections (France 24, 1)
+   [0.89] Israel’s election: The main issues in the words of the leading candidates (Al Jazeera, 2)
+   [0.89] Israel's election: Five key things to know (Al Jazeera, 2)
+
+-- 5 headlines from 2 former stories
+   [0.83] FTSE 100 Jumps as Falling Oil Prices Boost Investor Sentiment (Global Banking & Finance Review, 1)
+   [0.83] FTSE 100 rises as falling oil prices boost risk appetite (AOL, 4)
+
+-- 5 headlines from 2 former stories
+   [0.87] Africa's second-strongest military approves first foreign troop deployment in 53 years to protect $13 billion  (Business Insider Africa, 3)
+   [0.87] Algeria's military deployment to Niger: What's behind the move? (Al Jazeera, 2)
+
+-- 5 headlines from 3 former stories
+   [0.89] Officials from Mecca pact states to hold talks in Iran amid regional tensions (Al Jazeera, 2)
+   [0.89] Mecca Pact nations to hold high-level talks with Iran in Tehran, Reuters reports (Investing, 1)
+   [0.80] Top officials from Mecca pact countries to meet Iranian officials in Tehran on Monday, two sources say (Reuters, 2)
+
+-- 5 headlines from 2 former stories
+   [0.84] Ted Sarandos Shrugs Off U.S. Troubles To Mark Netflix’s 10 Years In Korea (Deadline, 2)
+   [0.84] Ted Sarandos Swoops Into Seoul as Netflix Celebrates 10 Years in Korea (IMDb, 3)
+
+-- 5 headlines from 2 former stories
+   [0.98] Oil prices retreat from near six-month highs (GulfToday, 4)
+   [0.98] Oil Prices Retreat After Nearing Six-Month Highs (Fana News -, 1)
+
+-- 5 headlines from 2 former stories
+   [0.91] US Designates Helium as Critical Semiconductor Material Amid Global Supply Risks (Electronics For You BUSINESS, 4)
+   [0.91] United States Classifies Helium as Critical to Semiconductor Supply (CXO Digitalpulse, 1)
+
+-- 5 headlines from 2 former stories
+   [0.81] Japan Govt Says It Takes Mongolia Wildfire Seriously (JIJI PRESS, 3)
+   [0.81] Mongolia Wildfire Burns 80% of Protected Area, Blamed on Japanese Executives (SBS 뉴스, 2)
+
+-- 5 headlines from 3 former stories
+   [0.83] Sports Doctor Reveals Best and Worst Case Scenarios For Magic’s Jalen Suggs Injury (Yahoo Sports, 1)
+   [0.83] Jalen Suggs goes down with scary-looking injury as Magic continue to feel cursed (CBS Sports, 1)
+   [0.82] Magic's Jalen Suggs exits late vs. Knicks with apparent knee injury (ESPN, 3)
+
+-- 5 headlines from 2 former stories
+   [0.85] Fans Welcome Quinn Hughes Back To Vancouver With Boos, Canucks Fall 4-2 To The Wild (Yahoo Sports, 2)
+   [0.85] Quinn Hughes has a goal and an assist in his Vancouver return in Wild's 4-2 victory (Yahoo Sports, 3)
+
+-- 4 headlines from 2 former stories
+   [0.94] Michigan gas prices jump 32 cents since last week (WDIV Local 4, 3)
+   [0.94] Michigan gas prices spike 32 cents in the past week, AAA says (CBS News, 1)
+
+-- 4 headlines from 2 former stories
+   [0.85] El-Sayed to Trump: ‘I will be Senator Muhammad to you bro’ (The Hill, 2)
+   [0.85] ‘I’ll be Sen. Mohammed to you, bro’: El-Sayed responds to Trump (CNN, 2)
+
+-- 4 headlines from 2 former stories
+   [0.92] Here’s the prize money payout for each golfer at the 2026 Butterfield Bermuda Championship (Yahoo Sports, 2)
+   [0.92] Butterfield Bermuda Championship 2026 Purse: How Much Does the Winner Make (Yahoo Sports, 2)
+
+-- 4 headlines from 2 former stories
+   [0.84] Nicki Minaj says she'd back Trump if he runs again, despite third-term ban (KEYE, 1)
+   [0.84] Nicki Minaj tells Trump she’ll support him if he runs again (NewsNation, 3)
+
+-- 4 headlines from 4 former stories
+   [0.86] Houthis Claim Attacks on Saudi Arabia's East-West Oil Pipeline (OilPrice, 1)
+   [0.84] Houthis say they attacked East-West oil pumping stations; No Saudi confirmation (Reuters, 1)
+   [0.84] Houthis say they attacked Saudi oil pumping stations, Riyadh airport as fighting intensifies (Reuters, 1)
+   [0.86] Houthis claim to have struck key Saudi crude pipeline (NHKニュース, 1)
+
+-- 4 headlines from 2 former stories
+   [0.84] Gold Prices Stabilise Near Three-Month Lows Ahead of Fed Rate Announcement (Yahoo Finance, 1)
+   [0.84] Gold hovers near three-month low as Fed rate outlook weighs on prices (The Vibes, 3)
+
+-- 4 headlines from 2 former stories
+   [0.86] Cancelo’s blunt assessment after El Clásico: “This is Real Madrid...” (Diario AS, 1)
+   [0.86] 'This is Real Madrid!' – Joao Cancelo delivers bold verdict on El Clasico defeat (Yahoo Sports, 3)
+
+-- 4 headlines from 2 former stories
+   [0.81] Ukraine disputes Musk’s claim Starlink was used for offensive drone strikes (KPIC, 3)
+   [0.81] Musk accuses Ukraine of using Starlink to kill people (KXLY, 1)
+
+-- 4 headlines from 2 former stories
+   [0.92] Galaxy Corporation launches arena for robot performances in UAE (Korea JoongAng Daily, 1)
+   [0.92] Galaxy Corp. opens robot performance arena in Dubai (The Korea Times, 3)
+
+-- 4 headlines from 2 former stories
+   [0.82] Van Gogh’s ‘The Starry Night’ may have been inspired by real celestial arrangement, astronomers say (RNZ, 2)
+   [0.82] New study traces van Gogh's famed 'Starry Night' to an actual night sky from 1889 (GreenevilleSun, 2)
+
+-- 4 headlines from 2 former stories
+   [0.80] China marks anniversary of Taiwan's recovery with events across Taiwan Strait (China.org.cn, 3)
+   [0.80] Honor Taiwan restoration history, forge a shared cross-Strait future (CGTN, 1)
+
+-- 3 headlines from 2 former stories
+   [0.82] What to know about the five phases of women’s and girls’ heart health (NBC News, 2)
+   [0.82] The 4 stages of women’s heart health: New framework for doctors and patients (STAT, 1)
+
+-- 3 headlines from 2 former stories
+   [0.80] Antonelli wants to clinch maiden F1 title in style in Mexico (Yahoo Sports, 2)
+   [0.80] How Antonelli can win the 2026 F1 title at the Mexico City GP (Sky Sports, 1)
+
+-- 3 headlines from 2 former stories
+   [0.85] Oil Prices Fall as Traders Weigh U.S.-Iran Diplomacy, Saudi Attacks (WSJ, 2)
+   [0.85] Oil prices fall as US-Iran peace talks ease tensions, but Saudi attacks keep global supply risks high | Hindus (Hindustan Times, 1)
+
+-- 3 headlines from 2 former stories
+   [0.87] Trump says he'll soon decide whether to ‘make a deal’ with Iran or ‘finish it off' (CNBC, 2)
+   [0.87] Watch Trump Says Decision Nearing on Iran: Deal or ‘Finish It Off’ (Bloomberg, 1)
+
+-- 3 headlines from 2 former stories
+   [0.84] Arsenal Amongst Multiple Premier League Clubs Tracking Lennart Karl (roundtable.io, 2)
+   [0.84] Arsenal among Premier League trio watching Lennart Karl situation (Yahoo Sports, 1)
+
+-- 3 headlines from 3 former stories
+   [0.92] ChatGPT and Claude blocked by Swedish government over "problematic" security concerns (TechRadar, 1)
+   [0.92] Sweden blocks ChatGPT and Claude over security risks (Cybernews, 1)
+   [0.85] Sweden blocked ChatGPT and Claude on government computers starting October 26th. (Vietnam.vn, 1)
+
+-- 3 headlines from 2 former stories
+   [0.82] Lula’s re-election brings continuity to China-Brazil ties, fresh momentum for Global South cooperation (Friends of Socialist China, 2)
+   [0.82] China congratulates Lula on reelection, pledges closer Brazil ties (China Daily, 1)
+
+-- 3 headlines from 2 former stories
+   [0.80] 'It wasn't a farewell' - Michael Carrick breaks silence on Man Utd sack fears after Bournemouth humiliation (Yahoo Sports, 2)
+   [0.80] Michael Carrick on the brink of Manchester United exit after Bournemouth humiliation (Yahoo Sports, 1)
+
+-- 3 headlines from 2 former stories
+   [0.82] Yuri Yoshida wins in South Korea for her first LPGA Tour victory (The Augusta Press, 2)
+   [0.82] Yoshida wins in South Korea to become 4th Japanese winner on LPGA this season (San Francisco Chronicle, 1)
+
+-- 3 headlines from 2 former stories
+   [0.81] Quirky Tropicana Field isn’t a pretty ballpark but the Rays love their home (AP News, 1)
+   [0.81] Tropicana Field, home of the Rays, is one of the most unique ballparks in baseball (Yahoo Sports, 2)
+
+-- 3 headlines from 2 former stories
+   [0.89] $89K AI robot unleashed in NYC park to learn human behavior — and eventually become a babysitter (Forex Factory, 2)
+   [0.89] An $89K AI Robot Is Learning to Interact With Humans in NYC Before Its Potential Future as a Babysitter (International Business Times UK, 1)
+
+-- 3 headlines from 3 former stories
+   [1.00] India's Stock Market Feels the Heat From High Oil Prices (OilPrice, 1)
+   [1.00] India's Stock Market Feels the Heat From High Oil Prices (OilPrice, 1)
+   [1.00] India's Stock Market Feels the Heat From High Oil Prices (Yahoo Finance, 1)
+
+-- 3 headlines from 2 former stories
+   [0.92] Lula pulls off Brazil’s first-ever run-off comeback to beat Bolsonaro (South China Morning Post, 1)
+   [0.92] Lula pulls off a historic comeback in Brazil and leads the left to victory over Jair Bolsonaro (EL PAÍS English, 2)
+
+-- 3 headlines from 2 former stories
+   [0.84] NFL Power Rankings entering Week 8: Steelers rise with good-not-great AFC North, Chiefs stay put (FanSided, 1)
+   [0.84] AFC power rankings for NFL Week 8: Bills jump Chiefs, Browns & Steelers surge, Raiders fall (The Big Lead, 2)
+
+-- 3 headlines from 2 former stories
+   [0.81] Seahawks end Chiefs’ undefeated start to 2026 in dominant fashion (Yahoo Sports, 1)
+   [0.81] Seahawks knock the Chiefs from the ranks of the undefeated with 20-3 win (Yahoo Sports, 2)
+
+-- 2 headlines from 2 former stories
+   [0.82] India's chip design startups struggle with final commercial hurdle (Nikkei Asia, 1)
+   [0.82] India Chip Design Startups: 6-12 Month Gap [2026] (shattered.io, 1)
+
+-- 2 headlines from 2 former stories
+   [0.82] easyJet partners with SpaceX to launch inflight Starlink Wi-Fi across fleet from 2027 (ANI News, 1)
+   [0.82] EasyJet to offer Starlink internet onboard some flights from 2027 (The Economic Times, 1)
+
+-- 2 headlines from 2 former stories
+   [0.83] Football: Who will win the 2026 Ballon d'Or? (France 24, 1)
+   [0.83] Ballon d'Or 2026: Who are the leading contenders? (Yahoo Sports, 1)
+
+-- 2 headlines from 2 former stories
+   [0.88] Ovintiv to buy Logan Energy for $890 million, expanding Montney oil position (Reuters, 1)
+   [0.88] Ovintiv to buy Logan Energy in $890M deal, boosting Montney acreage (OVV:NYSE) (Seeking Alpha, 1)
+
+-- 2 headlines from 2 former stories
+   [0.85] Shadab Khan’s record-breaking innings gives Pakistan ODI win over England (Al Jazeera, 1)
+   [0.85] Shadab Khan breaks world record with unbeaten 113 in Pakistan’s stunning 1-wicket win vs England (News9live, 1)
+
+-- 2 headlines from 2 former stories
+   [0.87] Nigeria's Ebola patient on medical evacuation flight to Switzerland, condition stable (Reuters, 1)
+   [0.87] Nigeria's Ebola patient medically evacuated from country, Arise TV reports (Reuters, 1)
+
+-- 2 headlines from 2 former stories
+   [0.83] Dolphins news: Reactions, recaps from Week 7 win over New York Jets (Yahoo Sports, 1)
+   [0.83] Jets vs. Dolphins: Full highlights from Week 7 (Yahoo Sports, 1)
+
+-- 2 headlines from 2 former stories
+   [0.92] Democrats keeping eye on Israel’s elections (Punchbowl News, 1)
+   [0.92] Democrats watch Israel’s Tuesday elections closely (Punchbowl News, 1)
+
+-- 2 headlines from 2 former stories
+   [0.84] Galp and Moeve fail to agree merger of refining and distribution operations (Euronews, 1)
+   [0.84] Galp and Moeve Scrap Plans for Major European Refining Merger (OilPrice, 1)
+
+-- 2 headlines from 2 former stories
+   [0.85] Drone strikes cut power across southeast Sudan, operator says (Reuters, 1)
+   [0.85] Sudan paramilitary drone strikes cause mass power cuts in eastern states (The Guardian, 1)
+
+-- 2 headlines from 2 former stories
+   [0.92] Could UK Interest Rates Reach 5% by 2027? Experts Weigh In (EasternEye, 1)
+   [0.92] Will UK interest rates really hit 5 per cent by 2027? Economists aren't convinced (EasternEye, 1)
+
+-- 2 headlines from 2 former stories
+   [0.80] Indonesia defends Singapore gas cuts, cites rising domestic needs and contractual limits (South China Morning Post, 1)
+   [0.80] Singapore Shields Itself From Energy Risks as Indonesia Cuts Gas (Bloomberg, 1)
+
+-- 2 headlines from 2 former stories
+   [0.85] North Korea accuses South of fabricating DMZ land mine blasts in letter to UN (NK News, 1)
+   [0.85] N. Korea calls DMZ mine blasts 'fabricated' in Security Council letter (upi, 1)
+
+-- 2 headlines from 2 former stories
+   [1.00] Analysts forecast Brazil market falls after Lula turnaround win (Reuters, 1)
+   [1.00] Analysts forecast Brazil market falls after Lula turnaround win (Yahoo Finance, 1)
+
+-- 2 headlines from 2 former stories
+   [0.81] GOP Rep. Ryan Guillen predicts South Texas will shift leftward (The Texas Tribune, 1)
+   [0.81] As South Texas Republicans brace for losses, Ryan Guillen’s career offers a possible roadmap back (News From The States, 1)
+
+-- 2 headlines from 2 former stories
+   [0.90] Why is Prysmian stock climbing today? By Investing.com (Investing.com Nigeria, 1)
+   [0.90] Why is Prysmian stock gaining today? By Investing.com (Investing.com Nigeria, 1)
+
+-- 2 headlines from 2 former stories
+   [1.00] Brazil's Lula seals re-election in surprise win (France 24, 1)
+   [1.00] Brazil's Lula seals re-election in surprise win (France 24, 1)
+
+-- 2 headlines from 2 former stories
+   [0.81] Priced out of the World Series in Milwaukee, Brewers fans take their party to Florida (New York Times, 1)
+   [0.81] Brewers fans can fly to Florida, attend the World Series and still save $1,500 (USA Today, 1)
+
+-- 2 headlines from 2 former stories
+   [0.85] Protests in France: Rising Tensions and Nationwide Unrest (The Knight Crier, 1)
+   [0.85] France Braces for Mass Protests: What to Know (New York Times, 1)
+
+-- 2 headlines from 2 former stories
+   [0.84] 70% in Japan want to shelter at home after disasters, survey finds (The Japan Times, 1)
+   [0.84] 70 Pct in Japan Prefer Sheltering at Home after Disasters: Survey (nippon, 1)
+
+-- 2 headlines from 2 former stories
+   [0.82] Bulgaria heads to presidential runoff after close vote (Reuters, 1)
+   [0.82] Bulgaria Faces Election Runoff After President Falls Short (Bloomberg, 1)
+
+-- 2 headlines from 2 former stories
+   [0.81] Who should win the men’s Ballon d’Or? The Athletic asked 100 people from elite football to vote (New York Times, 1)
+   [0.81] Who should win the men's Ballon d'Or? BBC Sport pundits have their say (BBC Sport, 1)
+
+-- 2 headlines from 2 former stories
+   [0.83] China to send giant panda to Belgium, continuing conservation collaboration (chinadailyhk, 1)
+   [0.83] Giant panda Ran Ran to head to Belgium as China and Belgium extend conservation partnership (Global Times, 1)
+
+-- 2 headlines from 2 former stories
+   [0.81] South Korea shares slip as AI trade falters ahead of megacap earnings (TradingView, 1)
+   [0.81] South Korean Stocks Slip As Investors Reprice The AI Trade (Finimize, 1)
+
+-- 2 headlines from 2 former stories
+   [0.81] Analyst bullish on Jim Harbaugh turning the Chargers' season around (Yahoo Sports, 1)
+   [0.81] Chargers could face difficult Jim Harbaugh decision if season keeps spiraling (Yahoo Sports, 1)
+
+-- 2 headlines from 2 former stories
+   [0.83] Luka Doncic reveals why he let Austin Reaves take the biggest shot despite scoring 52 points (Yahoo Sports, 1)
+   [0.83] Luka Doncic Makes Surprising Austin Reaves Admission After 52-Point Game (Yahoo Sports, 1)
+
+-- 2 headlines from 2 former stories
+   [1.00] Supporters celebrate Lula's presidential re-election in Brazil (Reuters, 1)
+   [1.00] Supporters celebrate Lula's presidential re-election in Brazil (Reuters, 1)
+
+-- 2 headlines from 2 former stories
+   [0.85] Sam Darnold shows some improvement in Week 7 win (Yahoo Sports, 1)
+   [0.85] Seahawks QB Sam Darnold showed great improvement in Week 7 (Yahoo Sports, 1)
+
+-- 2 headlines from 2 former stories
+   [1.00] Lula wins elections in Brazil and students win in Serbia (Belga Share, 1)
+   [1.00] Lula wins elections in Brazil and students win in Serbia (Belga Share, 1)
+
+-- 2 headlines from 2 former stories
+   [0.84] China stocks slip as tech shares lead declines, before key central bank meetings (TradingView, 1)
+   [0.84] China Tech Stocks Slipped As Investors Waited On Central Banks (Finimize, 1)
+
+-- 2 headlines from 2 former stories
+   [1.00] investingLive Asia-Pacific market news: Brazil ETF slumps on Lula win (investingLive, 1)
+   [1.00] investingLive Asia-Pacific market news: Brazil ETF slumps on Lula win (investingLive, 1)
+
+-- 2 headlines from 2 former stories
+   [1.00] China Stocks Kick Off Week Lower (Trading Economics, 1)
+   [1.00] China Stocks Kick Off Week Lower (TradingView, 1)
+
+=== NEAR MISSES (0.74-0.8), not merged ===
+   [0.75] China's automaking rise spurs German industry's turn to arms  <>  Beyond exports: China's automakers dig deeper into Europe
+   [0.75] Celebrations in Serbia after veteran ruler Vučić loses election to student-led p  <>  'Serbia is free': Belgrade erupts in celebration after Vucic's defeat
+   [0.75] Celebrations in Serbia after veteran ruler Vučić loses election to student-led p  <>  'Serbia is free': Belgrade erupts in celebration after Vucic's defeat
+   [0.75] Seahawks defense dominates Patrick Mahomes, Kenneth Walker III in big win  <>  Seahawks defense holds Patrick Mahomes to the worst offensive performance of his
+   [0.76] US singer Chris Brown avoids jail after guilty plea in UK nightclub incident  <>  Chris Brown Given Suspended Prison Sentence For London Nightclub Confrontation
+   [0.80] US singer Chris Brown avoids jail after guilty plea in UK nightclub incident  <>  Chris Brown avoids prison time for brawling at a London nightclub
+   [0.75] US singer Chris Brown avoids jail after guilty plea in UK nightclub incident  <>  Chris Brown Receives Suspended Jail Sentence in London Nightclub Attack Case
+   [0.80] US singer Chris Brown avoids jail after guilty plea in UK nightclub incident  <>  Chris Brown avoids prison time for brawling at a London nightclub
+   [0.76] US singer Chris Brown avoids jail after guilty plea in UK nightclub incident  <>  Chris Brown Given Suspended Prison Sentence For London Nightclub Confrontation
+   [0.74] US singer Chris Brown avoids jail after guilty plea in UK nightclub incident  <>  Singer Chris Brown to be sentenced over bottle attack at a London nightclub
+   [0.74] US singer Chris Brown avoids jail after guilty plea in UK nightclub incident  <>  Singer Chris Brown to be sentenced over bottle attack at a London nightclub
+   [0.76] Microsoft Stock Has Been a Hit With Wall Street. Why Massive AI Spending Won't B  <>  Stock earnings pick of the week: Can Microsoft's AI growth still justify its spe
+   [0.76] Microsoft Stock Has Been a Hit With Wall Street. Why Massive AI Spending Won't B  <>  Stock earnings pick of the week: Can Microsoft's AI growth still justify its spe
+   [0.77] International News  <>  Domestic News
+   [0.75] Brazil’s Leftist President Declared Winner Over Bolsonaro After Suspicious Elect  <>  Bolsonaro Rejects Results in Brazil Presidential Election
+   [0.74] Brazil’s Leftist President Declared Winner Over Bolsonaro After Suspicious Elect  <>  Brazil election results: Lula officially wins, Bolsonaro refuses to concede defe
+   [0.79] Brazil runoff live updates: world leaders congratulate Lula on historic election  <>  Brazil election results: Lula officially wins, Bolsonaro refuses to concede defe
+   [0.78] Brazil runoff live updates: world leaders congratulate Lula on historic election  <>  Lula beats Bolsonaro in Brazil runoff: What does it mean for Donald Trump?
+   [0.78] Brazil runoff live updates: world leaders congratulate Lula on historic election  <>  Lula wins historic Brazil election as Bolsonaro reportedly refuses to concede
+   [0.77] Brazil runoff live updates: world leaders congratulate Lula on historic election  <>  Brazil’s electoral court declares Lula winner of presidential runoff
+   [0.77] Brazil runoff live updates: world leaders congratulate Lula on historic election  <>  Brazil’s electoral court declares Lula winner of presidential runoff
+   [0.79] Brazil runoff live updates: world leaders congratulate Lula on historic election  <>  Video. Brazil's Lula clinches election victory as Bolsonaro rejects results
+   [0.78] Brazil runoff live updates: world leaders congratulate Lula on historic election  <>  Lula beats Bolsonaro in Brazil runoff: What does it mean for Donald Trump?
+   [0.78] Brazil runoff live updates: world leaders congratulate Lula on historic election  <>  Video: Lula Wins Brazil’s Presidency as Bolsonaro Rejects Results
+   [0.77] Brazil runoff live updates: world leaders congratulate Lula on historic election  <>  Lula is declared winner of Brazil's election as Bolsonaro rejects results | Worl
+   [0.77] Brazil runoff live updates: world leaders congratulate Lula on historic election  <>  Brazil votes in a tense Lula vs Bolsonaro runoff with U.S. influence over Latin 
+   [0.75] easyJet partners with SpaceX to launch inflight Starlink Wi-Fi across fleet from  <>  easyJet Signs Up for Starlink
+   [0.77] easyJet partners with SpaceX to launch inflight Starlink Wi-Fi across fleet from  <>  EasyJet Inks Deal to Fit SpaceX’s Starlink Wi-Fi on Fleet
+   [0.74] Dan Campbell fires up Lions after Packers win, looks to Vikings  <>  Lions HC Dan Campbell Makes Honest Admission About Defense After Packers Win
+   [0.74] Dan Campbell fires up Lions after Packers win, looks to Vikings  <>  Lions HC Dan Campbell Makes Honest Admission About Defense After Packers Win
+   [0.80] Michigan gas prices jump 32 cents since last week  <>  Lansing gas prices jumped 29 cents per gallon in a week
+   [0.77] Anthropic Is Said to Plan Public Filing for Mega-IPO Monday  <>  Anthropic to File IPO Filing as Early as October 26, Aiming for Mid-November Lis
+   [0.76] Israel braces for national elections seen as a referendum on Netanyahu  <>  What to know about the Israeli elections as Netanyahu faces a battle for surviva
+   [0.76] Israel braces for national elections seen as a referendum on Netanyahu  <>  What to know about the Israeli elections as Netanyahu faces a battle for surviva
+   [0.79] Meta is raising about $35 billion in stock for AI, with Nvidia and AMD as potent  <>  Meta announces $95 billion stock offering to fund AI expansion
+   [0.80] Meta is raising about $35 billion in stock for AI, with Nvidia and AMD as potent  <>  Meta launches $35 billion stock offering to fund AI expansion
+   [0.80] Meta is raising about $35 billion in stock for AI, with Nvidia and AMD as potent  <>  Meta launches $35 billion stock offering to fund AI expansion
+   [0.80] Meta is raising about $35 billion in stock for AI, with Nvidia and AMD as potent  <>  Meta launches $35 billion stock offering to fund AI expansion
+   [0.76] Meta is raising about $35 billion in stock for AI, with Nvidia and AMD as potent  <>  Meta Launches $35B Stock Offering, Plans Another $60B Program In 2027: Nvidia, A
+   [0.75] Meta is raising about $35 billion in stock for AI, with Nvidia and AMD as potent  <>  Nvidia, AMD and Broadcom could buy Meta shares as part of $35 billion stock offe
