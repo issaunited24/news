@@ -19,7 +19,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import gdelt, positioning, texts  # noqa: E401,E402
+import gdelt, gnews, positioning, texts  # noqa: E401,E402
 from features import embeddings, finbert_scores, rule_features, rules_block  # noqa: E402
 from market_data import (ASSETS, best_forward_return, context_at, daily_context, daily_return, fetch,  # noqa: E402
                          fetch_daily, load_fine)
@@ -28,9 +28,11 @@ from sources import source_features, tier_of  # noqa: E402
 
 STORE, OUT = 'data/ml/store', 'data/ml/dataset'
 QUICK = os.environ.get('ML_QUICK') == '1'
-GDELT_MIN = float(os.environ.get('ML_GDELT_MIN', '150'))
+GNEWS_MIN = float(os.environ.get('ML_GNEWS_MIN', '150'))
+GDELT_MIN = float(os.environ.get('ML_GDELT_MIN', '20'))
 TEXT_MIN = float(os.environ.get('ML_TEXT_MIN', '70'))
 COLS = ['title', 'url', 'ts', 'domain', 'src']
+ARCHIVE = 'data/ml/newsarchive'
 
 
 def log(*a):
@@ -71,6 +73,18 @@ def live_results():
     return pd.DataFrame(list(rows.values()), columns=COLS)
 
 
+def archive_rows():
+    """The robot's own market headlines (the "newsarchive" branch, see archive_news.py), with their summaries."""
+    rows = []
+    if os.path.isdir(ARCHIVE):
+        for f in sorted(os.listdir(ARCHIVE)):
+            if f.endswith('.jsonl'):
+                for line in open(os.path.join(ARCHIVE, f)):
+                    d = json.loads(line)
+                    rows.append({'title': d['title'], 'url': '', 'ts': d['ts'], 'domain': d.get('outlet', ''), 'src': 'archive', 'summary': d.get('summary', '')})
+    return pd.DataFrame(rows, columns=COLS + ['summary'])
+
+
 def text_features(strings, cache):
     """FinBERT tone (3) + meaning (384) for each string, computed once and cached by content."""
     keys = [hashlib.sha1(s.encode('utf-8')).hexdigest()[:16] if s else '' for s in strings]
@@ -96,12 +110,16 @@ def main():
         heads['url'] = ''
     log(f'Store: {len(heads)} headlines, {len(done)} searches done, {sum(1 for v in txt.values() if v)} openings, {len(feat)} texts read')
 
-    # 1. headlines
+    # 1. headlines: Google News week by week (main source), then GDELT (often refuses GitHub's servers, so short)
     if QUICK:
-        gdelt.QUERIES[:] = gdelt.QUERIES[:3]
-        gdelt.RECENT_DAYS = 30
-        gdelt.HISTORY_START = pd.Timestamp.utcnow().to_pydatetime() - pd.Timedelta(days=40).to_pytimedelta()
-    heads, done = gdelt.fetch(heads[COLS], done, 12 if QUICK else GDELT_MIN)
+        gnews.QUERIES[:] = gnews.QUERIES[:3]
+        gnews.START = pd.Timestamp.utcnow().to_pydatetime() - pd.Timedelta(days=21).to_pytimedelta()
+        gdelt.QUERIES[:] = gdelt.QUERIES[:2]
+        gdelt.RECENT_DAYS = 20
+        gdelt.HISTORY_START = pd.Timestamp.utcnow().to_pydatetime() - pd.Timedelta(days=30).to_pytimedelta()
+    heads, done = gnews.fetch(heads[COLS], done, 6 if QUICK else GNEWS_MIN)
+    save_store(heads, done, txt, feat)
+    heads, done = gdelt.fetch(heads[COLS], done, 4 if QUICK else GDELT_MIN)
     save_store(heads, done, txt, feat)
 
     # 2. prices (hourly for 2 years, daily for 10) and hedge-fund positioning
@@ -119,7 +137,10 @@ def main():
         pos = {}
 
     # 3. rows: GDELT headlines + the app's own checked stories
-    df = pd.concat([heads[COLS], live_results()], ignore_index=True).sort_values('ts').reset_index(drop=True)
+    df = pd.concat([heads[COLS], live_results(), archive_rows()], ignore_index=True)
+    df['key'] = df.title.str.lower().str.replace(r'[^a-z0-9 ]', '', regex=True).str.slice(0, 90)
+    df = df.sort_values('ts').drop_duplicates('key').drop(columns='key').reset_index(drop=True)
+    log('Rows by source: ' + ', '.join(f'{k} {v}' for k, v in df.src.value_counts().items()))
     hourly_from = px['gold'].index[0].timestamp() if len(px['gold']) else 0
 
     # 4. article openings for the rows the hourly models learn from (best outlets and newest first)
@@ -128,7 +149,7 @@ def main():
     urls = recent.sort_values(['tier', 'ts'], ascending=[False, False]).url.tolist()
     texts.fetch(urls, txt, 5 if QUICK else TEXT_MIN)
     save_store(heads, done, txt, feat)
-    df['text'] = df.url.map(lambda u: txt.get(u, '') if u else '')
+    df['text'] = [txt.get(u, '') if u else (sm or '') for u, sm in zip(df.url, df.get('summary', pd.Series([''] * len(df))).fillna(''))]
 
     # 5. labels and mood
     log('Labels and market mood...')

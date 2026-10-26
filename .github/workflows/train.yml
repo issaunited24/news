@@ -13,8 +13,8 @@ on:
         description: "Quick test run (small data, nothing published)"
         type: boolean
         default: false
-      gdelt_minutes:
-        description: "Minutes to spend downloading headlines this run"
+      gnews_minutes:
+        description: "Minutes to spend downloading Google News headlines this run"
         default: "150"
   schedule:
     - cron: "17 3 * * 0"
@@ -59,6 +59,10 @@ jobs:
             if gh run download "$id" -n mlstore -D data/ml/store 2>/dev/null; then echo "Restored the store from run $id"; break; fi
           done
           ls -la data/ml/store || true
+      - name: The robot's news archive
+        continue-on-error: true
+        run: |
+          git fetch -q --depth=1 origin newsarchive && mkdir -p data/ml/newsarchive && git --work-tree=data/ml/newsarchive checkout FETCH_HEAD -- . && git reset -q && ls data/ml/newsarchive | wc -l
       - name: 5-minute price archive
         continue-on-error: true
         run: |
@@ -66,7 +70,8 @@ jobs:
       - name: Build the dataset
         env:
           ML_QUICK: ${{ inputs.quick && '1' || '0' }}
-          ML_GDELT_MIN: ${{ inputs.gdelt_minutes || '150' }}
+          ML_GNEWS_MIN: ${{ inputs.gnews_minutes || '150' }}
+          ML_GDELT_MIN: "20"
         run: mkdir -p out && python scripts/ml/build_dataset.py 2>&1 | tee out/dataset.log; test ${PIPESTATUS[0]} -eq 0
       - name: Keep the log with the dataset
         if: always()

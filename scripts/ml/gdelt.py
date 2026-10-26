@@ -73,7 +73,7 @@ def search(q, t0, t1):
     params = {'query': f'{QUERIES[q]} sourcelang:english', 'mode': 'artlist', 'maxrecords': '250', 'format': 'json',
               'startdatetime': t0.strftime('%Y%m%d%H%M%S'), 'enddatetime': t1.strftime('%Y%m%d%H%M%S'), 'sort': 'hybridrel'}
     url = 'https://api.gdeltproject.org/api/v2/doc/doc?' + urllib.parse.urlencode(params)
-    for i in range(5):
+    for i in range(2):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
                 txt = r.read().decode('utf-8', 'replace')
@@ -83,7 +83,7 @@ def search(q, t0, t1):
                 return []  # GDELT answers plain text when a search has no results or is malformed
         except Exception as e:
             log(f'  retry {i + 1}: {str(e)[:80]}')
-            time.sleep(20 * (2 ** i))
+            time.sleep(30)
     return None  # failed: not marked done, tried again next run
 
 
@@ -93,7 +93,7 @@ def fetch(store, done, budget_min):
     now = datetime.now(timezone.utc)
     todo = [w for w in windows(now) if wkey(*w) not in done]
     log(f'GDELT: {len(todo)} searches to do, {len(done)} already done')
-    rows, n = [], 0
+    rows, n, fails = [], 0, 0
     for q, t0, t1 in todo:
         if time.time() > t_end:
             log('GDELT: time budget used, the rest next run')
@@ -102,7 +102,12 @@ def fetch(store, done, budget_min):
         time.sleep(8)
         n += 1
         if arts is None:
+            fails += 1
+            if fails >= 3:
+                log('GDELT: refusing repeatedly, stopping for this run')
+                break
             continue
+        fails = 0
         done.add(wkey(q, t0, t1))
         for a in arts:
             title = (a.get('title') or '').strip()
