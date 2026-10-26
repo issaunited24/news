@@ -23,7 +23,8 @@ function publish(obj) {
 const tasks = JSON.parse(readFileSync('bt/tasks.json', 'utf8')).filter((_, i) => i % SHARDS === SHARD);
 let results = {};
 try { git('fetch', '-q', '--depth=1', 'origin', BRANCH); results = JSON.parse(git('show', 'FETCH_HEAD:results.json')).results || {}; } catch {}
-for (const [id, r] of Object.entries(results)) if (r.model !== AI_MODEL) delete results[id];
+// only one version is graded: this AI model, these instructions, test set 4 (leak-free outcomes); older results are redone
+for (const [id, r] of Object.entries(results)) if (r.model !== AI_MODEL || r.tv !== 4) delete results[id];
 log(`backtest worker ${SHARD}/${SHARDS}: ${tasks.length} headlines, ${Object.keys(results).length} done earlier`);
 let fails = 0;
 for (const t of tasks) {
@@ -32,7 +33,7 @@ for (const t of tasks) {
   const t0 = Date.now();
   try {
     const res = await analysePrepared(t);
-    results[t.id] = { model: AI_MODEL, ts: t.ts, title: t.title, labels: t.labels, status: res.status, credibility: res.credibility, importance: res.importance, priced_in: res.priced_in,
+    results[t.id] = { model: AI_MODEL, tv: t.tv, dateOnly: t.date_only, ts: t.ts, title: t.title, labels: t.labels, status: res.status, credibility: res.credibility, importance: res.importance, priced_in: res.priced_in,
       markets: Object.fromEntries(Object.entries(res.markets).map(([k, m]) => [k, { bias: m.bias, conviction: m.conviction, check: m.check }])) };
     log(`${Math.round((Date.now() - t0) / 1000)}s ${t.title.slice(0, 60)} | gold ${res.markets.gold?.bias} ${res.markets.gold?.conviction} | next day ${t.labels.gold?.d1}`);
     publish({ updated: Date.now(), shard: SHARD, results });

@@ -15,7 +15,7 @@ import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from market_data import ASSETS, daily_return, daily_return_n, fetch_daily  # noqa: E402
+from market_data import ASSETS, daily_return, daily_return_after, daily_return_n, date_only, fetch_daily  # noqa: E402
 
 START = pd.Timestamp('2025-01-01', tz='UTC').timestamp()
 PER_DAY = 6
@@ -177,9 +177,12 @@ def main():
         labels = {}
         for k in ASSETS:
             s = raw.get(k)
-            labels[k] = {'d1': daily_return(s, float(r.ts)), 'd3': daily_return_n(s, float(r.ts), 3), 'w1': daily_return_n(s, float(r.ts), 5)}
+            if date_only(r.ts, r.src):  # time of day unknown: measure from the news day's close
+                labels[k] = {'d1': daily_return_after(s, float(r.ts), 1), 'd3': daily_return_after(s, float(r.ts), 3), 'w1': daily_return_after(s, float(r.ts), 5)}
+            else:
+                labels[k] = {'d1': daily_return(s, float(r.ts)), 'd3': daily_return_n(s, float(r.ts), 3), 'w1': daily_return_n(s, float(r.ts), 5)}
             labels[k] = {h: (None if v is None or not np.isfinite(v) else round(float(v), 4)) for h, v in labels[k].items()}
-        tasks.append({'id': hashlib.sha1(f'{r.title}|{r.ts}'.encode()).hexdigest()[:12], 'ts': float(r.ts), 'title': r.title,
+        tasks.append({'tv': 4, 'date_only': bool(date_only(r.ts, r.src)), 'id': hashlib.sha1(f'{r.title}|{r.ts}'.encode()).hexdigest()[:12], 'ts': float(r.ts), 'title': r.title,
                       'text': (r.text or '')[:2000] if isinstance(r.text, str) else '', 'outlet': r.domain if isinstance(r.domain, str) else '', 'recent': recent,
                       'snapshot': snapshot(t, px, mac), 'regime': regime(t, px, mac), 'labels': labels})
     os.makedirs('bt', exist_ok=True)

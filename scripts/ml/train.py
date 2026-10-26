@@ -36,7 +36,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from calib import RATING_STEPS, caps, check  # noqa: E402
 from features import assemble  # noqa: E402
-from market_data import ASSETS, CONTEXT_KEYS, DAILY_KEYS, daily_return_n, fetch_daily  # noqa: E402
+from market_data import ASSETS, CONTEXT_KEYS, DAILY_KEYS, daily_return_after, daily_return_n, date_only, fetch_daily  # noqa: E402
+LABELS = 2  # 2: leak-free outcomes for headlines with only a publication date
 from positioning import KEYS as POS_KEYS  # noqa: E402
 
 DATA, OUT = 'data/ml/dataset', 'model'
@@ -218,10 +219,16 @@ def main():
     # 3-day and 1-week outcomes, from daily prices (the 1-day ones come with the dataset)
     log('Daily prices for the 3-day and 1-week outcomes...')
     pxd = fetch_daily('10y')
-    for prefix in ('r3D', 'rW'):
+    # Google News gives older articles only a date (midnight US Pacific). For those, outcomes start at the news day's
+    # close, so moves before publication can't leak in; and they can't be used for the 1-hour and 4-hour models.
+    donly = np.array([date_only(t, sc) for t, sc in zip(meta.ts.values, meta.src.values)])
+    log(f'{donly.sum()} of {len(meta)} headlines have only a date: outcomes measured from the close of their news day')
+    for prefix in ('rD', 'r3D', 'rW'):
         for k in ASSETS:
-            meta[f'{prefix}_{k}'] = [daily_return_n(pxd.get(k), float(t), DAYS[prefix]) for t in meta.ts.values]
-    hourly = meta[[f'r4_{k}' for k in ASSETS]].notna().any(axis=1).values
+            n = DAYS[prefix]
+            meta[f'{prefix}_{k}'] = [daily_return_after(pxd.get(k), float(t), n) if d else (meta.at[i, f'rD_{k}'] if prefix == 'rD' else daily_return_n(pxd.get(k), float(t), n))
+                                     for i, (t, d) in enumerate(zip(meta.ts.values, donly))]
+    hourly = meta[[f'r4_{k}' for k in ASSETS]].notna().any(axis=1).values & ~donly
     daily = meta[[f'rD_{k}' for k in ASSETS]].notna().any(axis=1).values
     if daily.sum() > MAX_DAILY_ROWS:
         idx = np.where(daily)[0][-MAX_DAILY_ROWS:]
@@ -229,7 +236,7 @@ def main():
         daily[idx] = True
     log(f'{len(meta)} headlines: {hourly.sum()} for the hourly models, {daily.sum()} for the 1-day model')
 
-    report = {'trained': time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime()), 'headlines': int(len(meta)), 'horizons': {}}
+    report = {'trained': time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime()), 'headlines': int(len(meta)), 'labels': LABELS, 'horizons': {}}
     bundle = {'version': report['trained'], 'rating_steps': RATING_STEPS, 'horizons': {}}
     frames = {'hourly': Frame(meta, feats, hourly, 'hourly'), 'daily': Frame(meta, feats, daily, 'daily')}
     selected = {}
@@ -303,6 +310,10 @@ def main():
             old = None
     new_b, old_b = mean_b(report), mean_b(old) if old and old.get('quality_ok') else None
     report['deploy'] = bool(report['quality_ok'] and (old_b is None or new_b is None or new_b >= old_b - 0.005))
+    # a live model tested with the old, leaky outcomes is always replaced, even by "nothing passed" (the robot then
+    # stops using the trained model), because its test results can't be trusted
+    if old and old.get('labels', 1) != LABELS:
+        report['deploy'] = True
     report['compared_with'] = {'previous_next_day_score': old_b, 'new_next_day_score': new_b}
     passed = [f'{h} {k}' for h, hz in report['horizons'].items() for k, v in hz.items() if v.get('use') == 'model']
     log(f'Passed the quality bar: {", ".join(passed) or "nothing"}. {"Deploying." if report["deploy"] else "Not deploying."}')

@@ -180,6 +180,24 @@ def daily_return_n(s, ts, n):
     return (s.values[j] / s.values[i] - 1) * 100
 
 
+def date_only(ts, src):
+    """Google News gives older articles a date, not a time (stamped midnight US Pacific, exactly on the hour)."""
+    return src == 'gnews' and float(ts) % 3600 == 0
+
+
+def daily_return_after(s, ts, n):
+    """For a story whose time of day is unknown: from the close of its news day to the close n trading days later (%),
+    so nothing that happened on the news day before it was published leaks into the outcome."""
+    t = pd.Timestamp(ts, unit='s', tz='UTC')
+    if s is None or len(s) < n + 3:
+        return np.nan
+    i = s.index.searchsorted(t.normalize() + pd.Timedelta(days=1), side='left') - 1  # the news day's close (or the last before it)
+    j = i + n
+    if i < 0 or j >= len(s) or (s.index[j] - t).days > 5 + 2 * n:
+        return np.nan
+    return (s.values[j] / s.values[i] - 1) * 100
+
+
 # ---------- 5-minute archive (the "prices" branch, see archive_prices.py) ----------
 def load_fine(folder='data/ml/prices5m'):
     out = {}

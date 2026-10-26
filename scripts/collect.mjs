@@ -665,7 +665,7 @@ if (!FIXTURES && (!btGrade || now - btGrade.at > 20 * 60e3)) {
     try {
       if (spawnSync('git', ['fetch', '-q', '--depth=1', 'origin', `bt-${n}`], { timeout: 30000 }).status !== 0) continue;
       const j = JSON.parse(spawnSync('git', ['show', 'FETCH_HEAD:results.json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).stdout);
-      all.push(...Object.values(j.results || {}).filter(r => r.model === AI_MODEL));
+      all.push(...Object.values(j.results || {}).filter(r => r.model === AI_MODEL && r.tv === 4)); // only the leak-free test set
     } catch {}
   }
   btGrade = { at: now, ...gradeBacktest(all) };
