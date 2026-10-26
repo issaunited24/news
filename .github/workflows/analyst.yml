@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # so a finished run can start the next one
 
 jobs:
   worker:
@@ -29,6 +30,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
+      - name: Note the start time
+        run: echo "STARTED=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -60,3 +63,9 @@ jobs:
       - name: Server log (for checking)
         if: always()
         run: tail -20 server.log || true
+      - name: Start the next run (only after a healthy run, so a broken setup can't loop)
+        if: always() && matrix.shard == 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ $(( $(date +%s) - STARTED )) -gt 1800 ]; then gh workflow run analyst.yml --ref main && echo "next run started"; else echo "run was short; not restarting"; fi
