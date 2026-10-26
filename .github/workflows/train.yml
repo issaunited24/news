@@ -61,19 +61,21 @@ jobs:
           retention-days: 14
       - name: Train and test
         run: python scripts/ml/train.py 2>&1 | tee out/train.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Train and test the calendar model
+        run: python scripts/ml/cal_model.py train 2>&1 | tee out/calendar.log; test ${PIPESTATUS[0]} -eq 0
       - name: Save the model
         if: ${{ !inputs.quick }}
         run: |
           git config user.name "briefly-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add model/forecast.joblib model/report.json
+          git add model/forecast.joblib model/report.json model/calendar.joblib model/calendar_report.json
           git commit -m "Retrained forecast model" || exit 0
           for i in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0; sleep 10; done
           exit 1
       - name: Publish the logs and report (for checking)
         if: always()
         run: |
-          mkdir -p out && cp model/report.json out/ 2>/dev/null || true
+          mkdir -p out && cp model/report.json model/calendar_report.json out/ 2>/dev/null || true
           cd out && git init -q && git checkout -q -b ml-check
           git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add . && git commit -qm "Training logs" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ml-check

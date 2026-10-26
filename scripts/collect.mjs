@@ -420,9 +420,30 @@ function priceAt(key, t) {
   for (const [ts, v] of pts) { if (ts <= t) best = [ts, v]; else break; }
   return best && t - best[0] <= 3 * 3600e3 ? best[1] : null;
 }
+// Calendar model (model/calendar.joblib): for each US release, the reaction it expects if the number comes in above
+// or below forecast; once the actual is out, its call for each market. Upcoming ones are refreshed every 30 minutes.
+const CAL_MODEL = new URL('model/calendar.joblib', ROOT);
+const calVersion = existsSync(new URL('model/calendar_report.json', ROOT)) ? (JSON.parse(await readFile(new URL('model/calendar_report.json', ROOT), 'utf8')).trained || 'v1') : null;
+const calId = e => `${e.title}|${e.time}`;
+const calPreds = new Map(Object.entries(prevState.calPreds || {}).filter(([, v]) => v.v === calVersion && now - v.at < (v.done ? 8 * 864e5 : 30 * 60e3)));
+if (!FIXTURES && calVersion && existsSync(CAL_MODEL) && calendar?.events?.length) {
+  const todo = calendar.events.filter(e => e.forecast && !calPreds.has(calId(e)) && Date.parse(e.time) > now - 7 * 864e5 && Date.parse(e.time) < now + 5 * 864e5)
+    .map(e => ({ id: calId(e), title: e.title, actual: e.actual, forecast: e.forecast, importance: e.impact === 'high' ? 1 : 0, ts: Date.parse(e.time) / 1000 }));
+  if (todo.length) {
+    const res = spawnSync('python3', [new URL('scripts/ml/cal_model.py', ROOT).pathname, 'predict'], { input: JSON.stringify(todo), encoding: 'utf8', timeout: 90000, maxBuffer: 8 * 1024 * 1024 });
+    try {
+      const out = JSON.parse(res.stdout);
+      for (const [id, p] of Object.entries(out.preds || {})) calPreds.set(id, { v: calVersion, at: now, done: !!p.assets, ...p });
+    } catch { console.log('Calendar model unavailable this round:', (res.stderr || res.error?.message || '').slice(-300)); }
+  }
+}
+for (const e of calendar?.events || []) {
+  const p = calPreds.get(calId(e));
+  if (p) e.model = p.assets ? { assets: p.assets } : { above: p.above, below: p.below };
+}
 // Calendar calls: when a US release beats or misses its forecast, the usual reaction is recorded as a forecast
 // for the US dollar, gold and the Nasdaq, then checked against the price an hour later.
-const CAL_HORIZON = 3600e3;
+const CAL_HORIZON = 90 * 60e3; // the calendar model learned the reaction from just before the release to 90 minutes after
 const CAL_RULES = [ // [title pattern, effect when the actual comes in ABOVE forecast (USD, gold, Nasdaq)]
   [/core pce|pce|cpi|ppi|inflation|price index/i, ['up', 'down', 'down']],
   [/non-?farm|nfp|employment change|adp|jolts|job openings/i, ['up', 'down', null]],
@@ -436,6 +457,15 @@ const numOf = v => { const m = String(v ?? '').replace(/,/g, '').match(/-?\d+(\.
 for (const e of calendar?.events || []) {
   const t = Date.parse(e.time), a = numOf(e.actual), f = numOf(e.forecast);
   if (!t || a == null || f == null || a === f || now - t > KEEP) continue;
+  if (e.model?.assets) {
+    for (const [k, m] of Object.entries(e.model.assets)) {
+      const key = `cal:${e.title}:${e.time}:${k}`;
+      if (forecasts.has(key)) continue;
+      const p0 = priceAt(k, t); if (p0 == null) continue;
+      forecasts.set(key, { key, cal: true, model: true, title: `${e.title}: ${e.actual} vs ${e.forecast} forecast`.slice(0, 100), asset: k, dir: m.dir, conf: m.conf, at: t, p0, horizon: CAL_HORIZON });
+    }
+    continue;
+  }
   const rule = CAL_RULES.find(([re]) => re.test(e.title)); if (!rule) continue;
   const eff = a > f ? rule[1] : rule[1].map(flipDir);
   ['usd', 'gold', 'ndq'].forEach((k, i) => {
@@ -575,6 +605,6 @@ await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
 // Everything else (older or small stories), in its own file so the app's regular check stays light
 await writeFile(new URL('data/older.json', ROOT), JSON.stringify({ updated: now, stories: keep.filter(st => !isRecent(st)) }));
 await writeFile(new URL('data/charts.json', ROOT), JSON.stringify(charts));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries(preds), lastFetch }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries(preds), calPreds: Object.fromEntries(calPreds), lastFetch }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);

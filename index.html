@@ -227,7 +227,7 @@ main { touch-action: pan-y; will-change: transform; }
 .sb-g strong { display: block; margin-top: 1px; font: 800 17px var(--ui); letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sb-g strong.beat { color: var(--up); } .sb-g strong.miss { color: var(--down); }
 .sb-g strong.sb-wait { font-size: 12px; font-weight: 600; color: var(--mute); padding-top: 4px; }
-.sb-res { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; background: rgba(0,0,0,.25); font: 500 10.5px var(--mono); color: var(--ink2); }
+.sb-res { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; background: rgba(0,0,0,.25); font: 500 10.5px/1.6 var(--mono); color: var(--ink2); }
 .sb-res i { font-style: normal; } .sb-res i.u { color: var(--up); } .sb-res i.d { color: var(--down); } .sb-res i.m { color: #ffc463; }
 .sb-tag { padding: 2px 8px; border-radius: 999px; font-weight: 700; }
 .sb-tag.beat { color: #04140f; background: var(--up); } .sb-tag.miss { color: #fff; background: #e8324f; } .sb-tag.inline { color: var(--ink); background: rgba(255,255,255,.12); }
@@ -1034,7 +1034,12 @@ function calResult(e) {
   const good = INVERSE_CAL.test(e.title) ? a < f : a > f;
   return { k: good ? 'beat' : 'miss', word: good ? 'Beat' : 'Miss', above: a > f };
 }
+// The calendar model's calls: after the release, its call per market; before it, the reaction either way
+const CAL_SHORT = { usd: 'USD', gold: 'Gold', ndq: 'NDQ', oil: 'Oil' };
+const calCalls = a => ['usd', 'gold', 'ndq', 'oil'].filter(k => a?.[k]).map(k => `${CAL_SHORT[k]} <i class="${a[k].dir === 'up' ? 'u' : 'd'}">${a[k].dir === 'up' ? '↑' : '↓'}</i>${a[k].conf}`).join(' · ');
 function calMoves(e, res) { // what it usually does to USD, gold and the Nasdaq
+  if (e.model?.assets && res?.k !== 'inline') return `Model: ${calCalls(e.model.assets)}`;
+  if (e.model?.above && !e.actual) return `Above forecast: ${calCalls(e.model.above)}<br>Below forecast: ${calCalls(e.model.below)}`;
   const r = PB.find(([re]) => re.test(e.title)); if (!r) return '';
   const eff = res ? (res.above ? r[3] : r[4]) : r[3];
   if (res?.k === 'inline') return '';
