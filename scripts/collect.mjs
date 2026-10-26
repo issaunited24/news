@@ -604,7 +604,7 @@ for (const st of stories) {
 //     here into one balanced next-day call per market. Stories it hasn't analysed (yet) keep the trained model's call.
 const aiState = { analyses: {} };
 if (!FIXTURES) {
-  for (const n of [0, 1, 2]) {
+  for (const n of [0, 1, 2, 3, 4]) {
     try {
       const out = spawnSync('git', ['fetch', '-q', '--depth=1', 'origin', `ai-${n}`], { encoding: 'utf8', timeout: 30000 });
       if (out.status !== 0) continue;

@@ -1458,12 +1458,12 @@ function previewSheet(id) {
   if (s.fx?.ai) fillAI(s);
 }
 /* ---------- AI analysis (story view) ---------- */
-// The AI workers publish their full reasoning to the ai-0/1/2 branches; it's only downloaded when a story is opened.
+// The AI workers publish their full reasoning to the ai-0 ... ai-4 branches; it's only downloaded when a story is opened.
 const AI_SRC = n => `https://raw.githubusercontent.com/issaunited24/news/ai-${n}/analyses.json`;
 let aiCache = null, aiAt = 0;
 async function getAnalyses() {
   if (aiCache && Date.now() - aiAt < 3 * 60e3) return aiCache;
-  const parts = await Promise.all([0, 1, 2].map(n => fetch(`${AI_SRC(n)}?t=${Date.now()}`, { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).catch(() => null)));
+  const parts = await Promise.all([0, 1, 2, 3, 4].map(n => fetch(`${AI_SRC(n)}?t=${Date.now()}`, { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).catch(() => null)));
   const all = {};
   for (const p of parts) for (const [id, a] of Object.entries(p?.analyses || {})) all[id] = a;
   if (parts.some(Boolean)) { aiCache = all; aiAt = Date.now(); }

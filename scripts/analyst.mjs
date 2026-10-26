@@ -1,8 +1,8 @@
 // AI analyst: reads important market stories and reasons about what they mean for gold, the Nasdaq, the US dollar and
 // oil over the next day, then combines that with the trained next-day model and the rules into one balanced call.
 //
-// - The AI is a free open model (Qwen2.5 7B Instruct) running on the robot's own GitHub machines: no key, no cost, no
-//   daily limit (.github/workflows/analyst.yml runs three AI workers next to the news robot). It's slow (a few minutes
+// - The AI is a free open model (Qwen2.5 14B Instruct) running on the robot's own GitHub machines: no key, no cost, no
+//   daily limit (.github/workflows/analyst.yml runs five AI workers next to the news robot). It's slow (a few minutes
 //   per story), so only stories that matter are analysed (importance, trusted outlets, confirmation), most important first.
 // - The AI works through every cause-and-effect channel (safe haven, real yields, the Fed's likely response, the dollar,
 //   inflation expectations, oil, risk mood, positioning, "already priced in") and says which forces win and why.
@@ -13,7 +13,7 @@
 //   including its latest misses, and the ratings are graded against real results in the scorecard.
 
 const API = process.env.AI_URL || 'http://127.0.0.1:8000/v1/chat/completions'; // the local AI server
-export const AI_MODEL = 'Qwen2.5 7B (open model)';
+export const AI_MODEL = 'Qwen2.5 14B (open model)';
 export const ORDER = ['gold', 'ndq', 'usd', 'oil']; // Issa's priority
 const NAMES = { gold: 'Gold (XAU/USD)', ndq: 'Nasdaq 100', usd: 'US Dollar Index (DXY)', oil: 'WTI crude oil' };
 const H = 3600e3;
@@ -94,14 +94,15 @@ Method (do it for every market):
  OIL: supply (OPEC+, sanctions, outages, war near producers or shipping lanes), demand (China, global growth, recession risk), inventories, dollar (inverse), de-escalation (bearish), risk sentiment.
 3. Competing effects. Effects often conflict. Example: a war lifts safe-haven demand for gold, but if it sends oil higher, raises inflation expectations, makes a tighter Fed more likely and strengthens the dollar, those can push gold DOWN. Decide which forces dominate given THIS situation, the current market snapshot (recent moves, yields, positioning, what the market already expects) and the likely policy response. Similar events can move markets differently.
 4. Priced in? If the market already moved on this or it was widely expected, the remaining effect is smaller.
-5. Be honest. If the evidence is balanced or thin, say "unclear" or "neutral" with low conviction. Never force a call. Never invent facts or numbers: use only what is given. Conviction caps: unverified 4, speculation/opinion 3, conflicting 3, headline-only input 6.
+5. Be honest. If the evidence is balanced or thin, say "unclear" or "neutral" with low conviction (0-3). Never force a call. Never invent facts or numbers: use only what is given, with the exact labels given (do not mix up nominal yields, real yields and the Fed funds rate). Conviction caps: unverified 4, speculation/opinion 3, conflicting 3, headline-only input 6. Analysis pieces, previews and question headlines ("Will the Fed...?") are "speculation" or "opinion", not news. Use the full 0-10 range: most stories deserve 2-5; 8+ only for major confirmed surprises.
+6. Consistency. Every factor's "dir" is the direction IT pushes that market ("up" or "down"). Your bias must follow from the factors you list: bullish only if the "up" factors are stronger overall, bearish only if the "down" factors are. "wins" must name the side you chose.
 
 Use the trained model's view and your own recent record as supporting evidence, not as the answer.
 
-Reply with JSON only, no prose outside it. Be concise: every text field max ~15 words, at most 3 factors per side for gold and 2 for the others:
+Reply with JSON only, no prose outside it. Be concise: every text field max ~15 words, gold 3-5 factors, the others 2-4:
 {"status":"confirmed|official|reported|unverified|speculation|opinion|conflicting","credibility":1-5,"importance":1-5,"priced_in":"none|partly|mostly","what":"one sentence: what actually happened","facts":["..."],"claims":["..."],
-"markets":{"gold":{"bias":"bullish|bearish|neutral|unclear","conviction":0-10,"bull":[{"f":"factor","chain":"cause -> effect -> gold","s":"weak|moderate|strong"}],"bear":[same],"wins":"which forces dominate and why","counter":"best argument against your call","flip":"what would change the view"},
-"ndq":{same fields, 1-2 factors each side, short},"usd":{same, short},"oil":{same, short}},
+"markets":{"gold":{"factors":[{"f":"channel name","chain":"cause -> effect -> gold","dir":"up|down","s":"weak|moderate|strong"}],"bias":"bullish|bearish|neutral|unclear","conviction":0-10,"wins":"which side dominates and why","counter":"best argument against your call","flip":"what would change the view"},
+"ndq":{same fields, 2-4 factors},"usd":{same},"oil":{same}},
 "uncertainty":"main unknowns"}`;
 
 function userPrompt(st, ctx, now, text) {
@@ -210,8 +211,17 @@ function tidy(r) {
   const cap = { unverified: 4, speculation: 3, opinion: 3, conflicting: 3 }[out.status] ?? 10;
   for (const k of ORDER) {
     const m = r.markets?.[k]; if (!m) continue;
-    const fac = l => (Array.isArray(l) ? l : []).slice(0, 4).map(x => ({ f: short(x.f, 80), chain: short(x.chain, 160), s: ['weak', 'moderate', 'strong'].includes(x.s) ? x.s : 'moderate' })).filter(x => x.f);
-    out.markets[k] = { bias: BIAS.has(m.bias) ? m.bias : 'unclear', conviction: Math.max(0, Math.min(cap, Math.round(+m.conviction || 0))), bull: fac(m.bull), bear: fac(m.bear), wins: short(m.wins, 220), counter: short(m.counter, 200), flip: short(m.flip, 200) };
+    const W = { weak: 1, moderate: 2, strong: 3 };
+    const fac = (Array.isArray(m.factors) ? m.factors : [...(m.bull || []).map(x => ({ ...x, dir: x.dir || 'up' })), ...(m.bear || []).map(x => ({ ...x, dir: x.dir || 'down' }))])
+      .slice(0, 6).map(x => ({ f: short(x.f, 80), chain: short(x.chain, 160), dir: x.dir === 'down' ? 'down' : 'up', s: W[x.s] ? x.s : 'moderate' })).filter(x => x.f);
+    let bias = BIAS.has(m.bias) ? m.bias : 'unclear', conviction = Math.max(0, Math.min(cap, Math.round(+m.conviction || 0)));
+    // consistency check: the call must follow from its own factors, otherwise it isn't trusted
+    const net = fac.reduce((n, x) => n + (x.dir === 'up' ? 1 : -1) * W[x.s], 0), tot = fac.reduce((n, x) => n + W[x.s], 0);
+    let check = 'ok';
+    if ((bias === 'bullish' && net <= 0) || (bias === 'bearish' && net >= 0)) { bias = 'unclear'; conviction = Math.min(conviction, 2); check = 'contradicts its factors'; }
+    else if (bias === 'bullish' || bias === 'bearish') conviction = Math.min(conviction, Math.round(3 + 7 * Math.abs(net) / Math.max(tot, 1))); // a lopsided case can be confident, a close one can't
+    if (bias === 'neutral' || bias === 'unclear') conviction = Math.min(conviction, 3);
+    out.markets[k] = { bias, conviction, factors: fac, bull: fac.filter(x => x.dir === 'up'), bear: fac.filter(x => x.dir === 'down'), wins: check === 'ok' ? short(m.wins, 220) : `The AI's factors didn't support its own call, so this is treated as unclear.`, counter: short(m.counter, 200), flip: short(m.flip, 200), check };
   }
   return out;
 }
@@ -252,8 +262,12 @@ export function pickStories(stories, analyses, now, shard = 0, shards = 1) {
     return !prev.redo && ['unverified', 'reported', 'conflicting'].includes(prev.res.status) && (outlets >= prev.outlets + 2 || (st.breaking && !prev.breaking));
   }).sort((a, b) => priority(b, now) - priority(a, now));
 }
+const SPECULATIVE = /\?\s*(\(|$)|\b(could|might|may|preview|what to expect|outlook|forecast|prediction|opinion|analysis|explainer|why |how )\b/i;
 export async function analyseOne(st, ctx, now, getPage) {
   const text = await articleBody(st, getPage);
-  const res = tidy(await callModel(SYSTEM, userPrompt(st, ctx, now, text)));
+  const raw = await callModel(SYSTEM, userPrompt(st, ctx, now, text));
+  // a question, preview or analysis headline is speculation however the AI labels it
+  if (SPECULATIVE.test(st.title) && !['official', 'opinion', 'speculation', 'unverified', 'conflicting'].includes(raw.status)) raw.status = 'speculation';
+  const res = tidy(raw);
   return { id: st.id, at: now, model: AI_MODEL, res, ev: st.ev, outlets: (st.sources || []).length + 1, breaking: !!st.breaking, full: text.full, title: st.title };
 }
