@@ -26,6 +26,7 @@ jobs:
         run: |
           mkdir -p out live && git fetch -q --depth=1 origin live && git show FETCH_HEAD:news.json > live/news4.json && git show FETCH_HEAD:charts.json > live/charts.json
           node tools/aidebug.mjs > out/aidebug.txt 2>&1 || true
+          curl -sS -i -X POST https://models.github.ai/inference/chat/completions -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"model":"openai/gpt-4.1-mini","messages":[{"role":"user","content":"Say hi"}],"max_tokens":10}' > out/curl.txt 2>&1 || true
           node tools/aitest.mjs "$PWD/live" > out/aitest.txt 2>&1 || true
       - name: Publish
         if: always()

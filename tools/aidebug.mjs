@@ -1,12 +1,6 @@
 const token = process.env.TOKEN;
-async function t(label, url, body, extra = {}) {
-  try {
-    const res = await fetch(url, { method: 'POST', redirect: 'manual', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json', 'X-GitHub-Api-Version': '2022-11-28', ...extra }, body: JSON.stringify(body) });
-    const txt = await res.text();
-    console.log(label, res.status, res.headers.get('location') || '', res.headers.get('content-type'), '|', txt.slice(0, 300).replace(/\n/g, ' '));
-  } catch (e) { console.log(label, 'ERR', e.message); }
-}
-const msg = [{ role: 'user', content: 'Reply with JSON {"a":1}' }];
-await t('github.ai', 'https://models.github.ai/inference/chat/completions', { model: 'openai/gpt-4.1-mini', messages: msg, max_tokens: 20 });
-await t('github.ai-org', `https://models.github.ai/orgs/issaunited24/inference/chat/completions`, { model: 'openai/gpt-4.1-mini', messages: msg, max_tokens: 20 });
-await t('azure', 'https://models.inference.ai.azure.com/chat/completions', { model: 'gpt-4o-mini', messages: msg, max_tokens: 20 });
+const res = await fetch('https://models.github.ai/inference/chat/completions', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'openai/gpt-4.1-mini', messages: [{ role: 'user', content: 'Say hi' }], max_tokens: 10 }) });
+console.log(res.status, JSON.stringify([...res.headers]), (await res.text()).slice(0, 200));
+const c = await fetch('https://models.github.ai/catalog/models', { headers: { Authorization: `Bearer ${token}` } });
+console.log('catalog', c.status, JSON.stringify([...c.headers]).slice(0, 400), (await c.text()).slice(0, 300));
+console.log('env proxy:', process.env.HTTPS_PROXY || process.env.https_proxy || 'none');
