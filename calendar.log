@@ -1,0 +1,94 @@
+Calendar history from TradingView...
+  1558 US releases with actual and forecast
+gold: uses simple rule (beat the model); tested accuracy model 0.521, simple rule 0.5285996055226825; by rating {3: {'n': 254, 'hit': 0.488}}
+usd: uses simple rule (beat the model); tested accuracy model 0.527, simple rule 0.561822125813449; by rating {2: {'n': 139, 'hit': 0.525}, 3: {'n': 34, 'hit': 0.559}, 4: {'n': 15, 'hit': 0.6}, 5: {'n': 14, 'hit': 0.643}, 6: {'n': 29, 'hit': 0.552}}
+ndq: uses model (lean, C=0.03); tested accuracy model 0.579, simple rule 0.5192307692307693; by rating {1: {'n': 41, 'hit': 0.634}, 2: {'n': 24, 'hit': 0.583}, 3: {'n': 28, 'hit': 0.643}, 4: {'n': 141, 'hit': 0.553}}
+oil: uses model (lean, C=0.01); tested accuracy model 0.437, simple rule None; by rating {1: {'n': 254, 'hit': 0.469}}
+{
+ "trained": "2026-10-26 19:26 UTC",
+ "releases": 1558,
+ "test_from": "2026-01-26",
+ "assets": {
+  "gold": {
+   "uses": "simple rule (beat the model)",
+   "test_accuracy": 0.529,
+   "model_accuracy": 0.521,
+   "rule_accuracy": 0.529,
+   "test_count": 507,
+   "by_rating": {
+    "3": {
+     "n": 254,
+     "hit": 0.488
+    }
+   }
+  },
+  "usd": {
+   "uses": "simple rule (beat the model)",
+   "test_accuracy": 0.562,
+   "model_accuracy": 0.527,
+   "rule_accuracy": 0.562,
+   "test_count": 461,
+   "by_rating": {
+    "2": {
+     "n": 139,
+     "hit": 0.525
+    },
+    "3": {
+     "n": 34,
+     "hit": 0.559
+    },
+    "4": {
+     "n": 15,
+     "hit": 0.6
+    },
+    "5": {
+     "n": 14,
+     "hit": 0.643
+    },
+    "6": {
+     "n": 29,
+     "hit": 0.552
+    }
+   }
+  },
+  "ndq": {
+   "uses": "model (lean, C=0.03)",
+   "test_accuracy": 0.579,
+   "model_accuracy": 0.579,
+   "rule_accuracy": 0.519,
+   "test_count": 468,
+   "by_rating": {
+    "1": {
+     "n": 41,
+     "hit": 0.634
+    },
+    "2": {
+     "n": 24,
+     "hit": 0.583
+    },
+    "3": {
+     "n": 28,
+     "hit": 0.643
+    },
+    "4": {
+     "n": 141,
+     "hit": 0.553
+    }
+   }
+  },
+  "oil": {
+   "uses": "model (lean, C=0.01)",
+   "test_accuracy": 0.437,
+   "model_accuracy": 0.437,
+   "rule_accuracy": null,
+   "test_count": 508,
+   "by_rating": {
+    "1": {
+     "n": 254,
+     "hit": 0.469
+    }
+   }
+  }
+ }
+}
+Calendar model done in 56s

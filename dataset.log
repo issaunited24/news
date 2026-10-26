@@ -1,0 +1,99 @@
+Store: 120223 headlines, 2069 searches done, 1974 openings, 126679 texts read
+Google News: 3749 searches to do
+  100 searches, 5709 headlines
+  200 searches, 10924 headlines
+  300 searches, 16828 headlines
+  400 searches, 23399 headlines
+  500 searches, 29401 headlines
+  600 searches, 35512 headlines
+  700 searches, 41178 headlines
+  800 searches, 46831 headlines
+  900 searches, 52348 headlines
+  1000 searches, 57940 headlines
+  1100 searches, 63880 headlines
+  1200 searches, 69523 headlines
+  1300 searches, 74518 headlines
+  1400 searches, 79485 headlines
+  1500 searches, 84257 headlines
+  1600 searches, 88991 headlines
+  1700 searches, 93736 headlines
+  1800 searches, 98566 headlines
+  1900 searches, 103126 headlines
+  2000 searches, 107628 headlines
+  2100 searches, 112176 headlines
+  2200 searches, 116981 headlines
+  2300 searches, 121956 headlines
+  2400 searches, 126506 headlines
+  2500 searches, 131362 headlines
+Google News: time budget used, the rest next run
+Google News: 133564 headlines from 2549 searches this run; 237989 headlines in the store
+GDELT: 2657 searches to do, 4582 already done
+  retry 1: HTTP Error 429: Too Many Requests
+  retry 2: HTTP Error 429: Too Many Requests
+  retry 1: HTTP Error 429: Too Many Requests
+  retry 2: HTTP Error 429: Too Many Requests
+  retry 1: HTTP Error 429: Too Many Requests
+  retry 2: HTTP Error 429: Too Many Requests
+GDELT: refusing repeatedly, stopping for this run
+/home/runner/work/news/news/scripts/ml/gdelt.py:124: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  df = pd.concat([store, new], ignore_index=True) if len(store) else new
+GDELT: 0 new headlines this run, 237989 in total, from 2019-07-08
+Prices...
+  5-minute archive: gold from 2026-10-20, usd from 2026-10-20, ndq from 2026-10-20, oil from 2026-10-20, vix from 2026-10-19, tnx from 2026-10-19
+  gold: 13667 hourly bars from 2024-06-04, 2514 daily from 2016-10-26
+  usd: 14222 hourly bars from 2024-06-04, 2514 daily from 2016-10-26
+  ndq: 13626 hourly bars from 2024-06-04, 2515 daily from 2016-10-26
+  oil: 13490 hourly bars from 2024-06-04, 2514 daily from 2016-10-26
+  positioning: gold 521 weeks, oil 521 weeks, ndq 521 weeks, usd 521 weeks
+Rows by source: gnews 235886, archive 4407, gdelt 2053, live 265
+Article openings: 0 to fetch, 1974 already have
+Labels and market mood...
+/home/runner/work/news/news/scripts/ml/market_data.py:145: RuntimeWarning: invalid value encountered in log
+  c[f'dv20_{k}'] = float(np.std(np.diff(np.log(v[i - 20:i + 1]))) * 100)
+242586 labelled headlines (134808 with hourly labels, 240 from the app)
+Reading the headlines and openings...
+  reading 118370 new texts with FinBERT and the meaning model...
+    FinBERT 0/118370
+    FinBERT 3200/118370
+    FinBERT 6400/118370
+    FinBERT 9600/118370
+    FinBERT 12800/118370
+    FinBERT 16000/118370
+    FinBERT 19200/118370
+    FinBERT 22400/118370
+    FinBERT 25600/118370
+    FinBERT 28800/118370
+    FinBERT 32000/118370
+    FinBERT 35200/118370
+    FinBERT 38400/118370
+    FinBERT 41600/118370
+    FinBERT 44800/118370
+    FinBERT 48000/118370
+    FinBERT 51200/118370
+    FinBERT 54400/118370
+    FinBERT 57600/118370
+    FinBERT 60800/118370
+    FinBERT 64000/118370
+    FinBERT 67200/118370
+    FinBERT 70400/118370
+    FinBERT 73600/118370
+    FinBERT 76800/118370
+    FinBERT 80000/118370
+    FinBERT 83200/118370
+    FinBERT 86400/118370
+    FinBERT 89600/118370
+    FinBERT 92800/118370
+    FinBERT 96000/118370
+    FinBERT 99200/118370
+    FinBERT 102400/118370
+    FinBERT 105600/118370
+    FinBERT 108800/118370
+    FinBERT 112000/118370
+    FinBERT 115200/118370
+  reading 58 new texts with FinBERT and the meaning model...
+Rules, "is it new?", sources...
+  gold: 113988 with 4-hour labels (median move 0.229%), 239693 with 1-day labels
+  usd: 113435 with 4-hour labels (median move 0.082%), 239693 with 1-day labels
+  ndq: 114040 with 4-hour labels (median move 0.184%), 239693 with 1-day labels
+  oil: 113780 with 4-hour labels (median move 0.634%), 239693 with 1-day labels
+Stage 1 done in 251 min
