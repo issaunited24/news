@@ -626,7 +626,7 @@ for (const st of stories) {
     st.fx.ai = { status: a.res.status, cred: a.res.credibility, priced: a.res.priced_in, at: a.at, full: a.full || undefined, from: a.id !== st.id ? a.id : undefined };
     // the card's one-line reason comes from the AI's gold verdict, so it never contradicts the call shown
     const g = a.res.markets?.gold;
-    if (g?.wins) st.fx.why = `${{ bullish: 'Gold bullish', bearish: 'Gold bearish', neutral: 'Gold neutral', unclear: 'Gold unclear' }[g.bias] || 'Gold'}: ${g.wins}`.slice(0, 180);
+    if (g?.wins) st.fx.why = `AI on gold (${g.bias}): ${g.wins}`.slice(0, 180);
     st.fx.model = true;
     if (a.res.importance >= 4 && st.fx.impact !== 'high') st.fx.impact = a.res.importance >= 5 ? 'high' : 'medium';
   }
