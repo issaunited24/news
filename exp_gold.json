@@ -1,0 +1,276 @@
+{
+ "moments": 631,
+ "holdout_from": "2026-03-17",
+ "results": [
+  {
+   "horizon": "90m",
+   "part": "all",
+   "rule": "S1 every surprise",
+   "n": 560,
+   "rule_acc": 53.8,
+   "rule_ci": [
+    49.6,
+    57.8
+   ],
+   "always_up": 54.8,
+   "momentum": 50.8,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "90m",
+   "part": "all",
+   "rule": "S2 big surprises (|z|>=1)",
+   "n": 274,
+   "rule_acc": 50.0,
+   "rule_ci": [
+    44.1,
+    55.9
+   ],
+   "always_up": 55.8,
+   "momentum": 55.3,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "90m",
+   "part": "all",
+   "rule": "S3 big inflation/jobs/Fed",
+   "n": 80,
+   "rule_acc": 56.2,
+   "rule_ci": [
+    45.3,
+    66.6
+   ],
+   "always_up": 56.2,
+   "momentum": 50.6,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "90m",
+   "part": "holdout",
+   "rule": "S1 every surprise",
+   "n": 225,
+   "rule_acc": 52.9,
+   "rule_ci": [
+    46.4,
+    59.3
+   ],
+   "always_up": 48.4,
+   "momentum": 56.0,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "90m",
+   "part": "holdout",
+   "rule": "S2 big surprises (|z|>=1)",
+   "n": 105,
+   "rule_acc": 49.5,
+   "rule_ci": [
+    40.1,
+    58.9
+   ],
+   "always_up": 46.7,
+   "momentum": 57.8,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "90m",
+   "part": "holdout",
+   "rule": "S3 big inflation/jobs/Fed",
+   "n": 31,
+   "rule_acc": 61.3,
+   "rule_ci": [
+    43.8,
+    76.3
+   ],
+   "always_up": 48.4,
+   "momentum": 61.3,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "close",
+   "part": "all",
+   "rule": "S1 every surprise",
+   "n": 522,
+   "rule_acc": 53.3,
+   "rule_ci": [
+    49.0,
+    57.5
+   ],
+   "always_up": 51.9,
+   "momentum": 48.7,
+   "beats_both": true,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "close",
+   "part": "all",
+   "rule": "S2 big surprises (|z|>=1)",
+   "n": 263,
+   "rule_acc": 51.7,
+   "rule_ci": [
+    45.7,
+    57.7
+   ],
+   "always_up": 53.2,
+   "momentum": 50.6,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "close",
+   "part": "all",
+   "rule": "S3 big inflation/jobs/Fed",
+   "n": 80,
+   "rule_acc": 57.5,
+   "rule_ci": [
+    46.6,
+    67.7
+   ],
+   "always_up": 53.8,
+   "momentum": 45.6,
+   "beats_both": true,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "close",
+   "part": "holdout",
+   "rule": "S1 every surprise",
+   "n": 213,
+   "rule_acc": 50.2,
+   "rule_ci": [
+    43.6,
+    56.9
+   ],
+   "always_up": 43.2,
+   "momentum": 49.2,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "close",
+   "part": "holdout",
+   "rule": "S2 big surprises (|z|>=1)",
+   "n": 104,
+   "rule_acc": 50.0,
+   "rule_ci": [
+    40.6,
+    59.4
+   ],
+   "always_up": 42.3,
+   "momentum": 48.5,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "close",
+   "part": "holdout",
+   "rule": "S3 big inflation/jobs/Fed",
+   "n": 33,
+   "rule_acc": 63.6,
+   "rule_ci": [
+    46.6,
+    77.8
+   ],
+   "always_up": 36.4,
+   "momentum": 45.5,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "24h",
+   "part": "all",
+   "rule": "S1 every surprise",
+   "n": 484,
+   "rule_acc": 52.7,
+   "rule_ci": [
+    48.2,
+    57.1
+   ],
+   "always_up": 53.1,
+   "momentum": 43.3,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "24h",
+   "part": "all",
+   "rule": "S2 big surprises (|z|>=1)",
+   "n": 219,
+   "rule_acc": 53.0,
+   "rule_ci": [
+    46.4,
+    59.5
+   ],
+   "always_up": 54.8,
+   "momentum": 42.2,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "24h",
+   "part": "all",
+   "rule": "S3 big inflation/jobs/Fed",
+   "n": 60,
+   "rule_acc": 60.0,
+   "rule_ci": [
+    47.4,
+    71.4
+   ],
+   "always_up": 53.3,
+   "momentum": 40.7,
+   "beats_both": true,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "24h",
+   "part": "holdout",
+   "rule": "S1 every surprise",
+   "n": 194,
+   "rule_acc": 50.0,
+   "rule_ci": [
+    43.0,
+    57.0
+   ],
+   "always_up": 51.5,
+   "momentum": 47.4,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "24h",
+   "part": "holdout",
+   "rule": "S2 big surprises (|z|>=1)",
+   "n": 81,
+   "rule_acc": 48.1,
+   "rule_ci": [
+    37.6,
+    58.9
+   ],
+   "always_up": 53.1,
+   "momentum": 46.2,
+   "beats_both": false,
+   "ci_above_50": false
+  },
+  {
+   "horizon": "24h",
+   "part": "holdout",
+   "rule": "S3 big inflation/jobs/Fed",
+   "n": 23,
+   "rule_acc": 60.9,
+   "rule_ci": [
+    40.8,
+    77.8
+   ],
+   "always_up": 47.8,
+   "momentum": 43.5,
+   "beats_both": true,
+   "ci_above_50": false
+  }
+ ]
+}
