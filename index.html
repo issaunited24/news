@@ -490,7 +490,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.28'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.29'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1071,7 +1071,7 @@ function scorecardHTML() {
     ${total ? `<div class="sc-g">${cell('GOLD', sc.assets.gold)}${cell('USD', sc.assets.usd)}${cell('NASDAQ', sc.assets.ndq)}${cell('OIL', sc.assets.oil || { hit: 0, miss: 0 })}${cell('CONF 7+', sc.high)}</div>`
       : `<p class="sc-empty">Collecting results. Each call is checked ${sc.horizonH} hours after the news${sc.pending ? ` · ${sc.pending} waiting` : ''}.</p>`}
     ${sc.ai && sc.ai.hit + sc.ai.miss ? `<p class="sc-empty">AI-analysed calls: ${pct(sc.ai)} right, ${sc.ai.hit}/${sc.ai.hit + sc.ai.miss}.</p>` : ''}
-    ${sc.aiBacktest?.markets?.gold?.n >= 30 ? `<p class="sc-empty">AI tested on past news (2025–26): ${['gold', 'ndq', 'usd', 'oil'].filter(k => sc.aiBacktest.markets[k]?.n >= 30).map(k => `${{ gold: 'Gold', ndq: 'NDQ', usd: 'USD', oil: 'Oil' }[k]} ${Math.round(sc.aiBacktest.markets[k].hit / sc.aiBacktest.markets[k].n * 100)}% (${sc.aiBacktest.markets[k].n})`).join(' · ')}.</p>` : ''}
+    ${sc.aiBacktest?.markets?.gold?.n >= 30 ? `<p class="sc-empty">AI tested on past news (2025–26): ${['gold', 'ndq', 'usd', 'oil'].filter(k => sc.aiBacktest.markets[k]?.n >= 30).map(k => `${{ gold: 'Gold', ndq: 'NDQ', usd: 'USD', oil: 'Oil' }[k]} ${Math.round(sc.aiBacktest.markets[k].hit / sc.aiBacktest.markets[k].n * 100)}%${sc.aiBacktest.markets[k].lo != null ? ` (likely ${sc.aiBacktest.markets[k].lo}–${sc.aiBacktest.markets[k].hi}%)` : ''}`).join(' · ')}. 50% = a coin flip; until a range is above 50% it isn't proven.</p>` : ''}
     ${sc.cal ? `<p class="sc-empty">Includes calendar calls (a beat or miss checked 1 hour after the release): ${sc.cal.hit + sc.cal.miss ? `${pct(sc.cal)} right, ${sc.cal.hit}/${sc.cal.hit + sc.cal.miss}` : 'waiting for the next release'}.</p>` : ''}
   </div>`;
 }

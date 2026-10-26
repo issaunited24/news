@@ -354,21 +354,32 @@ export async function analyseOne(st, ctx, now, getPage) {
 // For each market: how often the AI's bullish/bearish calls matched the next day's move, overall and by how confident
 // it was. The AI's weight in the blend follows: more weight where it has proven right, less where it hasn't.
 export const convBucket = c => (c >= 7 ? '7-10' : c >= 4 ? '4-6' : '1-3');
+// Day-clustered: headlines from the same day share one market outcome, so each day counts once (its share of right
+// calls), and confidence ranges use the number of days, not headlines.
+const wilson = (p, n, z = 1.96) => { if (!n) return [null, null]; const d = 1 + z * z / n, c = (p + z * z / (2 * n)) / d, w = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d; return [c - w, c + w]; };
 export function gradeBacktest(results) {
   const out = { n: results.length, markets: {}, weights: {} };
   for (const k of ORDER) {
     const g = { n: 0, hit: 0, byConv: {} };
+    const days = new Map(), strongDays = new Map();
     for (const r of results) {
       const m = r.markets?.[k], y = r.labels?.[k]?.d1;
       if (!m || (m.bias !== 'bullish' && m.bias !== 'bearish') || y == null || Math.abs(y) < 0.02) continue;
-      const ok = (m.bias === 'bullish') === (y > 0), b = convBucket(m.conviction);
+      const ok = (m.bias === 'bullish') === (y > 0), b = convBucket(m.conviction), d = Math.floor(r.ts / 86400);
       g.n++; g.hit += ok ? 1 : 0;
       (g.byConv[b] ||= { n: 0, hit: 0 }).n++; if (ok) g.byConv[b].hit++;
+      const add = (map) => { const x = map.get(d) || [0, 0]; x[0] += ok ? 1 : 0; x[1]++; map.set(d, x); };
+      add(days); if (m.conviction >= 4) add(strongDays);
     }
+    const dayRate = map => { const v = [...map.values()].map(([h, n]) => h / n); return { days: v.length, p: v.length ? v.reduce((a, x) => a + x, 0) / v.length : null }; };
+    const all = dayRate(days), st = dayRate(strongDays);
+    [g.lo, g.hi] = wilson(all.p ?? 0.5, all.days).map(x => (x == null ? null : Math.round(x * 100)));
+    g.days = all.days;
     out.markets[k] = g;
-    // weight from the calls that move the final call (conviction 4+), once there are enough of them
-    const strong = ['4-6', '7-10'].reduce((t, b) => ({ n: t.n + (g.byConv[b]?.n || 0), hit: t.hit + (g.byConv[b]?.hit || 0) }), { n: 0, hit: 0 });
-    out.weights[k] = strong.n >= 120 ? Math.max(0.15, Math.min(0.8, 0.55 + (strong.hit / strong.n - 0.53) * 6)) : 0.55;
+    // The AI's weight only moves when the evidence is statistically clear (its 95% range over days excludes a coin flip)
+    // on its confident calls (4/10+), with at least 150 days behind it. Otherwise it stays at the starting 55%.
+    const [lo, hi] = wilson(st.p ?? 0.5, st.days);
+    out.weights[k] = st.days >= 150 && lo > 0.5 ? Math.min(0.8, 0.55 + (st.p - 0.53) * 6) : st.days >= 150 && hi < 0.5 ? 0.15 : 0.55;
   }
   return out;
 }
