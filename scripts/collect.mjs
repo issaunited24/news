@@ -506,6 +506,7 @@ if (!FIXTURES && calVersion && existsSync(CAL_MODEL) && calendar?.events?.length
 for (const e of calendar?.events || []) {
   const p = calPreds.get(calId(e));
   if (p) e.model = p.assets ? { assets: p.assets } : { above: p.above, below: p.below };
+  if (p?.z != null) e.z = p.z; // the surprise in "normal surprises" for this release (actual - forecast, scaled)
 }
 // Calendar calls: when a US release beats or misses its forecast, the usual reaction is recorded as a forecast
 // for the US dollar, gold and the Nasdaq, then checked against the price an hour later.

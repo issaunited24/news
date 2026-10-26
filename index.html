@@ -486,7 +486,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.23'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.24'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1237,7 +1237,7 @@ function calendarHTML(now) {
       <div class="sb-top"><span class="sb-imp">${x.impact === 'high' ? 'HIGH IMPACT' : 'MEDIUM'}</span><span class="sb-when">${timeFmt.format(x.t)}</span></div>
       <div class="sb-n">${esc(x.title)}</div>
       <div class="sb-g"><div><small>ACTUAL</small>${x.actual ? `<strong class="${r ? r.k : ''}">${esc(x.actual)}</strong>` : `<strong class="sb-wait">${x.t < now ? 'Coming in…' : 'Waiting'}</strong>`}</div><div><small>FORECAST</small><strong>${esc(x.forecast || '—')}</strong></div><div><small>PREVIOUS</small><strong>${esc(x.previous || '—')}</strong></div></div>
-      ${r || mv ? `<div class="sb-res">${r ? `<span class="sb-tag ${r.k}">${r.word}</span>` : ''}<span>${mv}</span></div>` : ''}
+      ${r || mv ? `<div class="sb-res">${r ? `<span class="sb-tag ${r.k}">${r.word}${x.z != null && r.k !== 'inline' ? ` · ${Math.abs(x.z) < 0.5 ? 'tiny' : Math.abs(x.z) < 1 ? 'small' : Math.abs(x.z) < 2 ? 'big' : 'huge'} surprise` : ''}</span>` : ''}<span>${mv}</span></div>` : ''}
     </div>`;
   }).join('')}`).join('');
 }

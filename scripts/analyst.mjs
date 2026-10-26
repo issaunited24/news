@@ -19,15 +19,20 @@ const NAMES = { gold: 'Gold (XAU/USD)', ndq: 'Nasdaq 100', usd: 'US Dollar Index
 const H = 3600e3;
 
 /* ---------- Extra market context: yields, real yields, inflation expectations, Fed expectations, fear gauge ---------- */
+const day = ms => new Date(ms).toISOString().slice(0, 10);
 async function yahooDaily(sym, getText) {
-  const j = JSON.parse(await getText(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=1mo&interval=1d`));
-  const r = j.chart.result[0], c = r.indicators.quote[0].close.filter(v => v != null);
-  return { last: c[c.length - 1], d1: c[c.length - 2], d5: c[Math.max(0, c.length - 6)], d20: c[0] };
+  const j = JSON.parse(await getText(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=2mo&interval=1d`));
+  const r = j.chart.result[0], q = r.indicators.quote[0].close;
+  const byDay = {};
+  r.timestamp.forEach((t, i) => { if (q[i] != null) byDay[day(t * 1000)] = q[i]; });
+  const c = Object.values(byDay);
+  return { last: c[c.length - 1], d1: c[c.length - 2], d5: c[Math.max(0, c.length - 6)], d20: c[Math.max(0, c.length - 21)], byDay };
 }
 async function fredDaily(id, getText) {
   const csv = await getText(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}`);
-  const v = csv.trim().split('\n').slice(1).map(l => parseFloat(l.split(',')[1])).filter(x => !isNaN(x));
-  return { last: v[v.length - 1], d5: v[Math.max(0, v.length - 6)], d20: v[Math.max(0, v.length - 21)] };
+  const rows = csv.trim().split('\n').slice(1).map(l => l.split(',')).filter(r => !isNaN(parseFloat(r[1]))).slice(-60);
+  const v = rows.map(r => parseFloat(r[1]));
+  return { last: v[v.length - 1], d5: v[Math.max(0, v.length - 6)], d20: v[Math.max(0, v.length - 21)], byDay: Object.fromEntries(rows.map(r => [r[0], parseFloat(r[1])])) };
 }
 export async function getMacro(prev, now, getText) {
   if (prev && now - prev.at < 30 * 60e3) return prev;
@@ -66,10 +71,38 @@ function snapshot(ctx) {
   return lines.join('\n');
 }
 
+// how big a release surprise was, compared with that release's usual surprises (z-score from the calendar model)
+const surpriseWord = z => { const a = Math.abs(z); return a < 0.5 ? 'in line' : a < 1 ? 'small' : a < 2 ? 'large' : 'very large'; };
+// Regime check: how gold has actually been moving with the dollar, yields, the Nasdaq and oil over the last 20 trading
+// days (these links change over time; the AI should reason with the current one, not the textbook one)
+function corr(a, b) {
+  const n = a.length; if (n < 8) return null;
+  const ma = a.reduce((x, y) => x + y, 0) / n, mb = b.reduce((x, y) => x + y, 0) / n;
+  let sab = 0, saa = 0, sbb = 0;
+  for (let i = 0; i < n; i++) { sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) ** 2; sbb += (b[i] - mb) ** 2; }
+  return saa && sbb ? sab / Math.sqrt(saa * sbb) : null;
+}
+const linkWord = c => (c == null ? 'n/a' : c <= -0.4 ? 'strongly opposite' : c <= -0.15 ? 'somewhat opposite' : c < 0.15 ? 'no clear link' : c < 0.4 ? 'somewhat together' : 'strongly together');
+export function regimeText(ctx) {
+  const daily = k => Object.fromEntries((ctx.charts?.assets?.[k]?.ranges?.['1Y']?.bars || []).map(b => [day(b[0] * 1000), b[4]]));
+  const changes = (m, days, pct) => { const out = []; for (let i = 1; i < days.length; i++) { const a = m[days[i - 1]], b = m[days[i]]; out.push(a != null && b != null ? (pct ? (b / a - 1) * 100 : b - a) : null); } return out; };
+  const gold = daily('gold');
+  const days = Object.keys(gold).sort().slice(-21);
+  if (days.length < 10) return '';
+  const g = changes(gold, days, true);
+  const pair = (other, pct) => { const o = changes(other || {}, days, pct); const idx = g.map((x, i) => (x != null && o[i] != null ? i : -1)).filter(i => i >= 0); return corr(idx.map(i => g[i]), idx.map(i => o[i])); };
+  const m = ctx.macro?.items || {};
+  const links = [['the dollar index', pair(daily('usd'), true)], ['the US 10y yield', pair(m.us10y?.byDay, false)], ['the 10y real yield', pair(m.real10y?.byDay, false)],
+    ['the Nasdaq', pair(daily('ndq'), true)], ['oil', pair(daily('oil'), true)]];
+  const vol = Math.sqrt(g.filter(x => x != null).reduce((a, x) => a + x * x, 0) / Math.max(1, g.filter(x => x != null).length));
+  return `HOW GOLD HAS BEEN MOVING (last 20 trading days, correlation of daily moves; textbook: opposite to the dollar and real yields)\n` +
+    links.map(([n, c]) => `gold vs ${n}: ${c == null ? 'n/a' : (Math.round(c * 100) / 100).toFixed(2)} (${linkWord(c)})`).join('; ') + `. Gold's typical daily move: ${vol.toFixed(2)}%.`;
+}
+
 function calendarText(ctx, now) {
   const ev = (ctx.calendar?.events || []).map(e => ({ ...e, t: Date.parse(e.time) })).filter(e => e.impact === 'high' || e.impact === 'medium');
   const past = ev.filter(e => e.t <= now && e.t > now - 36 * H && e.actual != null).slice(-8)
-    .map(e => `${e.title}: actual ${e.actual} vs forecast ${e.forecast ?? 'n/a'} (prev ${e.previous ?? 'n/a'}), ${Math.round((now - e.t) / H)}h ago`);
+    .map(e => `${e.title}: actual ${e.actual} vs forecast ${e.forecast ?? 'n/a'} (prev ${e.previous ?? 'n/a'})${e.z != null ? `, surprise ${e.z > 0 ? '+' : ''}${e.z} normal surprises (${surpriseWord(e.z)})` : ''}, ${Math.round((now - e.t) / H)}h ago`);
   const next = ev.filter(e => e.t > now && e.t < now + 48 * H).slice(0, 8).map(e => `${e.title} in ${Math.round((e.t - now) / H)}h (forecast ${e.forecast ?? 'n/a'})`);
   return `Recent US releases:\n${past.join('\n') || 'none'}\nComing up (48h):\n${next.join('\n') || 'none'}`;
 }
@@ -92,7 +125,7 @@ Method (do it for every market):
  NASDAQ: yields and Fed path (higher = bearish for long-duration tech), AI/tech earnings and capex, risk sentiment, regulation, tariffs and China chip curbs, oil and inflation, dollar.
  USD: rate differentials (Fed vs ECB, BoJ, BoE), US data surprises, safe-haven demand in global stress, risk-on weakens USD, tariffs (often short-term USD up), US fiscal/political risk (USD down), positioning.
  OIL: supply (OPEC+, sanctions, outages, war near producers or shipping lanes), demand (China, global growth, recession risk), inventories, dollar (inverse), de-escalation (bearish), risk sentiment.
-3. Competing effects. Effects often conflict. Example: a war lifts safe-haven demand for gold, but if it sends oil higher, raises inflation expectations, makes a tighter Fed more likely and strengthens the dollar, those can push gold DOWN. Decide which forces dominate given THIS situation, the current market snapshot (recent moves, yields, positioning, what the market already expects) and the likely policy response. Similar events can move markets differently.
+3. Competing effects. Use the "how gold has been moving" line: if gold has recently moved WITH the dollar or yields instead of against them, the textbook link is not working right now, so weigh it less. Effects often conflict. Example: a war lifts safe-haven demand for gold, but if it sends oil higher, raises inflation expectations, makes a tighter Fed more likely and strengthens the dollar, those can push gold DOWN. Decide which forces dominate given THIS situation, the current market snapshot (recent moves, yields, positioning, what the market already expects) and the likely policy response. Similar events can move markets differently.
 4. Priced in? If the market already moved on this or it was widely expected, the remaining effect is smaller.
 5. Be honest. If the evidence is balanced or thin, say "unclear" or "neutral" with low conviction (0-3). Never force a call. Never invent facts or numbers: use only what is given, with the exact labels given (do not mix up nominal yields, real yields and the Fed funds rate). Conviction caps: unverified 4, speculation/opinion 3, conflicting 3, headline-only input 6. Analysis pieces, previews and question headlines ("Will the Fed...?") are "speculation" or "opinion", not news. Use the full 0-10 range: most stories deserve 2-5; 8+ only for major confirmed surprises.
 6. Consistency. Every factor's "dir" is the direction IT pushes that market ("up" or "down"). Your bias must follow from the factors you list: bullish only if the "up" factors are stronger overall, bearish only if the "down" factors are. "wins" must name the side you chose.
@@ -122,6 +155,7 @@ ${text.body || '(headline only)'}
 
 MARKET SNAPSHOT (now)
 ${snapshot(ctx)}
+${regimeText(ctx)}
 
 ${calendarText(ctx, now)}
 
