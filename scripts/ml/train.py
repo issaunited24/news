@@ -28,19 +28,18 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
 from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
-from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+from calib import RATING_STEPS, check  # noqa: E402
 from features import assemble  # noqa: E402
 from market_data import ASSETS, CONTEXT_KEYS, DAILY_KEYS  # noqa: E402
 from positioning import KEYS as POS_KEYS  # noqa: E402
 
 DATA, OUT = 'data/ml/dataset', 'model'
-RATING_STEPS = [0.50, 0.53, 0.56, 0.59, 0.62, 0.65, 0.68, 0.71, 0.74, 0.77]
 HORIZONS = {'1h': ('r1', 1), '4h': ('r4', 4), '1d': ('rD', 24)}
 BASE = {'hourly': ['headline', 'rules', 'mood'], 'daily': ['headline', 'rules', 'dmood']}
 OPTIONAL = ['fresh', 'source', 'opening', 'positioning']
@@ -51,14 +50,6 @@ START = time.time()
 
 def log(*a):
     print(f'[{(time.time() - START) / 60:5.1f}m]', *a, flush=True)
-
-
-def rating_of(acc):
-    r = 1
-    for i, s in enumerate(RATING_STEPS):
-        if acc >= s:
-            r = i + 1
-    return r
 
 
 def make_model(kind, C, emb_blocks):
@@ -191,36 +182,10 @@ def choose_model(fr, groups, prefix, hours):
     return chosen
 
 
-def fit_calibration(margin, right, min_bin=150, prior=50):
-    """Certainty -> expected hit rate, cautiously: certainty levels are grouped into bins of at least `min_bin`
-    tested calls, each bin's hit rate is pulled toward 50% (as if it also had `prior` coin-flip calls), and the
-    result is forced to rise with certainty. So a high rating needs a lot of evidence, not a lucky handful."""
-    o = np.argsort(margin)
-    m, r = margin[o], right[o]
-    nb = max(1, len(m) // min_bin)
-    edges = np.linspace(0, len(m), nb + 1).astype(int)
-    xs, ys, ws = [], [], []
-    for a, b in zip(edges[:-1], edges[1:]):
-        if b <= a:
-            continue
-        hits, n = r[a:b].sum(), b - a
-        xs.append(m[a:b].mean())
-        ys.append((hits + prior * 0.5) / (n + prior))
-        ws.append(n)
-    return IsotonicRegression(y_min=0.5, y_max=0.95, out_of_bounds='clip').fit(xs, ys, sample_weight=ws)
-
-
 def calibrate(r):
-    """Ratings: calibrate certainty -> hit rate on the earlier test periods, check on the later ones."""
+    """Ratings from the walk-forward tests (see calib.py)."""
     has = np.where(r['has'])[0]
-    p, y = r['oof'][has], r['y'][has]
-    margin, right = np.abs(p - 0.5), ((p > 0.5) == (y == 1)).astype(float)
-    half = len(p) // 2
-    iso_a = fit_calibration(margin[:half], right[:half])
-    rt = np.array([rating_of(a) for a in iso_a.predict(margin[half:])])
-    by = {int(x): {'n': int((rt == x).sum()), 'hit': round(float(right[half:][rt == x].mean()), 3)} for x in sorted(set(rt.tolist()))}
-    iso = fit_calibration(margin, right)
-    return iso, by
+    return check(r['oof'][has], r['y'][has])
 
 
 def baselines(fr, prefix, hours, k, has):

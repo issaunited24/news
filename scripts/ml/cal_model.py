@@ -16,18 +16,17 @@ from datetime import datetime, timedelta, timezone
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+from calib import check, rating_of  # noqa: E402
 from market_data import ASSETS, CONTEXT_KEYS, context_at, fetch, price_at  # noqa: E402
 
 MODEL = os.path.join(HERE, '..', '..', 'model', 'calendar.joblib')
 REPORT = os.path.join(HERE, '..', '..', 'model', 'calendar_report.json')
-RATING_STEPS = [0.50, 0.53, 0.56, 0.59, 0.62, 0.65, 0.68, 0.71, 0.74, 0.77]
 NOISE = {'gold': 0.04, 'usd': 0.02, 'ndq': 0.06, 'oil': 0.08}
 # Kinds of release, and whether a higher number is "stronger economy / hotter inflation" (+1) or weaker (-1)
 GROUPS = [
@@ -57,21 +56,18 @@ def group_of(title):
     return 'other', 1
 
 
-def rating_of(acc):
-    r = 1
-    for i, s in enumerate(RATING_STEPS):
-        if acc >= s:
-            r = i + 1
-    return r
-
-
-def features(title, z, importance, ctx):
+def features(title, z, importance, ctx, mood=True):
     g, sign = group_of(title)
     zz = float(np.clip(z * sign, -4, 4))  # positive = stronger economy / hotter inflation
     row = [zz * (1.0 if g == name else 0.0) for name in GROUP_NAMES]
     row += [abs(zz), zz, float(importance)]
-    row += [float(ctx.get(k, 0.0) or 0.0) for k in CONTEXT_KEYS]
+    if mood:
+        row += [float(ctx.get(k, 0.0) or 0.0) for k in CONTEXT_KEYS]
     return row
+
+
+# The simple rule: a stronger-than-expected US number lifts the dollar and weighs on gold and the Nasdaq
+RULE = {'usd': 1, 'gold': -1, 'ndq': -1, 'oil': 0}
 
 
 # ---------- training ----------
@@ -111,18 +107,20 @@ def train():
     scale = ev.groupby('key').surprise.apply(lambda s: float(np.std(s)) if len(s) >= 6 else np.nan).to_dict()
     fallback = (ev.forecast.astype(float).abs() * 0.05 + 1e-3)
     ev['z'] = [s / scale[k] if scale.get(k) and scale[k] > 0 else s / f for s, k, f in zip(ev.surprise, ev.key, fallback)]
-    X, R = [], {k: [] for k in ASSETS}
+    XM, XL, R = [], [], {k: [] for k in ASSETS}
     for row in ev.itertuples():
         t = pd.Timestamp(row.ts, unit='s', tz='UTC')
         ctx = context_at(px, row.ts - 3600)  # mood before the release
-        X.append(features(row.title, row.z, row.importance, ctx))
+        XM.append(features(row.title, row.z, row.importance, ctx, mood=True))
+        XL.append(features(row.title, row.z, row.importance, ctx, mood=False))
         for k in ASSETS:
             p0 = price_at(px[k], t - pd.Timedelta(minutes=31))
             p1 = price_at(px[k], t + pd.Timedelta(minutes=90))
             R[k].append((p1 / p0 - 1) * 100 if p0 and p1 else np.nan)
-    X = np.asarray(X, dtype=np.float32)
+    XS = {'lean': np.asarray(XL, np.float32), 'mood': np.asarray(XM, np.float32)}
+    zz = np.array([np.clip(z * group_of(t)[1], -4, 4) for z, t in zip(ev.z, ev.title)])
     n = len(ev)
-    split = int(n * 0.75)
+    split = int(n * 0.6)
     report = {'trained': time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime()), 'releases': n,
               'test_from': time.strftime('%Y-%m-%d', time.gmtime(float(ev.ts.iloc[split]))), 'assets': {}}
     models = {}
@@ -131,31 +129,38 @@ def train():
         ok = ~np.isnan(r) & (np.abs(np.nan_to_num(r)) >= NOISE[k]) & (ev.z.abs().values > 0.05)
         y = (r > 0).astype(int)
         tr, te = ok & (np.arange(n) < split), ok & (np.arange(n) >= split)
-        if tr.sum() < 150 or te.sum() < 40:
+        if tr.sum() < 150 or te.sum() < 60:
             print(f'{k}: not enough data ({tr.sum()}/{te.sum()})', flush=True)
             continue
+        # candidates: lean inputs (the surprise only) or with market mood, several strengths of regularisation
         best = None
-        for C in (0.03, 0.1, 0.3, 1.0):
-            m = make_pipeline(StandardScaler(), LogisticRegression(C=C, max_iter=3000)).fit(X[tr], y[tr])
-            p = m.predict_proba(X[te])[:, 1]
-            ll = float(-np.mean(y[te] * np.log(np.clip(p, 1e-6, 1)) + (1 - y[te]) * np.log(np.clip(1 - p, 1e-6, 1))))
-            if best is None or ll < best['ll']:
-                best = {'C': C, 'p': p, 'll': ll, 'acc': float(np.mean((p > 0.5) == (y[te] == 1)))}
-        p_te, y_te = best['p'], y[te]
-        half = len(p_te) // 2
-        iso_check = IsotonicRegression(y_min=0.5, y_max=0.95, out_of_bounds='clip').fit(np.abs(p_te[:half] - 0.5), ((p_te[:half] > 0.5) == (y_te[:half] == 1)).astype(float))
-        rt = np.array([rating_of(a) for a in iso_check.predict(np.abs(p_te[half:] - 0.5))])
-        right = (p_te[half:] > 0.5) == (y_te[half:] == 1)
-        by_rating = {int(x): {'n': int((rt == x).sum()), 'hit': round(float(right[rt == x].mean()), 3)} for x in sorted(set(rt.tolist()))}
-        iso = IsotonicRegression(y_min=0.5, y_max=0.95, out_of_bounds='clip').fit(np.abs(p_te - 0.5), ((p_te > 0.5) == (y_te == 1)).astype(float))
-        final = make_pipeline(StandardScaler(), LogisticRegression(C=best['C'], max_iter=3000)).fit(X[ok], y[ok])
-        # the old fixed rules on the same unseen releases, for comparison
-        rule = {'usd': 1, 'gold': -1, 'ndq': -1, 'oil': 0}[k]
-        zz = np.array([np.clip(z * group_of(t)[1], -4, 4) for z, t in zip(ev.z, ev.title)])
-        base = float(np.mean((np.sign(zz[te]) * rule > 0) == (y_te == 1))) if rule else None
-        models[k] = {'m': final, 'iso': iso}
-        report['assets'][k] = {'test_accuracy': round(best['acc'], 3), 'test_count': int(te.sum()), 'baseline_rules': round(base, 3) if base is not None else None, 'by_rating': by_rating}
-        print(f'{k}: unseen accuracy {best["acc"]:.3f} (old rules {base}), by rating {by_rating}', flush=True)
+        for variant, X in XS.items():
+            for C in (0.01, 0.03, 0.1, 0.3):
+                m = make_pipeline(StandardScaler(), LogisticRegression(C=C, max_iter=3000)).fit(X[tr], y[tr])
+                p = m.predict_proba(X[te])[:, 1]
+                ll = float(-np.mean(y[te] * np.log(np.clip(p, 1e-6, 1)) + (1 - y[te]) * np.log(np.clip(1 - p, 1e-6, 1))))
+                if best is None or ll < best['ll']:
+                    best = {'variant': variant, 'C': C, 'p': p, 'll': ll, 'acc': float(np.mean((p > 0.5) == (y[te] == 1)))}
+        # the simple rule on the same unseen releases
+        rule_acc = None
+        if RULE[k]:
+            pr = np.sign(zz[te]) * RULE[k] > 0
+            rule_acc = float(np.mean(pr == (y[te] == 1)))
+        use_rule = rule_acc is not None and rule_acc >= best['acc']
+        if use_rule:
+            # keep the simple rule for this market; its confidence grows with the size of the surprise
+            p_rule = 0.5 + np.sign(zz[te] * RULE[k]) * np.minimum(np.abs(zz[te]), 4) / 8.01
+            iso, by = check(p_rule, y[te], min_bin=60)
+            models[k] = {'rule': RULE[k], 'iso': iso}
+            chosen, acc = 'simple rule (beat the model)', rule_acc
+        else:
+            iso, by = check(best['p'], y[te], min_bin=60)
+            final = make_pipeline(StandardScaler(), LogisticRegression(C=best['C'], max_iter=3000)).fit(XS[best['variant']][ok], y[ok])
+            models[k] = {'m': final, 'iso': iso, 'variant': best['variant']}
+            chosen, acc = f'model ({best["variant"]}, C={best["C"]})', best['acc']
+        report['assets'][k] = {'uses': chosen, 'test_accuracy': round(acc, 3), 'model_accuracy': round(best['acc'], 3),
+                               'rule_accuracy': round(rule_acc, 3) if rule_acc is not None else None, 'test_count': int(te.sum()), 'by_rating': by}
+        print(f'{k}: uses {chosen}; tested accuracy model {best["acc"]:.3f}, simple rule {rule_acc}; by rating {by}', flush=True)
     os.makedirs(os.path.dirname(MODEL), exist_ok=True)
     joblib.dump({'models': models, 'scale': {k: v for k, v in scale.items() if v == v}, 'version': report['trained']}, MODEL, compress=3)
     with open(REPORT, 'w') as f:
@@ -180,10 +185,17 @@ def predict():
     out = {'version': b['version'], 'preds': {}}
 
     def call(title, z, imp, ctx):
-        x = np.asarray([features(title, z, imp, ctx)], dtype=np.float32)
         res = {}
         for k, m in b['models'].items():
-            p = float(m['m'].predict_proba(x)[0, 1])
+            if 'rule' in m:
+                g, sign = group_of(title)
+                zz = float(np.clip(z * sign, -4, 4))
+                if abs(zz) < 0.05:
+                    continue
+                p = 0.5 + np.sign(zz * m['rule']) * min(abs(zz), 4) / 8.01
+            else:
+                x = np.asarray([features(title, z, imp, ctx, mood=m.get('variant', 'mood') == 'mood')], dtype=np.float32)
+                p = float(m['m'].predict_proba(x)[0, 1])
             res[k] = {'dir': 'up' if p >= 0.5 else 'down', 'conf': rating_of(float(m['iso'].predict([abs(p - 0.5)])[0]))}
         return res
 
