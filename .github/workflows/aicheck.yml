@@ -17,17 +17,15 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Try the AI
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Analyse two live stories
         env:
-          GH_TOKEN: ${{ github.token }}
+          TOKEN: ${{ github.token }}
         run: |
-          mkdir -p out
-          curl -sS https://models.github.ai/catalog/models -H "Authorization: Bearer $GH_TOKEN" > out/catalog.json || true
-          for m in openai/gpt-4.1 openai/gpt-4.1-mini openai/gpt-4o openai/gpt-4o-mini openai/o4-mini deepseek/deepseek-v3-0324 meta/llama-4-maverick-17b-128e-instruct-fp8 openai/gpt-5-mini openai/gpt-5; do
-            echo "== $m" >> out/try.txt
-            curl -sS -D - https://models.github.ai/inference/chat/completions -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/json" \
-              -d "{\"model\":\"$m\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the single word: ok\"}],\"max_tokens\":5}" 2>&1 | grep -iE "^HTTP|x-ratelimit|\"content\"|error|message" | head -12 >> out/try.txt
-          done
+          mkdir -p out live && git fetch -q --depth=1 origin live && git show FETCH_HEAD:news.json > live/news4.json && git show FETCH_HEAD:charts.json > live/charts.json
+          node tools/aitest.mjs "$PWD/live" > out/aitest.txt 2>&1 || true
       - name: Publish
         if: always()
         run: |
