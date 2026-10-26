@@ -25,6 +25,7 @@ jobs:
           TOKEN: ${{ github.token }}
         run: |
           mkdir -p out live && git fetch -q --depth=1 origin live && git show FETCH_HEAD:news.json > live/news4.json && git show FETCH_HEAD:charts.json > live/charts.json
+          node tools/aidebug.mjs > out/aidebug.txt 2>&1 || true
           node tools/aitest.mjs "$PWD/live" > out/aitest.txt 2>&1 || true
       - name: Publish
         if: always()
