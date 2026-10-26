@@ -1,0 +1,66 @@
+name: Train forecast model
+
+# Builds a year of labelled market headlines, trains the forecast model, tests it on unseen months,
+# and saves it to model/ (the robot uses it from the next round). Runs every Sunday so it keeps learning.
+on:
+  workflow_dispatch:
+    inputs:
+      quick:
+        description: "Quick test run (3 topics, 3 weeks)"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "17 3 * * 0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: train
+  cancel-in-progress: false
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: scripts/ml/requirements.txt
+      - name: Cache language models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-finbert-minilm-v1
+      - name: Install
+        run: pip install -q -r scripts/ml/requirements.txt
+      - name: Build the dataset (a year of headlines and prices)
+        env:
+          ML_QUICK: ${{ inputs.quick && '1' || '0' }}
+        run: python scripts/ml/build_dataset.py
+      - name: Keep the dataset (for checking)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataset
+          path: data/ml/dataset.pkl.gz
+          retention-days: 14
+      - name: Train and test
+        run: python scripts/ml/train.py
+      - name: Save the model
+        if: ${{ !inputs.quick }}
+        run: |
+          git config user.name "briefly-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add model/forecast.joblib model/report.json
+          git commit -m "Retrained forecast model" || exit 0
+          for i in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0; sleep 10; done
+          exit 1
+      - name: Quick run report
+        if: ${{ inputs.quick }}
+        run: cat model/report.json
