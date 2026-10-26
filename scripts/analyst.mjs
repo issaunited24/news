@@ -350,8 +350,9 @@ export function gradeBacktest(results) {
       (g.byConv[b] ||= { n: 0, hit: 0 }).n++; if (ok) g.byConv[b].hit++;
     }
     out.markets[k] = g;
-    const acc = g.n ? g.hit / g.n : null;
-    out.weights[k] = g.n >= 150 ? Math.max(0.15, Math.min(0.8, 0.55 + (acc - 0.53) * 6)) : 0.55;
+    // weight from the calls that move the final call (conviction 4+), once there are enough of them
+    const strong = ['4-6', '7-10'].reduce((t, b) => ({ n: t.n + (g.byConv[b]?.n || 0), hit: t.hit + (g.byConv[b]?.hit || 0) }), { n: 0, hit: 0 });
+    out.weights[k] = strong.n >= 120 ? Math.max(0.15, Math.min(0.8, 0.55 + (strong.hit / strong.n - 0.53) * 6)) : 0.55;
   }
   return out;
 }
