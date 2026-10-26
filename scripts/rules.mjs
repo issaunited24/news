@@ -18,7 +18,10 @@ export function tokens(title) {
 }
 
 // Group headlines about the same event. Uses an inverted index so it stays fast.
-export function cluster(items) {
+// `same`: optional extra pairs [i, j, similarity] from the meaning model (scripts/ml/similar.py), merged only when
+// they're very close in meaning and pass the safety checks below.
+export const SAME_MIN = 0.8;
+export function cluster(items, same = []) {
   const parent = items.map((_, i) => i);
   const find = i => (parent[i] === i ? i : (parent[i] = find(parent[i])));
   const toks = items.map(it => tokens(it.title));
@@ -40,12 +43,62 @@ export function cluster(items) {
       if (close && ((inter >= 3 && overlap >= 0.6) || jaccard >= 0.5)) parent[find(i)] = find(j);
     }
   }
+  // Headlines that say the same thing in different words. Safety checks: within 18 hours, no clashing scores or
+  // numbers ("2-1" vs "3-0"), and no giant groups (a chain of loose matches can't swallow a whole topic).
+  if (same.length) {
+    const size = new Map(), support = new Map();
+    items.forEach((_, i) => { const r = find(i); size.set(r, (size.get(r) || 0) + 1); });
+    for (const [i, j, sim] of [...same].sort((x, y) => y[2] - x[2])) {
+      if (sim < SAME_MIN || !items[i] || !items[j] || !mergeable(items[i].title, items[j].title, sim)) continue;
+      if (Math.abs(items[i].time - items[j].time) > 18 * 3600e3) continue;
+      const a = find(i), b = find(j);
+      if (a === b) continue;
+      const sa = size.get(a) || 1, sb = size.get(b) || 1;
+      if (sa + sb > 40) continue;
+      // joining two bigger stories needs a very close match or two separate matching headlines (stops one headline
+      // that mentions two events from gluing those events together)
+      const key = a < b ? `${a}:${b}` : `${b}:${a}`, n = (support.get(key) || 0) + 1;
+      support.set(key, n);
+      if (sa > 3 && sb > 3 && sim < 0.86 && n < 2) continue;
+      parent[a] = b; size.set(b, sa + sb);
+    }
+  }
   const groups = new Map();
   items.forEach((it, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(it); });
   return [...groups.values()];
 }
+// Section pages and live hubs ("Europe News | Breaking...", "- UFC.com", "Stocks") aren't stories and are never matched
+const HUB_RE = /latest news|breaking (news|updates)|news today|live coverage|news (&|and) analysis|news, analysis|share price today|interactive stock chart|^form \d|^articles in|^\W*\d{4}\b|– page \d|^page \d|^(stocks|markets?|usa|united states)$/i;
+export const isHub = t => HUB_RE.test(t) || tokens(t).length < 3;
+const UP_RE = /\b(rise[sn]?|rose|gains?|gained|jumps?|jumped|climbs?|climbed|surges?|surged|soars?|soared|rall(y|ies|ied)|higher|up|beats?|wins?|won|record high)\b/i;
+const DOWN_RE = /\b(falls?|fell|drops?|dropped|slides?|slid|slips?|slipped|sinks?|sank|slumps?|slumped|plunges?|plunged|tumbles?|tumbled|retreats?|lower|down|loses|lost|misses|defeat(ed)?)\b/i;
+const CAP_STOP = new Set(('by investing com yahoo finance update video live watch news breaking exclusive analysis reuters bloomberg report reports ' +
+  'january february march april may june july august september october november december monday tuesday wednesday thursday friday saturday sunday ' +
+  'the a an in on at for of to and as is are with after how why what who when new us u.s ai ceo pm uk eu').split(' '));
+const caps = t => new Set((t.match(/\b[A-Z][A-Za-z0-9&.'’-]+/g) || []).map(w => w.toLowerCase().replace(/[’']s$/, '').replace(/\.(com|org|net)$/, '').replace(/\.$/, '')).filter(w => w.length > 1 && !CAP_STOP.has(w)));
+function mergeable(a, b, sim) {
+  if (isHub(a) || isHub(b) || tokens(a).length < 4 || tokens(b).length < 4) return false;
+  if (!sameNumbers(a, b)) return false;
+  // opposite moves ("Oil surges..." vs "Oil falls...") are different stories
+  if ((UP_RE.test(a) && DOWN_RE.test(b) && !DOWN_RE.test(a) && !UP_RE.test(b)) || (DOWN_RE.test(a) && UP_RE.test(b) && !UP_RE.test(a) && !DOWN_RE.test(b))) return false;
+  // unless nearly identical, they must name at least one of the same people, places or companies
+  if (sim < 0.9) { const ca = caps(a), cb = caps(b); if (ca.size && cb.size && ![...ca].some(w => cb.has(w))) return false; }
+  return true;
+}
+// Two headlines can't be the same story if they give different scores or different key numbers (years don't count)
+const SCORE_RE = /\b(\d{1,3})\s?[-–:]\s?(\d{1,3})\b/g, NUM_RE = /(?<![\w.])\d+(?:[.,]\d+)?/g; // "$50bn" counts as 50
+function sameNumbers(a, b) {
+  const sc = t => [...t.matchAll(SCORE_RE)].map(m => `${m[1]}-${m[2]}`);
+  const sa = sc(a), sb = sc(b);
+  if (sa.length && sb.length && !sa.some(x => sb.includes(x) || sb.includes(x.split('-').reverse().join('-')))) return false;
+  const nums = t => new Set((t.replace(SCORE_RE, ' ').match(NUM_RE) || []).filter(x => !/^(19|20)\d\d$/.test(x)));
+  const na = nums(a), nb = nums(b);
+  if (na.size && nb.size && ![...na].some(x => nb.has(x))) return false;
+  return true;
+}
 
-const BREAKING_RE = /^(breaking|live|urgent|just in|developing)\b|\bbreaking\b/i;
+// "Breaking" at the start or as a label ("BREAKING:"), not anywhere ("Breaking T-shirts", "is breaking records")
+const BREAKING_RE = /^(breaking|live|urgent|just in|developing)\b|\b(breaking( news)?|urgent)\s?[:|–-]/i;
 
 export const tierOf = score => (score >= 50 ? 'major' : score >= 28 ? 'notable' : 'minor');
 

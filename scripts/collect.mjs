@@ -7,7 +7,7 @@ import { existsSync } from 'node:fs';
 import { entries, all, first, textOf } from './xml.mjs';
 import { marketCatalyst, isPriceRecap } from './markets.mjs';
 import { classify } from './categories.mjs';
-import { cluster, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust, justInOk } from './rules.mjs';
+import { cluster, isHub, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust, justInOk } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
 const WINDOW_H = 36;           // keep stories from the last 36 hours
@@ -186,8 +186,18 @@ const items = [...byId.values()].sort((a, b) => b.time - a.time).slice(0, MAX_IT
 for (const it of items) it.cats ||= [it.category];
 
 // 3. Group into stories and rank them
+// The meaning model finds headlines that say the same thing in different words (scripts/ml/similar.py). If it isn't
+// available this round, grouping by shared words alone is used, as before.
+let similar = [];
+if (!FIXTURES && !process.env.NO_SIMILAR) {
+  const t0 = Date.now();
+  const res = spawnSync('python3', [new URL('scripts/ml/similar.py', ROOT).pathname], { input: JSON.stringify({ titles: items.map(it => ({ t: it.title, ts: it.time / 1000 })), min: 0.62, hours: 24, k: 12, budget: 80 }), encoding: 'utf8', timeout: 110000, maxBuffer: 64 * 1024 * 1024 });
+  try { similar = JSON.parse(res.stdout).pairs || []; console.log(`Meaning matches: ${similar.length} pairs in ${Math.round((Date.now() - t0) / 1000)}s`); }
+  catch { console.log('Meaning matches unavailable this round:', (res.stderr || res.error?.message || '').slice(-200)); }
+}
 const rank = trustRank;
-const stories = cluster(items).map(group => {
+const groupsOf = cluster(items, similar);
+const stories = groupsOf.map(group => {
   group.sort((a, b) => a.time - b.time);
   const rich = g => (g.summary || g.image ? 0 : 1);
   const lead = [...group].sort((a, b) => rank(a.outlet) - rank(b.outlet) || rich(a) - rich(b) || a.time - b.time)[0];
@@ -252,6 +262,26 @@ const stories = cluster(items).map(group => {
   };
 }).filter(Boolean).map(({ _all, ...s }) => s)
   .sort((a, b) => b.updatedAt - a.updatedAt);
+
+// Related stories (same event, different angle: "Arsenal win" and "Arteta's reaction") share an event tag `ev`,
+// so the app never shows more than 2 of them in a row.
+{
+  const sid = new Map(); // item -> story
+  const idOf = new Map(stories.map(st => [st.id, st]));
+  groupsOf.forEach(g => { const st = idOf.get(hash(g[0].id)); if (st) g.forEach(it => sid.set(it, st)); }); // groups are sorted oldest first above
+  const parent = new Map(), size = new Map();
+  const find = x => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+  for (const st of stories) { parent.set(st.id, st.id); size.set(st.id, 1); }
+  for (const [i, j, sim] of similar) {
+    if (sim < 0.66) continue;
+    const a = sid.get(items[i]), b = sid.get(items[j]);
+    if (!a || !b || a === b || isHub(items[i].title) || isHub(items[j].title)) continue;
+    const ra = find(a.id), rb = find(b.id);
+    if (ra === rb || size.get(ra) + size.get(rb) > 12) continue;
+    parent.set(ra, rb); size.set(rb, size.get(ra) + size.get(rb));
+  }
+  for (const st of stories) { const r = find(st.id); if (size.get(r) > 1) st.ev = r.slice(0, 8); }
+}
 
 // Market wraps: at most 2 per day (New York date), the most widely covered ones
 {
