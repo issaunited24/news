@@ -7,7 +7,7 @@ import { existsSync } from 'node:fs';
 import { entries, all, first, textOf } from './xml.mjs';
 import { marketCatalyst, isPriceRecap } from './markets.mjs';
 import { classify } from './categories.mjs';
-import { cluster, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust, justInOk } from './rules.mjs';
+import { cluster, isHub, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust, justInOk } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
 const WINDOW_H = 36;           // keep stories from the last 36 hours
@@ -275,7 +275,7 @@ const stories = groupsOf.map(group => {
   for (const [i, j, sim] of similar) {
     if (sim < 0.66) continue;
     const a = sid.get(items[i]), b = sid.get(items[j]);
-    if (!a || !b || a === b) continue;
+    if (!a || !b || a === b || isHub(items[i].title) || isHub(items[j].title)) continue;
     const ra = find(a.id), rb = find(b.id);
     if (ra === rb || size.get(ra) + size.get(rb) > 12) continue;
     parent.set(ra, rb); size.set(rb, size.get(ra) + size.get(rb));
