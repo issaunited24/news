@@ -264,7 +264,7 @@ export function pickStories(stories, analyses, now, shard = 0, shards = 1) {
     return !prev.redo && ['unverified', 'reported', 'conflicting'].includes(prev.res.status) && (outlets >= prev.outlets + 2 || (st.breaking && !prev.breaking));
   }).sort((a, b) => priority(b, now) - priority(a, now));
 }
-const SPECULATIVE = /\?\s*(\(|$)|\b(could|might|may|preview|what to expect|outlook|forecast|prediction|opinion|analysis|explainer|why |how )\b/i;
+const SPECULATIVE = /\?\s*(\(|$)|\b(could|might|may|preview|what to expect|what to watch|things to watch|week ahead|outlook|forecast|prediction|opinion|analysis|explainer|why |how )\b/i;
 export async function analyseOne(st, ctx, now, getPage) {
   const text = await articleBody(st, getPage);
   const raw = await callModel(SYSTEM, userPrompt(st, ctx, now, text));
