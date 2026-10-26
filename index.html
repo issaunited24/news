@@ -381,6 +381,11 @@ textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: va
 .ai-m p { margin: 6px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--ink2); }
 .ai-note { margin: 10px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--faint); }
 .ai-note span { display: block; margin-top: 3px; font: 500 10px var(--mono); }
+.lv-box { margin-top: 10px; padding: 9px 11px; border-radius: 14px; background: rgba(3,5,14,.5); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.lv-r { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font: 500 11.5px var(--mono); color: var(--ink2); padding: 3px 0; }
+.lv-h { font-size: 9.5px; letter-spacing: .12em; color: var(--mute); min-width: 86px; }
+.lv-r i { font-style: normal; } .lv-r i.u { color: var(--up); } .lv-r i.d { color: var(--down); }
+.lv-n { margin: 5px 0 0; font-size: 11px; color: var(--faint); }
 .pill.aip { background: rgba(160,140,255,.16); color: #c4b8ff; border: 0; font: inherit; cursor: pointer; position: relative; }
 .pill.aip::after { content: ''; position: absolute; inset: -10px -6px; } /* bigger tap area */
 .pv-actions { display: grid; grid-template-columns: 50px 50px minmax(0, 1fr); gap: 10px; margin-top: 20px; }
@@ -481,7 +486,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.22'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.23'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1443,7 +1448,7 @@ function previewHTML(s) {
     <h2 class="pv-title">${esc(s.title)}</h2>
     ${s.summary ? `<p class="pv-sum">${esc(s.summary)}${s.summaryFrom ? ` <small>· ${esc(s.summaryFrom)}</small>` : ''}</p>` : '<p class="pv-sum muted">No summary from the outlets yet. Open the full story below.</p>'}
     ${takes ? `<div class="pv-k">Also reported</div>${takes}` : ''}
-    ${s.fx ? `<div class="mini">${forecasts(s.fx, 90, 18)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>${s.fx.ai ? '<div class="ai" id="aiPanel"><p class="ai-load">Loading the AI analysis…</p></div>' : s.fx.model ? '<p class="pv-why" style="opacity:.75">Calls from the trained model: it read this story and compared it with years of past news and what prices did after. These are next-day calls: where each market should be about 24 hours after the story. Each rating is how often it was right at that level, tested on months it had never seen (1/10 = a coin flip, 10/10 = right 65% of the time or more). Important stories also get a full AI analysis.</p>' : ''}` : ''}
+    ${s.fx ? `<div class="mini">${forecasts(s.fx, 90, 18)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>${longViewHTML(s.fx)}${s.fx.ai ? '<div class="ai" id="aiPanel"><p class="ai-load">Loading the AI analysis…</p></div>' : s.fx.model ? '<p class="pv-why" style="opacity:.75">Calls from the trained model: it read this story and compared it with years of past news and what prices did after. These are next-day calls: where each market should be about 24 hours after the story. Each rating is how often it was right at that level, tested on months it had never seen (1/10 = a coin flip, 10/10 = right 65% of the time or more). Important stories also get a full AI analysis.</p>' : ''}` : ''}
     ${others.length ? `<div class="pv-k">Covering · ${others.length}</div><div class="pv-chips">${chipsH}</div>` : ''}
     <div class="pv-actions">
       <button class="sq ${sv ? 'saved' : ''}" data-act="pvsave" data-id="${s.id}" aria-label="${sv ? 'Remove from saved' : 'Save story'}">${sv ? ICON.saved : ICON.save}</button>
@@ -1458,6 +1463,16 @@ function previewSheet(id, toAI) {
   const body = $('sheetBody'); body.style.transform = ''; body.style.opacity = ''; body.style.transition = '';
   openSheet(previewHTML(s), true);
   if (s.fx?.ai) fillAI(s).then(() => { if (toAI && pvId === s.id) $('aiPanel')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+}
+/* ---------- Longer views from the trained model: next 3 days and next week (only markets where it passed its tests) ---------- */
+function longViewHTML(fx) {
+  const row = (label, a) => {
+    const ks = ['gold', 'ndq', 'usd', 'oil'].filter(k => a?.[k] && (a[k].dir === 'up' || a[k].dir === 'down') && a[k].conf);
+    if (!ks.length) return '';
+    return `<div class="lv-r"><span class="lv-h">${label}</span>${ks.map(k => `<span>${{ gold: 'Gold', ndq: 'NDQ', usd: 'USD', oil: 'Oil' }[k]} <i class="${a[k].dir === 'up' ? 'u' : 'd'}">${a[k].dir === 'up' ? '▲' : '▼'}</i>${a[k].conf}</span>`).join('')}</div>`;
+  };
+  const rows = row('NEXT 3 DAYS', fx.d3) + row('NEXT WEEK', fx.w1);
+  return rows ? `<div class="lv-box">${rows}<p class="lv-n">From the model trained on years of news; shown only where it passed its tests.</p></div>` : '';
 }
 /* ---------- AI analysis (story view) ---------- */
 // The AI workers publish their full reasoning to the ai-0 ... ai-4 branches; it's only downloaded when a story is opened.
