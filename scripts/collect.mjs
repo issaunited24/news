@@ -510,6 +510,22 @@ for (const e of calendar?.events || []) {
 //     move to expect (importance). New stories only; results are kept for 48 hours. Falls back to the rules if
 //     the model can't run.
 const MODEL_FILE = new URL('model/forecast.joblib', ROOT), MODEL_REPORT = new URL('model/report.json', ROOT);
+// Newer models from the weekly training are fetched as soon as they're published (checked every round)
+if (!FIXTURES) {
+  const REL = 'https://github.com/issaunited24/news/releases/download/model/';
+  const get = async (n, as = 'text') => { const r = await fetch(REL + n, { redirect: 'follow' }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return as === 'buf' ? Buffer.from(await r.arrayBuffer()) : r.text(); };
+  for (const [rep, files] of [['report.json', ['forecast.joblib']], ['calendar_report.json', ['calendar.joblib']]]) {
+    try {
+      const remote = await get(rep), local = existsSync(new URL(`model/${rep}`, ROOT)) ? await readFile(new URL(`model/${rep}`, ROOT), 'utf8') : '';
+      if (JSON.parse(remote).trained !== (local ? JSON.parse(local).trained : null)) {
+        await mkdir(new URL('model/', ROOT), { recursive: true });
+        for (const f of files) await writeFile(new URL(`model/${f}`, ROOT), await get(f, 'buf'));
+        await writeFile(new URL(`model/${rep}`, ROOT), remote);
+        console.log(`New model published: ${rep} ${JSON.parse(remote).trained}`);
+      }
+    } catch (e) { console.log(`Model check (${rep}): ${e.message}`); }
+  }
+}
 // Only a model whose tests passed the quality bar is used (report.quality_ok, set by scripts/ml/train.py)
 const modelReport = existsSync(MODEL_REPORT) ? JSON.parse(await readFile(MODEL_REPORT, 'utf8')) : null;
 const modelVersion = modelReport?.quality_ok ? (modelReport.trained || 'v1') : null;

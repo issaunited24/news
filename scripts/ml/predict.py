@@ -107,14 +107,17 @@ def main():
         for k, m in spec['models'].items():
             p = m['m'].predict_proba(X)[:, 1]
             acc = m['iso'].predict(np.abs(p - 0.5))
-            calls[h][k] = (p, acc)
+            calls[h][k] = (p, acc, m.get('cap', {}))
     imp = b['importance']
     X, _ = assemble(parts, imp['groups'])
     size = np.max(np.vstack([np.expm1(m.predict(X)) for m in imp['models'].values()]), axis=0)
 
     def pack(h, i):
-        return {k: {'dir': 'up' if p[i] >= 0.5 else 'down', 'conf': rating_of(float(a[i]), steps), 'p': round(float(p[i]), 3)}
-                for k, (p, a) in calls.get(h, {}).items()}
+        out = {}
+        for k, (p, a, cap) in calls.get(h, {}).items():
+            r = rating_of(float(a[i]), steps)
+            out[k] = {'dir': 'up' if p[i] >= 0.5 else 'down', 'conf': int(cap.get(r, r)), 'p': round(float(p[i]), 3)}
+        return out
 
     for i, it in enumerate(items):
         out['preds'][it['id']] = {

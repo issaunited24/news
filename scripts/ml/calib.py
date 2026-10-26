@@ -43,3 +43,13 @@ def check(p, y, min_bin=300):
     rt = np.array([rating_of(a) for a in iso_a.predict(margin[half:])])
     by = {int(x): {'n': int((rt == x).sum()), 'hit': round(float(right[half:][rt == x].mean()), 3)} for x in sorted(set(rt.tolist()))}
     return fit_calibration(margin, right, min_bin), by
+
+
+def caps(by, prior=150):
+    """No rating may promise more than it delivered on the most recent test months:
+    each rating is capped at the rating its recent hit rate (pulled toward 50%) actually earns."""
+    out = {}
+    for r, v in by.items():
+        earned = rating_of((v['hit'] * v['n'] + prior * 0.5) / (v['n'] + prior))
+        out[int(r)] = int(min(int(r), max(1, earned)))
+    return out

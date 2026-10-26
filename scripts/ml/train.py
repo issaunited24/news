@@ -34,7 +34,7 @@ from sklearn.preprocessing import StandardScaler
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from calib import RATING_STEPS, check  # noqa: E402
+from calib import RATING_STEPS, caps, check  # noqa: E402
 from features import assemble  # noqa: E402
 from market_data import ASSETS, CONTEXT_KEYS, DAILY_KEYS  # noqa: E402
 from positioning import KEYS as POS_KEYS  # noqa: E402
@@ -252,7 +252,7 @@ def main():
             passed = r['bacc'] >= 0.515 and r['acc'] >= 0.5 and late_acc >= 0.505 and (rules is None or model_on_rules >= rules - 0.005)
             if passed:
                 final = fit_w(make_model(kind, C or 1.0, emb), X[ok], y[ok], w[ok] * fr.extra[ok])
-                hb[k] = {'m': final, 'iso': iso}
+                hb[k] = {'m': final, 'iso': iso, 'cap': caps(by)}
             hr[k] = {'use': 'model' if passed else ('rules' if h == '4h' else 'none'), 'model': kind if C is None else f'{kind} C={C}',
                      'test_accuracy': round(r['acc'], 4), 'test_balanced_accuracy': round(r['bacc'], 4), 'test_logloss': round(r['ll'], 5),
                      'test_count': int(r['has'].sum()), 'recent_accuracy': round(late_acc, 4), 'baseline_majority': major, 'baseline_rules': rules,
