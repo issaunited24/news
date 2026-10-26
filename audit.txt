@@ -1,0 +1,59 @@
+open
+version 2026-10-26.26
+tab forex
+tab top
+tab justin
+tab world
+tab us
+tab sci
+tab tech  <- 1 issue(s)
+tab ent
+tab sports
+  brief: 4 moves, 3 stories, 2 releases
+  bias: GOLD ▼ Bearish 1/10 · 8 news | DOLLAR ▲ Bullish 1/10 · 8 news | NASDAQ ▲ Bullish 3/10 · 49 news | OIL • Neutral 1/10 · 10 news
+  big money: GOLD 87.8% long Below usual | DOLLAR 54.8% long Above usual | NASDAQ 50.5% long 3-year high | OIL 56.2% long Below usual
+  after hide: small button
+brief
+  forex order: brief-mini > fxmods > sess > prism > bias > bias > fxmods > sc
+forex order
+  refresh: spinning false
+  refresh toast: Up to date · checked 04:43 PM
+refresh button
+  ai panel: AI ANALYSIS · NEXT 24 HOURS Confirmed Anthropic filed for IPO, aiming to be first AI-focused company to go public Credibility 5/5 · importance 2/5 · priced in: partly · summary only Facts: Anthropic filed for IPO GOLD – Neutral 3/10 no clear move ↑ Fed path AI growth -> tech earnings up -> Fed less 
+ai story
+  sci odd: none
+  tech odd: Lula's re-election brings hope for the Amazon as deforestati | How 'Lula's Army' WhatsApp chat helped turn Brazil election  | US Equity Investors to Monitor Mag-7 Earnings, Fed's Monetar | Big Tech Earnings, the Fed, and Elections. The Next 2 Weeks 
+  ent odd: DC Voter Guide General Election: What you need to know befor
+sections
+open story
+close story
+story menu
+  oil live price: 102.93
+forex chart
+range 1H
+range 4H
+range 1D
+range 1W
+range 1M
+range 1Y
+range 5Y
+range ALL
+close chart
+calendar
+search
+saved
+settings
+important/all  <- 3 issue(s)
+  scroll frames {"frames":62,"median":"16.7","p95":"16.7","long":0}
+scroll speed  <- 1 issue(s)
+  offline worker active: true
+  installable manifest icons: 4
+  stories shown with no signal: 24
+offline  <- 4 issue(s)
+memory MB 37.3
+nodes 1994
+
+ISSUES (9)
+FAILED net::ERR_BLOCKED_BY_ORB https://wsrv.nl/?url=https%3A%2F%2Fi.cbc.ca%2Fais%2F1921e54c-82e2-40c3-b1bd-994dd166c2a5%2C1793024427688%2Ffull%2Fmax%2F0%2Fdefault.jpg%3Fim
+FAILED net::ERR_INTERNET_DISCONNECTED https://scanner.tradingview.com/global/scan
+console.error Failed to load resource: net::ERR_INTERNET_DISCONNECTED
