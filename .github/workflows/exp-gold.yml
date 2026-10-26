@@ -1,0 +1,31 @@
+name: Gold experiment
+
+# EXPERIMENT ONLY: tests whether US data surprises predict gold (scripts/ml/exp_gold.py). Results go to the
+# "exp-gold" branch. Nothing here changes the app or its predictions.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/exp-gold.yml", "scripts/ml/exp_gold.py"]
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -q pandas==2.2.3 numpy==1.26.4 scikit-learn==1.5.2 joblib==1.4.2
+      - name: Run
+        run: mkdir -p out && (set -o pipefail; python scripts/ml/exp_gold.py 2>&1 | tee out/log.txt)
+      - name: Publish
+        if: always()
+        run: |
+          cd out && git init -q && git checkout -q -b exp-gold
+          git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add . && git commit -qm "Gold experiment" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" exp-gold
