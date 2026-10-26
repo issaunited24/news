@@ -17,17 +17,20 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: 22
-      - name: Analyse two live stories
-        env:
-          TOKEN: ${{ github.token }}
+          python-version: "3.11"
+      - name: Local AI model test
         run: |
-          mkdir -p out live && git fetch -q --depth=1 origin live && git show FETCH_HEAD:news.json > live/news4.json && git show FETCH_HEAD:charts.json > live/charts.json
-          node tools/aidebug.mjs > out/aidebug.txt 2>&1 || true
-          curl -sS -i -X POST https://models.github.ai/inference/chat/completions -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"model":"openai/gpt-4.1-mini","messages":[{"role":"user","content":"Say hi"}],"max_tokens":10}' > out/curl.txt 2>&1 || true
-          node tools/aitest.mjs "$PWD/live" > out/aitest.txt 2>&1 || true
+          mkdir -p out
+          (getent hosts models.github.ai; nproc; free -g) > out/env.txt 2>&1
+          t0=$(date +%s)
+          pip install -q llama-cpp-python==0.3.9 --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu > out/pip.txt 2>&1; echo "pip $? $(( $(date +%s) - t0 ))s" >> out/env.txt
+          pip install -q huggingface_hub >> out/pip.txt 2>&1
+          t0=$(date +%s)
+          python -c "from huggingface_hub import hf_hub_download as d; print(d('Qwen/Qwen2.5-7B-Instruct-GGUF','qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf')); print(d('Qwen/Qwen2.5-7B-Instruct-GGUF','qwen2.5-7b-instruct-q4_k_m-00002-of-00002.gguf'))" >> out/env.txt 2>&1
+          echo "download $(( $(date +%s) - t0 ))s" >> out/env.txt
+          python tools/llmtest.py >> out/env.txt 2>&1 || true
       - name: Publish
         if: always()
         run: |
