@@ -1,0 +1,60 @@
+name: AI analyst
+
+# Three AI workers run next to the news robot. Each runs a free open AI model (Qwen2.5 7B Instruct) on its own GitHub
+# machine, analyses important market stories and publishes the results to its branch (ai-0, ai-1, ai-2); the news
+# robot blends them into the calls. One run keeps going for about 2 hours; the schedule starts the next one.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/analyst.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2]
+    concurrency:
+      group: analyst-${{ matrix.shard }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: scripts/ai/requirements.txt
+      - name: Install the AI engine
+        env:
+          CMAKE_ARGS: "-DGGML_NATIVE=OFF -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON"
+        run: pip install -q -r scripts/ai/requirements.txt || pip install -q "llama-cpp-python[server]==0.3.9" --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+      - name: Download the AI model
+        run: |
+          python -c "from huggingface_hub import hf_hub_download as d; [d('Qwen/Qwen2.5-7B-Instruct-GGUF', f'qwen2.5-7b-instruct-q4_k_m-0000{i}-of-00002.gguf', local_dir='model') for i in (1, 2)]"
+          ls -la model
+      - name: Analyse stories
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: 3
+          MINUTES: 110
+        run: |
+          git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python -m llama_cpp.server --model model/qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf --n_ctx 6144 --n_threads 4 --n_batch 512 --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8000/v1/models >/dev/null && break; sleep 2; done
+          node scripts/analyst-run.mjs
+      - name: Server log (for checking)
+        if: always()
+        run: tail -20 server.log || true

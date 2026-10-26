@@ -1,8 +1,9 @@
 // AI analyst: reads important market stories and reasons about what they mean for gold, the Nasdaq, the US dollar and
 // oil over the next day, then combines that with the trained next-day model and the rules into one balanced call.
 //
-// - The AI is GitHub Models (free with the robot's own GitHub access, no key). Daily limits are small, so only stories
-//   that matter are analysed (importance, trusted outlets, confirmation), the most important with the strongest model.
+// - The AI is a free open model (Qwen2.5 7B Instruct) running on the robot's own GitHub machines: no key, no cost, no
+//   daily limit (.github/workflows/analyst.yml runs three AI workers next to the news robot). It's slow (a few minutes
+//   per story), so only stories that matter are analysed (importance, trusted outlets, confirmation), most important first.
 // - The AI works through every cause-and-effect channel (safe haven, real yields, the Fed's likely response, the dollar,
 //   inflation expectations, oil, risk mood, positioning, "already priced in") and says which forces win and why.
 // - Credibility counts: confirmed facts vs reports vs speculation, conflicting reports, how many outlets confirm it.
@@ -11,14 +12,11 @@
 // - It learns from outcomes in the simplest honest way: each analysis sees its own recent record per market,
 //   including its latest misses, and the ratings are graded against real results in the scorecard.
 
-const API = 'https://models.github.ai/inference/chat/completions';
+const API = process.env.AI_URL || 'http://127.0.0.1:8000/v1/chat/completions'; // the local AI server
+export const AI_MODEL = 'Qwen2.5 7B (open model)';
 export const ORDER = ['gold', 'ndq', 'usd', 'oil']; // Issa's priority
 const NAMES = { gold: 'Gold (XAU/USD)', ndq: 'Nasdaq 100', usd: 'US Dollar Index (DXY)', oil: 'WTI crude oil' };
-// Strongest first; if one is out of free requests for the day, the next one is used
-const STRONG = ['openai/gpt-4.1', 'deepseek/deepseek-v3-0324', 'openai/gpt-4o'];
-const NORMAL = ['openai/gpt-4.1-mini', 'openai/gpt-4o-mini'];
-const DAILY = { 'openai/gpt-4.1': 48, 'deepseek/deepseek-v3-0324': 48, 'openai/gpt-4o': 48, 'openai/gpt-4.1-mini': 145, 'openai/gpt-4o-mini': 145 };
-const MAX_PER_ROUND = 5, ROUND_BUDGET_MS = 85e3, H = 3600e3;
+const H = 3600e3;
 
 /* ---------- Extra market context: yields, real yields, inflation expectations, Fed expectations, fear gauge ---------- */
 async function yahooDaily(sym, getText) {
@@ -103,7 +101,7 @@ Use the trained model's view and your own recent record as supporting evidence, 
 Reply with JSON only, no prose outside it, keep every text field short (max ~20 words):
 {"status":"confirmed|official|reported|unverified|speculation|opinion|conflicting","credibility":1-5,"importance":1-5,"priced_in":"none|partly|mostly","what":"one sentence: what actually happened","facts":["..."],"claims":["..."],
 "markets":{"gold":{"bias":"bullish|bearish|neutral|unclear","conviction":0-10,"bull":[{"f":"factor","chain":"cause -> effect -> gold","s":"weak|moderate|strong"}],"bear":[same],"wins":"which forces dominate and why","counter":"best argument against your call","flip":"what would change the view"},
-"ndq":{same fields, 1-3 factors each side},"usd":{same},"oil":{same}},
+"ndq":{same fields, 1-2 factors each side, short},"usd":{same, short},"oil":{same, short}},
 "uncertainty":"main unknowns"}`;
 
 function userPrompt(st, ctx, now, text) {
@@ -145,7 +143,7 @@ async function articleBody(st, getPage) {
       const body = html.replace(/<(script|style|noscript|figure|figcaption|aside|nav|header|footer)[\s\S]*?<\/\1>/gi, ' ');
       const paras = [...body.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)].map(m => cleanTxt(m[1])).filter(t => t.length > 60 && !/cookie|subscribe|sign up|newsletter|advertis|all rights reserved|©/i.test(t));
       const text = paras.join(' ');
-      if (text.length > 600) return { body: text.slice(0, 3800), full: true };
+      if (text.length > 600) return { body: text.slice(0, 2600), full: true };
     } catch {}
   }
   return { body: (st.summary || '').slice(0, 1200), full: false };
@@ -174,13 +172,11 @@ function eligible(st, now) {
 }
 
 /* ---------- The model call ---------- */
-async function callModel(model, system, user, token) {
-  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 60e3);
+async function callModel(system, user) {
+  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 15 * 60e3);
   try {
-    const body = { model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.2, max_tokens: 1600 };
-    if (model.startsWith('openai/')) body.response_format = { type: 'json_object' };
-    const res = await fetch(API, { method: 'POST', signal: ctrl.signal, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (res.status === 429) { const e = new Error('limit'); e.limit = true; e.retry = +res.headers.get('retry-after') || 0; throw e; }
+    const body = { messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.2, max_tokens: 1100, response_format: { type: 'json_object' }, cache_prompt: true };
+    const res = await fetch(API, { method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
     const j = await res.json();
     const txt = j.choices?.[0]?.message?.content || '';
@@ -229,56 +225,23 @@ export function combine(an, d1, rules) {
   return out;
 }
 
-/* ---------- One round ---------- */
-// state: { day, used: {model: n}, out: {model: until}, analyses: {id: {...}} }
-export async function runAnalyst({ stories, ctx, state, now, token, getPage, log = console.log }) {
-  const day = new Date(now).toISOString().slice(0, 10);
-  if (state.day !== day) { state.day = day; state.used = {}; }
-  state.used ||= {}; state.out ||= {}; state.analyses ||= {};
-  for (const [id, a] of Object.entries(state.analyses)) if (now - a.at > 48 * H) delete state.analyses[id];
-  if (!token) return 0;
-  const left = m => (DAILY[m] || 50) - (state.used[m] || 0);
-  const usable = list => list.filter(m => left(m) > 0 && !(state.out[m] > now));
-  // pace the day: by this hour, at most this share of the daily requests should be used (bursts allowed)
-  const dayFrac = (now % (24 * H)) / (24 * H);
-  const paced = list => list.reduce((n, m) => n + DAILY[m], 0) * Math.min(1, dayFrac + 0.3) - list.reduce((n, m) => n + (state.used[m] || 0), 0);
+/* ---------- Picking and analysing ---------- */
+// analyses: {id: {...}} already done (by any worker). Returns the stories to analyse next, most important first.
+export function pickStories(stories, analyses, now, shard = 0, shards = 1) {
+  const hashN = id => [...id].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7) % shards;
   const perEvent = new Map();
-  for (const a of Object.values(state.analyses)) if (a.ev && now - a.at < 6 * H) perEvent.set(a.ev, (perEvent.get(a.ev) || 0) + 1);
-  const todo = stories.filter(st => {
-    if (!eligible(st, now)) return false;
-    const prev = state.analyses[st.id];
+  for (const a of Object.values(analyses)) if (a.ev && now - a.at < 6 * H) perEvent.set(a.ev, (perEvent.get(a.ev) || 0) + 1);
+  return stories.filter(st => {
+    if (hashN(st.id) !== shard || !eligible(st, now)) return false;
+    const prev = analyses[st.id];
     if (!prev) return !(st.ev && (perEvent.get(st.ev) || 0) >= 2);
     // analysed again once if it was shaky and has since been confirmed by more outlets or turned into breaking news
     const outlets = (st.sources || []).length + 1;
     return !prev.redo && ['unverified', 'reported', 'conflicting'].includes(prev.res.status) && (outlets >= prev.outlets + 2 || (st.breaking && !prev.breaking));
-  }).sort((a, b) => priority(b, now) - priority(a, now)).slice(0, MAX_PER_ROUND);
-  if (!todo.length) return 0;
-  const t0 = Date.now();
-  let done = 0;
-  await Promise.all(todo.map(async (st, i) => {
-    await new Promise(r => setTimeout(r, i * 1500)); // stay under the per-minute limits
-    if (Date.now() - t0 > ROUND_BUDGET_MS - 30e3) return;
-    const strong = st.fx.impact === 'high' || st.breaking || st.top || (st.sources || []).length >= 4;
-    let chain = strong && paced(STRONG) > 0 ? [...usable(STRONG), ...usable(NORMAL)] : usable(NORMAL);
-    if (!strong && paced(NORMAL) <= 0) return;
-    if (!chain.length) return;
-    const text = await articleBody(st, getPage);
-    const user = userPrompt(st, ctx, now, text);
-    for (const model of chain) {
-      if (Date.now() - t0 > ROUND_BUDGET_MS) return;
-      try {
-        state.used[model] = (state.used[model] || 0) + 1;
-        const res = tidy(await callModel(model, SYSTEM, user, token));
-        const prev = state.analyses[st.id];
-        state.analyses[st.id] = { id: st.id, at: now, model, res, ev: st.ev, outlets: (st.sources || []).length + 1, breaking: !!st.breaking, full: text.full, redo: !!prev, title: st.title };
-        done++;
-        return;
-      } catch (e) {
-        if (e.limit) { state.out[model] = now + Math.max(e.retry * 1000, 60 * 60e3); state.used[model] = DAILY[model]; log(`AI analyst: ${model} reached its free limit`); continue; }
-        log(`AI analyst: ${model} failed on "${st.title.slice(0, 50)}": ${String(e.message).slice(0, 120)}`);
-      }
-    }
-  }));
-  log(`AI analyst: ${done} stories analysed in ${Math.round((Date.now() - t0) / 1000)}s; used today ${JSON.stringify(state.used)}`);
-  return done;
+  }).sort((a, b) => priority(b, now) - priority(a, now));
+}
+export async function analyseOne(st, ctx, now, getPage) {
+  const text = await articleBody(st, getPage);
+  const res = tidy(await callModel(SYSTEM, userPrompt(st, ctx, now, text)));
+  return { id: st.id, at: now, model: AI_MODEL, res, ev: st.ev, outlets: (st.sources || []).length + 1, breaking: !!st.breaking, full: text.full, title: st.title };
 }

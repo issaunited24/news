@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs';
 import { entries, all, first, textOf } from './xml.mjs';
 import { marketCatalyst, isPriceRecap } from './markets.mjs';
 import { classify } from './categories.mjs';
+import { combine } from './analyst.mjs';
 import { cluster, isHub, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust, justInOk } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
@@ -582,18 +583,46 @@ if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
 }
 for (const st of stories) {
   const p = st.fx && preds.get(st.id);
+  if (st.fx) st._rules = st.fx.assets; // kept as one input for the AI analyst
   if (st.fx && !p && modelVersion) { st.fx.assets = {}; st.fx.waiting = true; } // the model reads it next round
   if (!p) continue;
   const slim = o => (o ? Object.fromEntries(Object.entries(o).map(([k, a]) => [k, { dir: a.dir, conf: a.conf }])) : undefined);
   // The calls shown everywhere are the next-day model's (the best tested), each with its own tested rating and checked
   // a day later. The 1-hour and 4-hour models keep training every week but aren't shown.
   st.fx.assets = Object.fromEntries(Object.entries(p.d1 || {}).map(([k, a]) => [k, { dir: a.dir, conf: a.conf || 1, next: true }]));
+  st._d1 = p.d1;
   // Importance: the bigger of the rules' view (major Fed moves, wars, banking stress...) and the model's (how much
   // prices usually move after news like this), and breaking news is always high
   const RANK = { low: 0, medium: 1, high: 2 };
   st.fx.impact = st.breaking ? 'high' : (RANK[p.impact] ?? 0) >= (RANK[st.fx.impact] ?? 0) ? p.impact : st.fx.impact;
   if (p.fresh === false) st.fx.old = true;
   st.fx.model = true;
+}
+
+// 5e. AI analyst (scripts/analyst.mjs, run by the AI workers in .github/workflows/analyst.yml): important market
+//     stories are read and reasoned about by an AI; its view, the trained next-day model and the rules are combined
+//     here into one balanced next-day call per market. Stories it hasn't analysed (yet) keep the trained model's call.
+const aiState = { analyses: {} };
+if (!FIXTURES) {
+  for (const n of [0, 1, 2]) {
+    try {
+      const out = spawnSync('git', ['fetch', '-q', '--depth=1', 'origin', `ai-${n}`], { encoding: 'utf8', timeout: 30000 });
+      if (out.status !== 0) continue;
+      const j = JSON.parse(spawnSync('git', ['show', 'FETCH_HEAD:analyses.json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).stdout);
+      for (const [id, a] of Object.entries(j.analyses || {})) if (now - a.at < 48 * 3600e3) aiState.analyses[id] = a;
+    } catch {}
+  }
+  console.log(`AI analyses available: ${Object.keys(aiState.analyses).length}`);
+}
+for (const st of stories) {
+  const a = st.fx && aiState.analyses?.[st.id];
+  if (a) {
+    st.fx.assets = combine(a.res, st._d1, st._rules);
+    st.fx.ai = { status: a.res.status, cred: a.res.credibility, priced: a.res.priced_in, at: a.at, full: a.full || undefined };
+    st.fx.model = true;
+    if (a.res.importance >= 4 && st.fx.impact !== 'high') st.fx.impact = a.res.importance >= 5 ? 'high' : 'medium';
+  }
+  delete st._d1; delete st._rules;
 }
 
 // Smarter calls, before they're shown or scored (rules only; the trained model already accounts for the trend):
@@ -633,10 +662,13 @@ for (const st of stories) {
   if (!st.fx?.assets || now - st.firstSeen > 6 * 3600e3) continue;
   for (const k of ['gold', 'usd', 'ndq', 'oil']) {
     const a = st.fx.assets[k], key = `${st.id}:${k}`;
-    if (!a || a.dir === 'flat' || !a.conf || forecasts.has(key)) continue;
+    if (!a || a.dir === 'flat' || !a.conf) continue;
+    const had = forecasts.get(key);
+    // a call recorded before the AI analysed the story is replaced by the AI's balanced call (checked from now)
+    if (had && !(a.ai && !had.ai && !had.result && now - had.at < 3 * 3600e3)) continue;
     const p0 = priceAt(k, st.firstSeen);
     if (p0 == null) continue;
-    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, model: st.fx.model || undefined, at: st.firstSeen, p0, ...(a.next ? { horizon: NEXT_DAY } : {}) });
+    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, model: st.fx.model || undefined, ai: a.ai || undefined, at: had ? now : st.firstSeen, p0: had ? (priceAt(k, now) ?? p0) : p0, ...(a.next ? { horizon: NEXT_DAY } : {}) });
   }
 }
 for (const f of forecasts.values()) {
@@ -672,6 +704,18 @@ const scorecard = {
   assets: { gold: tally(judged.filter(f => f.asset === 'gold')), usd: tally(judged.filter(f => f.asset === 'usd')), ndq: tally(judged.filter(f => f.asset === 'ndq')), oil: tally(judged.filter(f => f.asset === 'oil')) },
   all: tally(judged), high: tally(judged.filter(f => f.conf >= 7)), news: tally(judged.filter(f => !f.cal)), cal: tally(judged.filter(f => f.cal)),
   pending: [...forecasts.values()].filter(f => !f.result).length, rules: 2,
+  ai: tally(judged.filter(f => f.ai)),
+  // the AI's track record by confidence (all its checked next-day calls, not just 5+): becomes the probability shown
+  // on a call once a confidence level has enough checked calls behind it
+  aiTrack: (() => {
+    const t = {};
+    for (const f of forecasts.values()) {
+      if (!f.ai || (f.result !== 'hit' && f.result !== 'miss')) continue;
+      const b = f.conf >= 8 ? '8-10' : f.conf >= 5 ? '5-7' : '1-4';
+      (t[b] ||= { hit: 0, n: 0 }).n++; if (f.result === 'hit') t[b].hit++;
+    }
+    return t;
+  })(),
   recent: judged.sort((a, b) => b.at - a.at).slice(0, 6).map(f => ({ title: f.title, asset: f.asset, dir: f.dir, conf: f.conf, result: f.result, chg: Math.round(f.chg * 100) / 100, at: f.at, cal: f.cal || undefined })),
 };
 
