@@ -526,7 +526,7 @@ function priceAt(key, t) {
 // Calendar model (model/calendar.joblib): for each US release, the reaction it expects if the number comes in above
 // or below forecast; once the actual is out, its call for each market. Upcoming ones are refreshed every 30 minutes.
 const CAL_MODEL = new URL('model/calendar.joblib', ROOT);
-const calVersion = existsSync(new URL('model/calendar_report.json', ROOT)) ? (JSON.parse(await readFile(new URL('model/calendar_report.json', ROOT), 'utf8')).trained || 'v1') : null;
+const calVersion = existsSync(new URL('model/calendar_report.json', ROOT)) ? `${JSON.parse(await readFile(new URL('model/calendar_report.json', ROOT), 'utf8')).trained || 'v1'}|z` : null; // |z: recompute once to add surprise sizes
 const calId = e => `${e.title}|${e.time}`;
 const calPreds = new Map(Object.entries(prevState.calPreds || {}).filter(([, v]) => v.v === calVersion && now - v.at < (v.done ? 8 * 864e5 : 30 * 60e3)));
 if (!FIXTURES && calVersion && existsSync(CAL_MODEL) && calendar?.events?.length) {
