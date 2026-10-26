@@ -4,6 +4,7 @@ import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 const b = await chromium.launch(), out = [], errs = [];
 const p = await b.newPage({ viewport: { width: 412, height: 870 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+p.setDefaultTimeout(15000);
 p.on('pageerror', e => errs.push('PAGE ERROR ' + e.message));
 p.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errs.push(`console.${m.type()} ${m.text().slice(0, 200)}`); });
 p.on('requestfailed', r => errs.push(`FAILED ${r.failure()?.errorText} ${r.url().slice(0, 140)}`));
@@ -51,7 +52,7 @@ await step('ai story', async () => {
   await click('.tab[data-tab="forex"]'); await wait(1000);
   const card = await p.$('#feed .mw.fx:has(.aip)');
   if (!card) { out.push('  ai story: none analysed yet'); return; }
-  await card.scrollIntoViewIfNeeded(); await card.tap();
+  await card.scrollIntoViewIfNeeded({ timeout: 5000 }).catch(() => {}); await card.tap({ force: true, timeout: 10000 });
   await wait(4000);
   out.push('  ai panel: ' + await p.evaluate(() => (document.getElementById('aiPanel')?.innerText || 'missing').replace(/\s+/g, ' ').slice(0, 300)));
   await p.evaluate(() => document.getElementById('aiPanel')?.scrollIntoView({ block: 'start' })); await wait(500);
