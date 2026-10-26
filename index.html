@@ -453,7 +453,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.8';
+const APP_VERSION = '2026-10-26.9';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1073,13 +1073,15 @@ function bigMoneyHTML() {
   const cells = Object.keys(MK).map(k => {
     const m = bm[k]; if (!m) return `<div class="bmc" style="--pc:${MK[k].c}"><b>${MK[k].short.toUpperCase()}</b><span class="bv">—</span></div>`;
     const col = m.longPct >= 55 ? 'var(--up)' : m.longPct <= 45 ? 'var(--down)' : 'var(--ink)';
-    const crowd = m.pctile >= 90 ? 'Crowded long' : m.pctile <= 10 ? 'Crowded short' : null;
-    return `<div class="bmc" style="--pc:${MK[k].c}" aria-label="${MK[k].name}: hedge funds ${m.longPct}% long, ${m.pctile}th percentile of 3 years${crowd ? `, ${crowd}` : ''}">
+    // compared with their own last 3 years: the extremes are where crowded bets tend to unwind
+    const crowd = m.pctile >= 90 ? 'Most bullish in 3y' : m.pctile <= 10 ? 'Most bearish in 3y' : null;
+    const usual = m.pctile >= 70 ? 'More bullish than usual' : m.pctile <= 30 ? 'Less bullish than usual' : null;
+    return `<div class="bmc" style="--pc:${MK[k].c}" aria-label="${MK[k].name}: hedge funds ${m.longPct}% long; more bullish than ${m.pctile}% of the last 3 years">
       <b>${MK[k].short.toUpperCase()}</b><span class="bv" style="color:${col}">${m.longPct}% long</span>
       <span class="bt"><i style="left:${Math.max(2, Math.min(98, m.pctile))}%"></i></span>
-      <small class="${crowd ? 'hot' : ''}">${crowd || `${m.chg >= 0 ? '+' : ''}${m.chg}% this wk`}</small></div>`;
+      <small class="${crowd ? 'hot' : ''}">${crowd || usual || `${m.chg >= 0 ? '+' : ''}${m.chg}% this week`}</small></div>`;
   }).join('');
-  return `<section class="bias"><div class="bias-h"><span>Big money</span><span>hedge funds · as of ${fmtD.format(new Date(any.date + 'T12:00:00Z'))}</span></div><div class="bm-g">${cells}</div></section>`;
+  return `<section class="bias"><div class="bias-h"><span>Big money</span><span>hedge funds · ${fmtD.format(new Date(any.date + 'T12:00:00Z'))} · bar = vs last 3y</span></div><div class="bm-g">${cells}</div></section>`;
 }
 // The model's calls for 1 hour, 4 hours and the next day (story view)
 function timeframesHTML(fx) {

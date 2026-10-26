@@ -27,6 +27,7 @@ await step('brief', async () => {
   out.push('  bias: ' + await p.evaluate(() => [...document.querySelectorAll('.bi')].map(b => b.innerText.replace(/\s+/g, ' ')).join(' | ')));
   await p.evaluate(() => document.querySelector('.bias')?.scrollIntoView({ block: 'center' })); await wait(500);
   await p.screenshot({ path: 'out/bias.png' });
+  out.push('  big money: ' + await p.evaluate(() => [...document.querySelectorAll('.bmc')].map(b => b.innerText.replace(/\s+/g, ' ')).join(' | ')));
   await p.evaluate(() => { prefs.calOpen = true; renderTop(); document.querySelector('.cal')?.scrollIntoView({ block: 'start' }); }); await wait(800);
   await p.screenshot({ path: 'out/calendar.png' });
   await p.evaluate(() => { prefs.calOpen = false; renderTop(); document.getElementById('brief')?.scrollIntoView({ block: 'center' }); }); await wait(500);
