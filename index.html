@@ -438,7 +438,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.5';
+const APP_VERSION = '2026-10-26.6';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1016,20 +1016,23 @@ function hideBrief() { const day = nyDay(new Date()); prefs.briefHid = day; if (
 /* ---------- Bias meter: every recent call on a market combined into one reading ---------- */
 // Each Forex story from the last 6 hours (and each calendar release the model called) votes for up or down,
 // weighted by its confidence, how important it is, and how recent it is (a 3-hour-old call counts half).
+// The strength (1-10) is how much they agree times how confident they are on average.
 const BIAS_H = 6;
 function biasOf(k, now) {
-  let sum = 0, tot = 0, n = 0, top = null;
+  let sum = 0, tot = 0, n = 0, top = null, confW = 0;
   const add = (dir, conf, t, imp, ref) => {
     if (!conf || (dir !== 'up' && dir !== 'down')) return;
     const age = (now - t) / 3600e3; if (age < 0 || age > BIAS_H) return;
     const w = conf * Math.pow(0.5, age / 3) * ({ high: 1.5, medium: 1, low: 0.6 }[imp] || 1), v = dir === 'up' ? 1 : -1;
-    sum += w * v; tot += w; n++;
+    sum += w * v; tot += w; n++; confW += w * conf;
     if (!top || w > top.w) top = { w, v, ref };
   };
   for (const s of data?.stories || []) if (s.fx?.assets?.[k] && visible(s)) add(s.fx.assets[k].dir, s.fx.assets[k].conf, Math.min(s.published, s.firstSeen), s.fx.impact, s.id);
   for (const e of data?.calendar?.events || []) if (e.model?.assets?.[k]) add(e.model.assets[k].dir, e.model.assets[k].conf, Date.parse(e.time), e.impact === 'high' ? 'high' : 'medium', null);
   if (!tot) return { n: 0 };
-  const score = sum / tot, strength = Math.max(1, Math.min(10, Math.round(Math.abs(score) * 10 * Math.min(1, n / 4))));
+  // strength: how much the calls agree, times how confident they are on average (fewer than 4 calls counts for less)
+  const score = sum / tot, avgConf = confW / tot;
+  const strength = Math.max(1, Math.min(10, Math.round(Math.abs(score) * avgConf * Math.min(1, n / 4))));
   return { n, score, strength, word: Math.abs(score) < 0.15 ? 'Neutral' : score > 0 ? 'Bullish' : 'Bearish', top };
 }
 function biasHTML() {
