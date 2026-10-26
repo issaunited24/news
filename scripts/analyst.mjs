@@ -29,7 +29,8 @@ async function yahooDaily(sym, getText) {
   return { last: c[c.length - 1], d1: c[c.length - 2], d5: c[Math.max(0, c.length - 6)], d20: c[Math.max(0, c.length - 21)], byDay };
 }
 async function fredDaily(id, getText) {
-  const csv = await getText(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}`);
+  const from = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10); // only recent dates: much faster
+  const csv = await getText(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}&cosd=${from}`);
   const rows = csv.trim().split('\n').slice(1).map(l => l.split(',')).filter(r => !isNaN(parseFloat(r[1]))).slice(-60);
   const v = rows.map(r => parseFloat(r[1]));
   return { last: v[v.length - 1], d5: v[Math.max(0, v.length - 6)], d20: v[Math.max(0, v.length - 21)], byDay: Object.fromEntries(rows.map(r => [r[0], parseFloat(r[1])])) };

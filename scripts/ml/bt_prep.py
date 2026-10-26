@@ -23,9 +23,15 @@ NAMES = {'gold': 'Gold (XAU/USD)', 'ndq': 'Nasdaq 100', 'usd': 'US Dollar Index 
 UA = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36'}
 
 
-def get(url):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60) as r:
-        return r.read().decode('utf-8', 'replace')
+def get(url, timeout=60, tries=1):
+    for i in range(tries):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout) as r:
+                return r.read().decode('utf-8', 'replace')
+        except Exception as e:
+            if i == tries - 1:
+                raise
+            print(f'  retry {i + 1}: {str(e)[:60]}', flush=True)
 
 
 def yahoo(sym):
@@ -36,7 +42,8 @@ def yahoo(sym):
 
 
 def fred(sid):
-    df = pd.read_csv(io.StringIO(get(f'https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}')))
+    # only the dates needed (much faster), more time and retries: FRED can be slow to answer
+    df = pd.read_csv(io.StringIO(get(f'https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}&cosd=2024-06-01', timeout=150, tries=4)))
     df.columns = ['d', 'v']
     df['v'] = pd.to_numeric(df.v, errors='coerce')
     s = pd.Series(df.v.values, index=pd.to_datetime(df.d, utc=True)).dropna()
