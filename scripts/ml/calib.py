@@ -2,12 +2,15 @@
 
 Certainty levels are grouped into bins of at least `min_bin` tested calls, each bin's hit rate is pulled toward 50%
 (as if it also had `prior` coin-flip calls), and the result is forced to rise with certainty. So a high rating needs a
-lot of evidence, not a lucky handful. Rating: hit rate 50% -> 1 ... 77%+ -> 10.
+lot of evidence, not a lucky handful. Rating: hit rate 50% -> 1 ... 65%+ -> 10.
 """
 import numpy as np
 from sklearn.isotonic import IsotonicRegression
 
-RATING_STEPS = [0.50, 0.53, 0.56, 0.59, 0.62, 0.65, 0.68, 0.71, 0.74, 0.77]
+# A realistic scale for markets: 50% right = 1/10, 65% or better = 10/10 (about 1.7% per point).
+# (Even the best short-term market forecasts are rarely right much more than 60-65% of the time.)
+RATING_STEPS = [round(0.50 + i * 0.15 / 9, 4) for i in range(10)]
+OLD_STEPS = [0.50, 0.53, 0.56, 0.59, 0.62, 0.65, 0.68, 0.71, 0.74, 0.77]  # the first, too-strict scale
 
 
 def rating_of(acc, steps=RATING_STEPS):

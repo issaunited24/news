@@ -16,6 +16,7 @@ import pandas as pd
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import positioning  # noqa: E402
+from calib import OLD_STEPS, RATING_STEPS  # noqa: E402
 from features import assemble, embeddings, finbert_scores, rule_features, rules_block  # noqa: E402
 from market_data import ASSETS, CONTEXT_KEYS, DAILY_KEYS, context_at, daily_context, fetch, fetch_daily  # noqa: E402
 from novelty import novelty  # noqa: E402
@@ -115,8 +116,17 @@ def main():
     def pack(h, i):
         out = {}
         for k, (p, a, cap) in calls.get(h, {}).items():
-            r = rating_of(float(a[i]), steps)
-            out[k] = {'dir': 'up' if p[i] >= 0.5 else 'down', 'conf': int(cap.get(r, r)), 'p': round(float(p[i]), 3)}
+            acc = float(a[i])
+            if steps == OLD_STEPS:  # a model trained with the first scale: its caps are translated to the realistic scale
+                old_r = rating_of(acc, OLD_STEPS)
+                c = int(cap.get(old_r, old_r))
+                hi = OLD_STEPS[c] if c < len(OLD_STEPS) else 1.0
+                acc = min(acc, (OLD_STEPS[c - 1] + hi) / 2)
+                r = rating_of(acc, RATING_STEPS)
+            else:
+                r = rating_of(acc, steps)
+                r = int(cap.get(r, r))
+            out[k] = {'dir': 'up' if p[i] >= 0.5 else 'down', 'conf': int(r), 'p': round(float(p[i]), 3), 'hit': round(acc, 3)}
         return out
 
     for i, it in enumerate(items):

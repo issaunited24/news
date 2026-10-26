@@ -528,7 +528,7 @@ if (!FIXTURES) {
 }
 // Only a model whose tests passed the quality bar is used (report.quality_ok, set by scripts/ml/train.py)
 const modelReport = existsSync(MODEL_REPORT) ? JSON.parse(await readFile(MODEL_REPORT, 'utf8')) : null;
-const modelVersion = modelReport?.quality_ok ? (modelReport.trained || 'v1') : null;
+const modelVersion = modelReport?.quality_ok ? `${modelReport.trained || 'v1'}|scale2` : null; // |scale2: recompute calls made on the old rating scale
 const preds = new Map(Object.entries(prevState.preds || {}).filter(([, v]) => now - v.at < 48 * 3600e3 && v.v === modelVersion));
 if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
   const todo = stories.filter(st => st.fx && !preds.has(st.id)).sort((a, b) => b.firstSeen - a.firstSeen).slice(0, 40) // newest first; the rest next round
