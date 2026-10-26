@@ -1,0 +1,36 @@
+name: AI check
+
+# Checks the free GitHub Models AI from the robot (results on the "ai-check" branch)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tools/ai-trigger.txt"]
+
+permissions:
+  contents: write
+  models: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Try the AI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p out
+          curl -sS https://models.github.ai/catalog/models -H "Authorization: Bearer $GH_TOKEN" > out/catalog.json || true
+          for m in openai/gpt-4.1 openai/gpt-4.1-mini openai/gpt-4o openai/gpt-4o-mini openai/o4-mini deepseek/deepseek-v3-0324 meta/llama-4-maverick-17b-128e-instruct-fp8 openai/gpt-5-mini openai/gpt-5; do
+            echo "== $m" >> out/try.txt
+            curl -sS -D - https://models.github.ai/inference/chat/completions -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/json" \
+              -d "{\"model\":\"$m\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the single word: ok\"}],\"max_tokens\":5}" 2>&1 | grep -iE "^HTTP|x-ratelimit|\"content\"|error|message" | head -12 >> out/try.txt
+          done
+      - name: Publish
+        if: always()
+        run: |
+          cd out && git init -q && git checkout -q -b ai-check
+          git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add . && git commit -qm "AI check" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ai-check
