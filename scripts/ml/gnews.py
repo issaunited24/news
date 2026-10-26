@@ -1,4 +1,5 @@
-"""Market headlines from Google News search, one week at a time back to mid-2024 (as far as hourly prices go).
+"""Market headlines from Google News search: week by week back to mid-2024 (as far as hourly prices go), then in
+2-week steps back to 2017 for the next-day model (daily prices go back that far).
 
 Google News search accepts date limits (after:/before:), so each (topic, week) search returns that week's headlines
 with their publish times and outlets. Searches already done are remembered between runs; only the current week is
@@ -13,6 +14,7 @@ import pandas as pd
 
 UA = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36'}
 START = datetime(2024, 6, 3, tzinfo=timezone.utc)  # a Monday, about when the hourly price history begins
+HISTORY_START = datetime(2017, 1, 2, tzinfo=timezone.utc)  # older news, in 2-week steps, for the next-day model
 QUERIES = [
     '"federal reserve" OR fomc OR powell',
     'inflation OR cpi OR "consumer prices" OR pce',
@@ -47,6 +49,10 @@ def windows(now):
         out.append((t0, min(t1, now + timedelta(days=1))))
         t0 = t1
     out.reverse()  # newest first
+    h = START
+    while h > HISTORY_START:  # then older years, newest first
+        out.append((max(h - timedelta(days=14), HISTORY_START), h))
+        h -= timedelta(days=14)
     return [(q, a, b) for a, b in out for q in range(len(QUERIES))]
 
 
