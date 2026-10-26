@@ -453,15 +453,8 @@ const MODEL_FILE = new URL('model/forecast.joblib', ROOT), MODEL_REPORT = new UR
 const modelVersion = existsSync(MODEL_REPORT) ? (JSON.parse(await readFile(MODEL_REPORT, 'utf8')).trained || 'v1') : null;
 const preds = new Map(Object.entries(prevState.preds || {}).filter(([, v]) => now - v.at < 48 * 3600e3 && v.v === modelVersion));
 if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
-  const todo = stories.filter(st => st.fx && !preds.has(st.id)).slice(0, 120).map(st => {
-    const t = Math.min(st.published, st.firstSeen), it = { id: st.id, title: st.title, text: st.summary || '' };
-    for (const k of ['gold', 'usd', 'ndq', 'oil']) {
-      const p0 = priceAt(k, t), p6 = priceAt(k, t - 6 * 3600e3), p24 = priceAt(k, t - 24 * 3600e3);
-      it[`m6_${k}`] = p0 && p6 ? (p0 / p6 - 1) * 100 : 0;
-      it[`m24_${k}`] = p0 && p24 ? (p0 / p24 - 1) * 100 : 0;
-    }
-    return it;
-  });
+  const todo = stories.filter(st => st.fx && !preds.has(st.id)).slice(0, 120)
+    .map(st => ({ id: st.id, title: st.title, text: st.summary || '', ts: Math.min(st.published, st.firstSeen) / 1000 }));
   if (todo.length) {
     const t0 = Date.now();
     const res = spawnSync('python3', [new URL('scripts/ml/predict.py', ROOT).pathname], { input: JSON.stringify(todo), encoding: 'utf8', timeout: 170000, maxBuffer: 32 * 1024 * 1024 });

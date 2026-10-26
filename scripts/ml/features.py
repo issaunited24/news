@@ -5,13 +5,15 @@ For each story:
 - A sentence-embedding model (MiniLM) turns its meaning into 384 numbers, so stories about similar things
   land close together and the model can learn what kinds of news move each market.
 - The forex rulebook (scripts/markets.mjs) adds its call and confidence for each asset and the type of news.
-- The price trend going into the story (last 6 and 24 hours) for each asset.
+- Market mood when the story came out: each market's trend and volatility, the VIX fear index, the 10-year
+  Treasury yield and which trading session is open (see market_data.py).
 """
-import json, os, subprocess
+import json, os, subprocess, sys
 
 import numpy as np
 
-ASSETS = ['gold', 'usd', 'ndq', 'oil']
+from market_data import ASSETS, CONTEXT_KEYS
+
 DRIVERS = ['none', 'war', 'peace', 'fed', 'earnings', 'trade', 'politics', 'oil', 'banking', 'sanctions', 'bigtech',
            'ai', 'yields', 'cb', 'china', 'preview', 'wrap']
 FINBERT = 'ProsusAI/finbert'
@@ -50,7 +52,7 @@ def finbert_scores(texts, batch=64):
             p = torch.softmax(mdl(**enc).logits, dim=-1).numpy()
             out.append(p[:, order])
             if len(texts) > 2000 and (i // batch) % 50 == 0:
-                print(f'    FinBERT {i}/{len(texts)}', flush=True)
+                print(f'    FinBERT {i}/{len(texts)}', flush=True, file=sys.stderr)
     return np.vstack(out) if out else np.zeros((0, 3))
 
 
@@ -71,26 +73,25 @@ def text_of(title, text):
     return f'{title}. {text[:400]}' if text else title
 
 
-def tabular(rules, momentum):
-    """Rule calls, news type and price trend as a small numeric block."""
+def tabular(rules, ctxs):
+    """Rule calls, news type and market mood as a small numeric block."""
     rows = []
-    for r, m in zip(rules, momentum):
+    for r, m in zip(rules, ctxs):
         row = []
         for k in ASSETS:
             row += [r['d'][k], r['d'][k] * r['c'][k] / 9.0]
         row += [1.0 if r['driver'] == d else 0.0 for d in DRIVERS]
         row += [{'none': 0, 'low': 1, 'medium': 2, 'high': 3}.get(r['impact'], 0) / 3.0]
-        for k in ASSETS:
-            row += [m.get(f'm6_{k}', 0.0), m.get(f'm24_{k}', 0.0)]
+        row += [float(m.get(k, 0.0) or 0.0) for k in CONTEXT_KEYS]
         rows.append(row)
-    return np.asarray(rows, dtype=np.float32)
+    return np.nan_to_num(np.asarray(rows, dtype=np.float32))
 
 
-def featurize(titles, texts, momentum):
-    """Full feature matrix: [FinBERT (3) | embedding (384) | rules, news type, trend]."""
+def featurize(titles, texts, ctxs):
+    """Full feature matrix: [FinBERT (3) | embedding (384) | rules, news type, market mood]."""
     full = [text_of(t, x) for t, x in zip(titles, texts)]
     fb = finbert_scores(full)
     emb = embeddings(full)
     rules = rule_features([{'title': t, 'text': x or t} for t, x in zip(titles, texts)])
-    tab = tabular(rules, momentum)
+    tab = tabular(rules, ctxs)
     return np.hstack([fb, emb, tab]), rules

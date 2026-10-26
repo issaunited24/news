@@ -14,13 +14,16 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from market_data import ASSETS, CONTEXT_KEYS, context_at, fetch, forward_return  # noqa: E402
+
 OUT = 'data/ml/dataset.pkl.gz'
 DAYS = int(os.environ.get('ML_DAYS', '365'))
 WINDOW_DAYS = int(os.environ.get('ML_WINDOW_DAYS', '10'))
 QUICK = os.environ.get('ML_QUICK') == '1'  # small run for testing the pipeline
 UA = {'User-Agent': 'Mozilla/5.0 (compatible; personal-news-reader/1.0)'}
 
-YAHOO = {'gold': 'GC=F', 'usd': 'DX-Y.NYB', 'ndq': 'NQ=F', 'oil': 'CL=F'}
+REUSE = os.environ.get('ML_REUSE', 'data/ml/previous.pkl.gz')  # last run's headlines, if available
 HORIZON_H = 4
 
 # Topics that move gold, the dollar, the Nasdaq and oil (GDELT search syntax)
@@ -59,9 +62,11 @@ def get(url, tries=5, pause=20):
     return None
 
 
-def gdelt_headlines():
+def gdelt_headlines(since=None):
     end = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0) - timedelta(hours=HORIZON_H + 1)
     start = end - timedelta(days=DAYS if not QUICK else 21)
+    if since is not None:
+        start = max(start, since)
     rows, n = [], 0
     for q in QUERIES:
         t0 = start
@@ -100,44 +105,16 @@ def gdelt_headlines():
     return df
 
 
-def prices():
-    out = {}
-    for k, sym in YAHOO.items():
-        txt = get(f'https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(sym)}?range=730d&interval=60m')
-        r = json.loads(txt)['chart']['result'][0]
-        s = pd.Series(r['indicators']['quote'][0]['close'], index=pd.to_datetime(r['timestamp'], unit='s', utc=True)).dropna()
-        s = s[~s.index.duplicated()].sort_index()
-        out[k] = s
-        print(f'  {k}: {len(s)} hourly bars from {s.index[0].date()}', flush=True)
-    return out
-
-
-def price_at(s, t):
-    """Close of the latest bar that started at or before t, if it's no more than 2 hours old."""
-    i = s.index.searchsorted(t, side='right') - 1
-    if i < 0:
-        return None
-    if (t - s.index[i]).total_seconds() > 2 * 3600:
-        return None
-    return float(s.iloc[i])
-
-
 def label(df, px):
-    for k, s in px.items():
-        fwd, b6, b24 = [], [], []
-        for ts in df.ts:
-            t = pd.Timestamp(ts, unit='s', tz='UTC')
-            p0 = price_at(s, t)
-            p1 = price_at(s, t + pd.Timedelta(hours=HORIZON_H))
-            pm6 = price_at(s, t - pd.Timedelta(hours=6))
-            pm24 = price_at(s, t - pd.Timedelta(hours=24))
-            fwd.append((p1 / p0 - 1) * 100 if p0 and p1 else np.nan)
-            b6.append((p0 / pm6 - 1) * 100 if p0 and pm6 else 0.0)
-            b24.append((p0 / pm24 - 1) * 100 if p0 and pm24 else 0.0)
-        df[f'r_{k}'] = fwd
-        df[f'm6_{k}'] = b6
-        df[f'm24_{k}'] = b24
-    return df
+    """What each market did over the 4 hours after each headline, plus the market mood going in."""
+    rows = []
+    for ts in df.ts.values:
+        t = pd.Timestamp(float(ts), unit='s', tz='UTC')
+        row = {f'r_{k}': forward_return(px[k], t, HORIZON_H) for k in ASSETS}
+        row.update(context_at(px, float(ts)))
+        rows.append(row)
+    lab = pd.DataFrame(rows, index=df.index)
+    return pd.concat([df[['title', 'text', 'ts', 'domain', 'src']], lab], axis=1)
 
 
 def live_results():
@@ -158,19 +135,33 @@ def live_results():
 def main():
     os.makedirs('data/ml', exist_ok=True)
     print('Prices...', flush=True)
-    px = prices()
-    print('Headlines from GDELT...', flush=True)
-    df = gdelt_headlines()
+    px = fetch('730d')
+    for k, s in px.items():
+        print(f'  {k}: {len(s)} hourly bars from {s.index[0].date()}', flush=True)
+    old = None
+    if os.path.exists(REUSE) and not QUICK:
+        old = pd.read_pickle(REUSE)
+        old = old[old.src == 'gdelt'][['title', 'text', 'ts', 'domain', 'src']]
+        cutoff = datetime.now(timezone.utc).timestamp() - DAYS * 86400
+        old = old[old.ts >= cutoff]
+        print(f'Reusing {len(old)} headlines from the last run', flush=True)
+    since = datetime.fromtimestamp(float(old.ts.max()), timezone.utc) - timedelta(days=2) if old is not None and len(old) > 1000 else None
+    print('Headlines from GDELT' + (f' since {since.date()}' if since else '') + '...', flush=True)
+    df = gdelt_headlines(since)
+    if old is not None and len(old):
+        df = pd.concat([old, df], ignore_index=True)
+        df['key'] = df.title.str.lower().str.replace(r'[^a-z0-9 ]', '', regex=True).str.slice(0, 90)
+        df = df.sort_values('ts').drop_duplicates('key').drop(columns='key')
     live = live_results()
     if not live.empty:
         df = pd.concat([df, live], ignore_index=True)
     print(f'{len(df)} headlines ({(df.src == "live").sum() if len(df) else 0} from the app itself)', flush=True)
     df = label(df, px)
-    have = df[[f'r_{k}' for k in YAHOO]].notna().any(axis=1)
+    have = df[[f'r_{k}' for k in ASSETS]].notna().any(axis=1)
     df = df[have].reset_index(drop=True)
     df.to_pickle(OUT)
     print(f'Saved {len(df)} labelled headlines to {OUT}', flush=True)
-    for k in YAHOO:
+    for k in ASSETS:
         r = df[f'r_{k}'].dropna()
         print(f'  {k}: {len(r)} labelled, median 4h move {r.abs().median():.3f}%, up {np.mean(r > 0):.1%}', flush=True)
 

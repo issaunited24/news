@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: train
@@ -40,6 +41,14 @@ jobs:
           key: hf-finbert-minilm-v1
       - name: Install
         run: pip install -q -r scripts/ml/requirements.txt
+      - name: Reuse the last run's headlines (so only new news has to be downloaded)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/ml
+          id=$(gh run list --workflow train.yml --status success -L 1 --json databaseId -q '.[0].databaseId')
+          [ -n "$id" ] && gh run download "$id" -n dataset -D prev && mv prev/dataset.pkl.gz data/ml/previous.pkl.gz && echo "Reusing run $id"
       - name: Build the dataset (a year of headlines and prices)
         env:
           ML_QUICK: ${{ inputs.quick && '1' || '0' }}

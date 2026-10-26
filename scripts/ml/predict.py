@@ -1,6 +1,6 @@
 """Live forecasts for the robot (called by scripts/collect.mjs every round, only for new Forex stories).
 
-stdin:  [{"id", "title", "text", "m6_gold", "m24_gold", ... for each asset}]
+stdin:  [{"id", "title", "text", "ts" (unix seconds)}]
 stdout: {"version", "preds": {id: {"assets": {asset: {"dir": "up"|"down", "conf": 1-10, "p": prob_up}},
                                   "impact": "high"|"medium"|"low", "size": expected move vs typical}}}
 """
@@ -12,6 +12,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from features import ASSETS, featurize  # noqa: E402
+from market_data import context_at, fetch  # noqa: E402
 
 MODEL = os.path.join(HERE, '..', '..', 'model', 'forecast.joblib')
 
@@ -31,8 +32,12 @@ def main():
     if not items:
         print(json.dumps(out))
         return
-    momentum = [{k: float(it.get(k) or 0) for k in it if k.startswith('m6_') or k.startswith('m24_')} for it in items]
-    X, _ = featurize([it['title'] for it in items], [it.get('text') or '' for it in items], momentum)
+    try:
+        px = fetch('10d', cache='/tmp/briefly-prices.pkl', max_age=900, tries=2)  # market mood, refreshed every 15 minutes
+    except Exception:
+        px = {}
+    ctxs = [context_at(px, float(it.get('ts') or 0)) for it in items]
+    X, _ = featurize([it['title'] for it in items], [it.get('text') or '' for it in items], ctxs)
     steps = bundle['rating_steps']
     per = {}
     sizes = []

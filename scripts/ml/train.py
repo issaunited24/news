@@ -25,6 +25,7 @@ from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from features import ASSETS, featurize  # noqa: E402
+from market_data import CONTEXT_KEYS  # noqa: E402
 
 DATA = 'data/ml/dataset.pkl.gz'
 OUT_DIR = 'model'
@@ -74,8 +75,11 @@ def main():
     t0 = time.time()
     df = pd.read_pickle(DATA).sort_values('ts').reset_index(drop=True)
     print(f'{len(df)} headlines', flush=True)
-    momentum = df[[c for c in df.columns if c.startswith('m6_') or c.startswith('m24_')]].fillna(0).to_dict('records')
-    X, rules = featurize(df.title.tolist(), df.text.fillna('').tolist(), momentum)
+    for k in CONTEXT_KEYS:
+        if k not in df.columns:
+            df[k] = 0.0
+    ctxs = df[CONTEXT_KEYS].fillna(0).to_dict('records')
+    X, rules = featurize(df.title.tolist(), df.text.fillna('').tolist(), ctxs)
     print(f'Features {X.shape} in {time.time() - t0:.0f}s', flush=True)
 
     n = len(df)
