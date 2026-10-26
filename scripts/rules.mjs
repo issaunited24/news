@@ -74,8 +74,8 @@ const UP_RE = /\b(rise[sn]?|rose|gains?|gained|jumps?|jumped|climbs?|climbed|sur
 const DOWN_RE = /\b(falls?|fell|drops?|dropped|slides?|slid|slips?|slipped|sinks?|sank|slumps?|slumped|plunges?|plunged|tumbles?|tumbled|retreats?|lower|down|loses|lost|misses|defeat(ed)?)\b/i;
 const CAP_STOP = new Set(('by investing com yahoo finance update video live watch news breaking exclusive analysis reuters bloomberg report reports ' +
   'january february march april may june july august september october november december monday tuesday wednesday thursday friday saturday sunday ' +
-  'the a an in on at for of to and as is are with after how why what who when new us u.s').split(' '));
-const caps = t => new Set((t.replace(/^\W*\S+/, '').match(/\b[A-Z][A-Za-z0-9&.'’-]+/g) || []).map(w => w.toLowerCase().replace(/[’']s$/, '').replace(/\.(com|org|net)$/, '').replace(/\.$/, '')).filter(w => w.length > 1 && !CAP_STOP.has(w)));
+  'the a an in on at for of to and as is are with after how why what who when new us u.s ai ceo pm uk eu').split(' '));
+const caps = t => new Set((t.match(/\b[A-Z][A-Za-z0-9&.'’-]+/g) || []).map(w => w.toLowerCase().replace(/[’']s$/, '').replace(/\.(com|org|net)$/, '').replace(/\.$/, '')).filter(w => w.length > 1 && !CAP_STOP.has(w)));
 function mergeable(a, b, sim) {
   if (isHub(a) || isHub(b) || tokens(a).length < 4 || tokens(b).length < 4) return false;
   if (!sameNumbers(a, b)) return false;
@@ -86,7 +86,7 @@ function mergeable(a, b, sim) {
   return true;
 }
 // Two headlines can't be the same story if they give different scores or different key numbers (years don't count)
-const SCORE_RE = /\b(\d{1,3})\s?[-–:]\s?(\d{1,3})\b/g, NUM_RE = /\b\d+(?:[.,]\d+)?\b/g;
+const SCORE_RE = /\b(\d{1,3})\s?[-–:]\s?(\d{1,3})\b/g, NUM_RE = /(?<![\w.])\d+(?:[.,]\d+)?/g; // "$50bn" counts as 50
 function sameNumbers(a, b) {
   const sc = t => [...t.matchAll(SCORE_RE)].map(m => `${m[1]}-${m[2]}`);
   const sa = sc(a), sb = sc(b);
