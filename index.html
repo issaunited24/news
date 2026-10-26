@@ -449,7 +449,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.11';
+const APP_VERSION = '2026-10-26.12';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -717,12 +717,13 @@ function smartRank(list, tab, ctx) {
   const pins = rows.filter(x => x.s.breaking && x.age < 1.5 && (x.s.tier === 'major' || (x.s.sources || []).length >= 2)).sort((a, b) => b.I - a.I).slice(0, 2);
   const out = [...pins];
   // 4. Variety: at most 1 small single-outlet story in any 4 cards, at most 2 cards in a row about the same event,
-  //    and in Sports at most 2 in a row from the same league. A card that would break a rule waits for a later spot.
+  //    (outside Forex, at most 2 in any 10 cards), and in Sports at most 2 in a row from the same league. A card that would break a rule waits for a later spot.
   const small = x => x.s.tier === 'minor' && !(x.s.sources || []).length && !x.s.breaking && !x.s.top && x.I < 20 && !ctx.liked(x.s);
   const ok = x => {
     const n = out.length;
     if (small(x) && out.slice(-3).some(small)) return false;
     if (x.s.ev && n >= 2 && out[n - 1].s.ev === x.s.ev && out[n - 2].s.ev === x.s.ev) return false;
+    if (x.s.ev && tab !== 'forex' && out.slice(-9).filter(y => y.s.ev === x.s.ev).length >= 2) return false; // and 2 in any 10
     if (tab === 'sports' && n >= 2 && (out[n - 1].s.sport || 'other') === (x.s.sport || 'other') && (out[n - 2].s.sport || 'other') === (x.s.sport || 'other')) return false;
     return true;
   };
