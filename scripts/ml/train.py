@@ -279,9 +279,13 @@ def main():
     bundle['importance'] = {'groups': groups, 'models': mags, 'high': float(np.quantile(s, 0.85)), 'medium': float(np.quantile(s, 0.45))}
 
     # Only go live if something passed the quality bar, and it tests at least as well as the live model
+    # judged on the next-day calls (the ones the app shows): each market's tested balanced accuracy, 50% for a market
+    # with no usable model, so losing a working market counts against the new model
     def mean_b(rep):
-        vals = [v.get('test_balanced_accuracy') for v in (rep or {}).get('horizons', {}).get('4h', {}).values() if v.get('use') == 'model']
-        return float(np.mean(vals)) if vals else None
+        hz = (rep or {}).get('horizons', {}).get('1d', {})
+        if not hz:
+            return None
+        return float(np.mean([v.get('test_balanced_accuracy', 0.5) if v.get('use') == 'model' else 0.5 for v in hz.values()]))
     report['quality_ok'] = any(v.get('use') == 'model' for hz in report['horizons'].values() for v in hz.values())
     old = None
     if os.path.exists(os.path.join(OUT, 'report.json')):
@@ -291,7 +295,7 @@ def main():
             old = None
     new_b, old_b = mean_b(report), mean_b(old) if old and old.get('quality_ok') else None
     report['deploy'] = bool(report['quality_ok'] and (old_b is None or new_b is None or new_b >= old_b - 0.005))
-    report['compared_with'] = {'previous_4h_balanced_accuracy': old_b, 'new_4h_balanced_accuracy': new_b}
+    report['compared_with'] = {'previous_next_day_score': old_b, 'new_next_day_score': new_b}
     passed = [f'{h} {k}' for h, hz in report['horizons'].items() for k, v in hz.items() if v.get('use') == 'model']
     log(f'Passed the quality bar: {", ".join(passed) or "nothing"}. {"Deploying." if report["deploy"] else "Not deploying."}')
 
