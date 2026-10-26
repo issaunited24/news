@@ -43,7 +43,7 @@ jobs:
         run: pip install -q -r scripts/ai/requirements.txt || pip install -q "llama-cpp-python[server]==0.3.9" --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
       - name: Download the AI model
         run: |
-          python -c "from huggingface_hub import snapshot_download as d; d('Qwen/Qwen2.5-14B-Instruct-GGUF', allow_patterns=['*q4_k_m*'], local_dir='model')"
+          for i in 1 2 3; do python -c "from huggingface_hub import snapshot_download as d; d('Qwen/Qwen2.5-14B-Instruct-GGUF', allow_patterns=['*q4_k_m*'], local_dir='model')" && break; sleep 30; done
           ls -la model
       - name: Analyse stories
         env:
