@@ -264,7 +264,9 @@ def main():
             hz = np.where(r['has'])[0]
             late = hz[len(hz) // 2:]
             late_acc = float(np.mean((r['oof'][late] > 0.5) == (r['y'][late] == 1)))
-            passed = r['bacc'] >= 0.515 and r['acc'] >= 0.5 and late_acc >= 0.505 and (rules is None or model_on_rules >= rules - 0.005)
+            # ...and it must be more accurate than simply always betting the usual direction (by at least 1 point)
+            passed = (r['bacc'] >= 0.515 and r['acc'] >= 0.5 and late_acc >= 0.505 and (rules is None or model_on_rules >= rules - 0.005)
+                      and r['acc'] >= major + 0.01)
             if passed:
                 final = fit_w(make_model(kind, C or 1.0, emb), X[ok], y[ok], w[ok] * fr.extra[ok])
                 hb[k] = {'m': final, 'iso': iso, 'cap': caps(by)}
