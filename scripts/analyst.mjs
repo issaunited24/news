@@ -40,10 +40,25 @@ export async function getMacro(prev, now, getText) {
   const out = { at: now, items: { ...(prev?.items || {}) } };
   const jobs = {
     us10y: () => yahooDaily('%5ETNX', getText), us2y: () => yahooDaily('2YY%3DF', getText), vix: () => yahooDaily('%5EVIX', getText),
-    fedFut: () => yahooDaily('ZQ%3DF', getText), real10y: () => fredDaily('DFII10', getText), be5y: () => fredDaily('T5YIE', getText),
+    fedFut: () => yahooDaily('ZQ%3DF', getText), real10y: () => treasuryDaily('daily_treasury_real_yield_curve', '10 YR', getText),
+    nom10y: () => treasuryDaily('daily_treasury_yield_curve', '10 Yr', getText),
   };
   await Promise.all(Object.entries(jobs).map(async ([k, f]) => { try { out.items[k] = await f(); } catch {} }));
   return out;
+}
+// US Treasury daily rates (free, no key; FRED is blocked from GitHub's machines)
+async function treasuryDaily(kind, col, getText) {
+  const byDay = {};
+  const y = new Date().getUTCFullYear();
+  for (const yr of [y - 1, y]) {
+    const csv = await getText(`https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/${yr}/all?type=${kind}&field_tdr_date_value=${yr}&page&_format=csv`);
+    const lines = csv.trim().split('\n'), head = lines[0].split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
+    const ci = head.indexOf(col.toLowerCase());
+    for (const l of lines.slice(1)) { const c = l.split(','); const [mm, dd, yy] = c[0].replace(/"/g, '').split('/'); const v = parseFloat(c[ci]); if (!isNaN(v)) byDay[`${yy}-${mm}-${dd}`] = v; }
+  }
+  const days = Object.keys(byDay).sort(), v = days.map(d => byDay[d]);
+  if (!v.length) throw new Error('no data');
+  return { last: v[v.length - 1], d5: v[Math.max(0, v.length - 6)], d20: v[Math.max(0, v.length - 21)], byDay: Object.fromEntries(days.slice(-60).map(d => [d, byDay[d]])) };
 }
 const pct = (a, b) => (a != null && b ? ((a - b) / b) * 100 : null);
 const f2 = v => (v == null || isNaN(v) ? 'n/a' : (Math.round(v * 100) / 100).toString());
@@ -64,7 +79,7 @@ function snapshot(ctx) {
   if (m.us10y) lines.push(`US 10y yield: ${f2(m.us10y.last)}% (5d ${bp(m.us10y.last, m.us10y.d5)}, 20d ${bp(m.us10y.last, m.us10y.d20)})`);
   if (m.us2y) lines.push(`US 2y yield: ${f2(m.us2y.last)}% (5d ${bp(m.us2y.last, m.us2y.d5)}, 20d ${bp(m.us2y.last, m.us2y.d20)})`);
   if (m.real10y) lines.push(`US 10y real yield (TIPS): ${f2(m.real10y.last)}% (5d ${bp(m.real10y.last, m.real10y.d5)}, 20d ${bp(m.real10y.last, m.real10y.d20)})`);
-  if (m.be5y) lines.push(`5y breakeven inflation: ${f2(m.be5y.last)}% (20d ${bp(m.be5y.last, m.be5y.d20)})`);
+  if (m.real10y && m.nom10y) { const be = x => (m.nom10y[x] != null && m.real10y[x] != null ? m.nom10y[x] - m.real10y[x] : null); lines.push(`10y breakeven inflation: ${f2(be('last'))}% (20d ${bp(be('last'), be('d20'))})`); }
   if (m.fedFut) lines.push(`Fed funds futures (front month) imply ~${f2(100 - m.fedFut.last)}% (20d change ${bp(100 - m.fedFut.last, 100 - m.fedFut.d20)})`);
   if (m.vix) lines.push(`VIX: ${f2(m.vix.last)} (5d ${sg(m.vix.last - m.vix.d5)})`);
   const bm = ctx.bigMoney;

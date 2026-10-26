@@ -34,7 +34,7 @@ jobs:
         run: |
           mkdir -p bt
           for id in $(gh run list --workflow backtest.yml -L 20 --json databaseId -q '.[].databaseId'); do
-            gh run download "$id" -n bt-tasks-v2 -D bt 2>/dev/null && [ -f bt/tasks.json ] && { echo "Reusing the test set from run $id"; break; }
+            gh run download "$id" -n bt-tasks-v3 -D bt 2>/dev/null && [ -f bt/tasks.json ] && { echo "Reusing the test set from run $id"; break; }
           done
           if [ ! -f bt/tasks.json ]; then
             pip install -q pandas==2.2.3 numpy==1.26.4   # the same versions that wrote the dataset
@@ -55,7 +55,7 @@ jobs:
           git add . && git commit -qm "Backtest prep log" && git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" bt-log
       - uses: actions/upload-artifact@v4
         with:
-          name: bt-tasks-v2
+          name: bt-tasks-v3
           path: bt/tasks.json
           retention-days: 30
 
@@ -75,7 +75,7 @@ jobs:
         run: echo "STARTED=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v4
         with:
-          name: bt-tasks-v2
+          name: bt-tasks-v3
           path: bt
       - uses: actions/setup-node@v4
         with:

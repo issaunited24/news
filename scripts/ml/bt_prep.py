@@ -41,6 +41,18 @@ def yahoo(sym):
     return s.dropna().groupby(level=0).last()
 
 
+def treasury(kind, col):
+    """US Treasury daily rates (free, no key): kind 'daily_treasury_real_yield_curve' or 'daily_treasury_yield_curve'."""
+    parts = []
+    for y in (2024, 2025, 2026):
+        url = (f'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/{y}/all'
+               f'?type={kind}&field_tdr_date_value={y}&page&_format=csv')
+        df = pd.read_csv(io.StringIO(get(url, timeout=60, tries=3)))
+        c = [x for x in df.columns if x.strip().lower() == col.lower()][0]
+        parts.append(pd.Series(pd.to_numeric(df[c], errors='coerce').values, index=pd.to_datetime(df['Date'], utc=True)))
+    return pd.concat(parts).dropna().sort_index().groupby(level=0).last()
+
+
 def fred(sid):
     # only the dates needed (much faster), more time and retries: FRED can be slow to answer
     df = pd.read_csv(io.StringIO(get(f'https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}&cosd=2024-06-01', timeout=150, tries=4)))
@@ -100,7 +112,7 @@ def snapshot(t, px, mac):
     lvl('US 10y yield', 'us10y')
     lvl('US 2y yield', 'us2y')
     lvl('US 10y real yield (TIPS)', 'real10y')
-    lvl('5y breakeven inflation', 'be5y')
+    lvl('10y breakeven inflation', 'be10y')
     lvl('Fed funds futures (front month) imply', 'fedfut', inv=True)
     lvl('VIX', 'vix', bp=False)
     return '\n'.join(lines)
@@ -136,12 +148,15 @@ def main():
         px[k] = c.groupby(level=0).last()
     mac = {}
     for key, fn in [('us10y', lambda: yahoo('%5ETNX')), ('us2y', lambda: yahoo('2YY%3DF')), ('vix', lambda: yahoo('%5EVIX')), ('fedfut', lambda: yahoo('ZQ%3DF')),
-                    ('real10y', lambda: fred('DFII10')), ('be5y', lambda: fred('T5YIE'))]:
+                    ('real10y', lambda: treasury('daily_treasury_real_yield_curve', '10 YR')),
+                    ('nom10y', lambda: treasury('daily_treasury_yield_curve', '10 Yr'))]:
         try:
             mac[key] = fn()
             print(f'  {key}: {len(mac[key])} days', flush=True)
         except Exception as e:
             print(f'  {key} unavailable: {e}', flush=True)
+    if 'real10y' in mac and 'nom10y' in mac:  # 10y breakeven inflation = nominal minus real 10y yield
+        mac['be10y'] = (mac['nom10y'] - mac['real10y']).dropna()
     m = meta[(meta.ts >= START) & meta[[f'rD_{k}' for k in ASSETS]].notna().any(axis=1)].copy()
     m = m[m.title.str.len() >= 35]
     # a spread of days and topics: up to PER_DAY headlines per day, preferring ones with an article opening
