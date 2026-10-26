@@ -425,7 +425,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.2';
+const APP_VERSION = '2026-10-26.3';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1268,7 +1268,7 @@ function previewHTML(s) {
     <h2 class="pv-title">${esc(s.title)}</h2>
     ${s.summary ? `<p class="pv-sum">${esc(s.summary)}${s.summaryFrom ? ` <small>· ${esc(s.summaryFrom)}</small>` : ''}</p>` : '<p class="pv-sum muted">No summary from the outlets yet. Open the full story below.</p>'}
     ${takes ? `<div class="pv-k">Also reported</div>${takes}` : ''}
-    ${s.fx ? `<div class="mini">${forecasts(s.fx, 90, 18)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>` : ''}
+    ${s.fx ? `<div class="mini">${forecasts(s.fx, 90, 18)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>${s.fx.model ? '<p class="pv-why" style="opacity:.75">Calls from the trained model: it read this story and compared it with a year of past news and what prices did after. Each rating is how often it was right at that level on months it had never seen.</p>' : ''}` : ''}
     ${others.length ? `<div class="pv-k">Covering · ${others.length}</div><div class="pv-chips">${chipsH}</div>` : ''}
     <div class="pv-actions">
       <button class="sq ${sv ? 'saved' : ''}" data-act="pvsave" data-id="${s.id}" aria-label="${sv ? 'Remove from saved' : 'Save story'}">${sv ? ICON.saved : ICON.save}</button>
