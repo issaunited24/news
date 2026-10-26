@@ -98,7 +98,7 @@ Method (do it for every market):
 
 Use the trained model's view and your own recent record as supporting evidence, not as the answer.
 
-Reply with JSON only, no prose outside it, keep every text field short (max ~20 words):
+Reply with JSON only, no prose outside it. Be concise: every text field max ~15 words, at most 3 factors per side for gold and 2 for the others:
 {"status":"confirmed|official|reported|unverified|speculation|opinion|conflicting","credibility":1-5,"importance":1-5,"priced_in":"none|partly|mostly","what":"one sentence: what actually happened","facts":["..."],"claims":["..."],
 "markets":{"gold":{"bias":"bullish|bearish|neutral|unclear","conviction":0-10,"bull":[{"f":"factor","chain":"cause -> effect -> gold","s":"weak|moderate|strong"}],"bear":[same],"wins":"which forces dominate and why","counter":"best argument against your call","flip":"what would change the view"},
 "ndq":{same fields, 1-2 factors each side, short},"usd":{same, short},"oil":{same, short}},
@@ -173,13 +173,25 @@ function eligible(st, now) {
 
 /* ---------- The model call ---------- */
 async function callModel(system, user) {
-  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 15 * 60e3);
+  // streamed, so a long analysis (several minutes on the robot's CPU) never hits a waiting-for-reply timeout
+  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 14 * 60e3);
   try {
-    const body = { messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.2, max_tokens: 1100, response_format: { type: 'json_object' }, cache_prompt: true };
+    const body = { messages: [{ role: 'system', content: system }, { role: 'user', content: user }], temperature: 0.2, max_tokens: 1000, response_format: { type: 'json_object' }, stream: true };
     const res = await fetch(API, { method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 160)}`);
-    const j = await res.json();
-    const txt = j.choices?.[0]?.message?.content || '';
+    let txt = '', buf = '';
+    const dec = new TextDecoder();
+    for await (const chunk of res.body) {
+      buf += dec.decode(chunk, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line.startsWith('data:')) continue;
+        const d = line.slice(5).trim();
+        if (d === '[DONE]') continue;
+        try { txt += JSON.parse(d).choices?.[0]?.delta?.content || ''; } catch {}
+      }
+    }
     const m = txt.match(/\{[\s\S]*\}/);
     if (!m) throw new Error('no JSON');
     return JSON.parse(m[0]);
