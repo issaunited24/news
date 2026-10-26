@@ -101,6 +101,19 @@ a { color: inherit; text-decoration: none; }
 .brief-mini { display: flex; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 0 16px 12px; padding: 10px 14px; border-radius: 16px; background: rgba(255,190,90,.08); box-shadow: inset 0 0 0 1px rgba(255,200,120,.18); font: 600 12px var(--mono); color: var(--ink2); text-align: left; }
 .brief-mini b { color: #ffcc66; letter-spacing: .1em; }
 
+
+/* Bias meter (top of Forex): every recent call combined into one reading per market */
+.bias { margin: 0 16px 14px; padding: 12px 12px 10px; border-radius: 20px; background: rgba(10,16,34,.86); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+.bias-h { display: flex; justify-content: space-between; align-items: baseline; margin: 0 2px 9px; font: 600 10.5px var(--mono); letter-spacing: .16em; color: var(--mute); text-transform: uppercase; }
+.bias-h span:last-child { letter-spacing: .04em; text-transform: none; font-weight: 500; }
+.bias-g { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.bi { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 8px 8px 7px; border-radius: 14px; text-align: left; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(var(--bc),.25); }
+.bi b { font: 600 10.5px var(--mono); letter-spacing: .06em; color: rgb(var(--pc)); }
+.bi .bw { font: 800 13px var(--ui); color: rgb(var(--bc)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bi .bm { height: 4px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; position: relative; }
+.bi .bm i { position: absolute; top: 0; bottom: 0; left: 50%; border-radius: 4px; background: rgb(var(--bc)); box-shadow: 0 0 8px rgba(var(--bc),.8); }
+.bi small { font: 500 9.5px var(--mono); color: var(--mute); white-space: nowrap; }
+
 /* Tabs */
 .tabs { position: sticky; top: 0; z-index: 10; display: flex; gap: 22px; padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px 12px; overflow-x: auto; scrollbar-width: none;
   background: linear-gradient(180deg, rgba(5,7,15,.97), rgba(5,7,15,.9) 75%, rgba(5,7,15,0)); }
@@ -425,7 +438,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.4';
+const APP_VERSION = '2026-10-26.5';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -999,13 +1012,47 @@ addEventListener('touchend', e => { if (briefX == null) return; const dx = e.cha
   if (Math.abs(dx) > 90) hideBrief(); else { el.style.transform = ''; el.style.opacity = ''; } });
 function hideBrief() { const day = nyDay(new Date()); prefs.briefHid = day; if (prefs.briefOpen === day) prefs.briefOpen = ''; save(); renderTop(); }
 
+
+/* ---------- Bias meter: every recent call on a market combined into one reading ---------- */
+// Each Forex story from the last 6 hours (and each calendar release the model called) votes for up or down,
+// weighted by its confidence, how important it is, and how recent it is (a 3-hour-old call counts half).
+const BIAS_H = 6;
+function biasOf(k, now) {
+  let sum = 0, tot = 0, n = 0, top = null;
+  const add = (dir, conf, t, imp, ref) => {
+    if (!conf || (dir !== 'up' && dir !== 'down')) return;
+    const age = (now - t) / 3600e3; if (age < 0 || age > BIAS_H) return;
+    const w = conf * Math.pow(0.5, age / 3) * ({ high: 1.5, medium: 1, low: 0.6 }[imp] || 1), v = dir === 'up' ? 1 : -1;
+    sum += w * v; tot += w; n++;
+    if (!top || w > top.w) top = { w, v, ref };
+  };
+  for (const s of data?.stories || []) if (s.fx?.assets?.[k] && visible(s)) add(s.fx.assets[k].dir, s.fx.assets[k].conf, Math.min(s.published, s.firstSeen), s.fx.impact, s.id);
+  for (const e of data?.calendar?.events || []) if (e.model?.assets?.[k]) add(e.model.assets[k].dir, e.model.assets[k].conf, Date.parse(e.time), e.impact === 'high' ? 'high' : 'medium', null);
+  if (!tot) return { n: 0 };
+  const score = sum / tot, strength = Math.max(1, Math.min(10, Math.round(Math.abs(score) * 10 * Math.min(1, n / 4))));
+  return { n, score, strength, word: Math.abs(score) < 0.15 ? 'Neutral' : score > 0 ? 'Bullish' : 'Bearish', top };
+}
+function biasHTML() {
+  const now = Date.now();
+  const cells = Object.keys(MK).map(k => {
+    const b = biasOf(k, now);
+    const col = !b.n || b.word === 'Neutral' ? '160,170,200' : b.score > 0 ? '62,240,180' : '255,100,135';
+    const w = b.n ? Math.min(50, Math.abs(b.score) * 50) : 0;
+    const bar = b.n ? `<i style="${b.score >= 0 ? `left:50%;width:${w}%` : `left:${50 - w}%;width:${w}%`}"></i>` : '';
+    return `<button class="bi" style="--pc:${MK[k].c};--bc:${col}" ${b.top?.ref ? `data-act="preview" data-id="${esc(b.top.ref)}"` : ''} aria-label="${MK[k].name} bias ${b.n ? `${b.word} ${b.strength} of 10` : 'no recent calls'}">
+      <b>${MK[k].short.toUpperCase()}</b><span class="bw">${b.n ? `${b.word === 'Bullish' ? '▲' : b.word === 'Bearish' ? '▼' : '•'} ${b.word}` : '—'}</span>
+      <span class="bm">${bar}</span><small>${b.n ? `${b.strength}/10 · ${b.n} call${b.n > 1 ? 's' : ''}` : 'no calls yet'}</small></button>`;
+  }).join('');
+  return `<section class="bias"><div class="bias-h"><span>Bias</span><span>last ${BIAS_H} hours · tap for the top story</span></div><div class="bias-g">${cells}</div></section>`;
+}
+
 function forexTop() {
   const e = nextEvent();
   let ring = 0;
   if (e) { const span = 24 * 3600e3; ring = Math.max(0.04, Math.min(1, 1 - (e.t - Date.now()) / span)); }
   const C = 2 * Math.PI * 19, now = Date.now();
   const rows = calendarHTML(now);
-  return `${briefHTML()}${prismHTML()}<div class="fxmods">${sessionsHTML()}
+  return `${briefHTML()}${biasHTML()}${prismHTML()}<div class="fxmods">${sessionsHTML()}
     <div><button class="next glass" id="nextBtn" aria-expanded="${!!prefs.calOpen}">
       <svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true" style="flex:none">
         <circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/>

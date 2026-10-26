@@ -24,6 +24,12 @@ await step('brief', async () => {
   await p.evaluate(() => { prefs.briefOpen = nyDay(new Date()); prefs.briefHid = ''; renderTop(); scrollTo(0, document.getElementById('top').getBoundingClientRect().top + scrollY - 70); });
   await wait(1200); await p.screenshot({ path: 'out/brief.png' });
   out.push('  brief: ' + await p.evaluate(() => { const b = document.getElementById('brief'); return b ? `${b.querySelectorAll('.br-mv div').length} moves, ${b.querySelectorAll('.br-st').length} stories, ${b.querySelectorAll('.br-ev').length} releases` : 'missing'; }));
+  out.push('  bias: ' + await p.evaluate(() => [...document.querySelectorAll('.bi')].map(b => b.innerText.replace(/\s+/g, ' ')).join(' | ')));
+  await p.evaluate(() => document.querySelector('.bias')?.scrollIntoView({ block: 'center' })); await wait(500);
+  await p.screenshot({ path: 'out/bias.png' });
+  await p.evaluate(() => { prefs.calOpen = true; renderTop(); document.querySelector('.cal')?.scrollIntoView({ block: 'start' }); }); await wait(800);
+  await p.screenshot({ path: 'out/calendar.png' });
+  await p.evaluate(() => { prefs.calOpen = false; renderTop(); document.getElementById('brief')?.scrollIntoView({ block: 'center' }); }); await wait(500);
   await click('#brief [data-act="briefHide"]'); await wait(600);
   out.push('  after hide: ' + await p.evaluate(() => document.querySelector('.brief-mini') ? 'small button' : document.getElementById('brief') ? 'still open' : 'gone'));
   await p.evaluate(() => scrollTo(0, 0));
