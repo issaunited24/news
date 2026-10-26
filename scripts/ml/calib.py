@@ -21,7 +21,7 @@ def rating_of(acc, steps=RATING_STEPS):
     return r
 
 
-def fit_calibration(margin, right, min_bin=300, prior=150):
+def fit_calibration(margin, right, min_bin=150, prior=60):
     margin, right = np.asarray(margin, float), np.asarray(right, float)
     o = np.argsort(margin)
     m, r = margin[o], right[o]
@@ -37,7 +37,7 @@ def fit_calibration(margin, right, min_bin=300, prior=150):
     return IsotonicRegression(y_min=0.5, y_max=0.95, out_of_bounds='clip').fit(xs, ys, sample_weight=ws)
 
 
-def check(p, y, min_bin=300):
+def check(p, y, min_bin=150):
     """Calibrate on the first half of tested calls, report hit rate per rating on the second half; final calibration on all."""
     p, y = np.asarray(p, float), np.asarray(y)
     margin, right = np.abs(p - 0.5), ((p > 0.5) == (y == 1)).astype(float)
@@ -48,7 +48,7 @@ def check(p, y, min_bin=300):
     return fit_calibration(margin, right, min_bin), by
 
 
-def caps(by, prior=150):
+def caps(by, prior=60):
     """No rating may promise more than it delivered on the most recent test months:
     each rating is capped at the rating its recent hit rate (pulled toward 50%) actually earns."""
     out = {}
