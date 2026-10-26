@@ -210,6 +210,7 @@ main { touch-action: pan-y; will-change: transform; }
 .pk { padding: 9px 8px; border-radius: 18px; text-align: left; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); transition: .3s; min-width: 0; }
 .pk .n { font: 700 11px var(--ui); color: var(--mute); }
 .pk .v { font: 800 15px var(--ui); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk .c small { font-size: .8em; opacity: .7; }
 .pk .c { font: 600 10px var(--mono); color: var(--up); } .pk .c.dn { color: var(--down); }
 .pk[aria-pressed="true"] { background: rgba(var(--pc),.16); box-shadow: inset 0 0 0 1px rgba(var(--pc),.6), 0 0 22px -6px rgba(var(--pc),.8); }
 .pk[aria-pressed="true"] .n { color: rgb(var(--pc)); }
@@ -479,7 +480,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.18'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.19'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -957,7 +958,7 @@ function prismHTML() {
   const k = prefs.pick, m = series(k), up = (m.chg ?? 0) >= 0;
   const picks = Object.keys(MK).map(key => {
     const s = series(key), u = (s.chg ?? 0) >= 0;
-    return `<button class="pk" data-pick="${key}" aria-pressed="${key === k}" style="--pc:${MK[key].c}"><div class="n">${MK[key].short}</div><div class="v">${fmtPrice(key, s.last)}</div><div class="c ${u ? '' : 'dn'}">${s.chg == null ? '—' : `${u ? '+' : ''}${s.chg.toFixed(2)}%`}</div></button>`;
+    return `<button class="pk" data-pick="${key}" aria-pressed="${key === k}" style="--pc:${MK[key].c}"><div class="n">${MK[key].short}</div><div class="v">${fmtPrice(key, s.last)}</div><div class="c ${u ? '' : 'dn'}">${s.chg == null ? '—' : `${u ? '+' : ''}${s.chg.toFixed(2)}%${live[key] ? '' : ' <small>wk</small>'}`}</div></button>`;
   }).join('');
   return `<section class="prism" id="prism" style="--c:${MK[k].c}"><div class="pick">${picks}</div>
     <button class="stage" data-chart="${k}" aria-label="Open the ${MK[k].name} chart"><span class="go">Chart ↗</span>
