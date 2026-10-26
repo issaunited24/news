@@ -616,11 +616,14 @@ if (!FIXTURES) {
   }
   console.log(`AI analyses available: ${Object.keys(aiState.analyses).length}`);
 }
+// another angle on an event the AI already analysed (same event tag) uses that event's newest analysis
+const evLatest = new Map();
+for (const a of Object.values(aiState.analyses)) if (a.ev && (!evLatest.get(a.ev) || evLatest.get(a.ev).at < a.at)) evLatest.set(a.ev, a);
 for (const st of stories) {
-  const a = st.fx && aiState.analyses?.[st.id];
+  const a = st.fx && (aiState.analyses?.[st.id] || (st.ev && evLatest.get(st.ev)));
   if (a) {
     st.fx.assets = combine(a.res, st._d1, st._rules);
-    st.fx.ai = { status: a.res.status, cred: a.res.credibility, priced: a.res.priced_in, at: a.at, full: a.full || undefined };
+    st.fx.ai = { status: a.res.status, cred: a.res.credibility, priced: a.res.priced_in, at: a.at, full: a.full || undefined, from: a.id !== st.id ? a.id : undefined };
     st.fx.model = true;
     if (a.res.importance >= 4 && st.fx.impact !== 'high') st.fx.impact = a.res.importance >= 5 ? 'high' : 'medium';
   }
