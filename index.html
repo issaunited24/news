@@ -381,6 +381,10 @@ textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: va
 .ai-m p { margin: 6px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--ink2); }
 .ai-note { margin: 10px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--faint); }
 .ai-note span { display: block; margin-top: 3px; font: 500 10px var(--mono); }
+.hz { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+.hz button { min-height: 36px; border-radius: 10px; font: 600 12px var(--mono); letter-spacing: .04em; color: var(--mute); }
+.hz button[aria-pressed="true"] { background: rgba(255,255,255,.12); color: var(--ink); }
+.hz-n { margin: -4px 4px 0; font-size: 11.5px; color: var(--faint); }
 .lv-box { margin-top: 10px; padding: 9px 11px; border-radius: 14px; background: rgba(3,5,14,.5); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
 .lv-r { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font: 500 11.5px var(--mono); color: var(--ink2); padding: 3px 0; }
 .lv-h { font-size: 9.5px; letter-spacing: .12em; color: var(--mute); min-width: 86px; }
@@ -486,7 +490,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.26'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.27'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -504,7 +508,7 @@ const hashN = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.cha
 
 /* ---------- Settings saved on this phone ---------- */
 const KEY = 'briefly.v1';
-const defaults = { tab: 'forex', important: true, hidden: [], muted: [], boosted: [], calAll: false, saved: [], lastVisit: 0, pick: 'gold' };
+const defaults = { tab: 'forex', important: true, hidden: [], muted: [], boosted: [], calAll: false, saved: [], lastVisit: 0, pick: 'gold', hz: 'd1' };
 let prefs = { ...defaults };
 try { prefs = { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch {} };
@@ -835,8 +839,15 @@ function spark(points, o = {}) {
   </svg>`;
 }
 // Gold / USD / Nasdaq forecast for one Forex story
+// Time frame chosen on the Forex tab: next day (the blended AI + model + rules call), or the trained model's next 3 days / week
+const HZ = { d1: 'Next day', d3: '3 days', w1: 'Week' };
+const callsOf = fx => (prefs.hz === 'd3' ? fx?.d3 : prefs.hz === 'w1' ? fx?.w1 : fx?.assets) || {};
+function hzSwitchHTML() {
+  const cur = HZ[prefs.hz] ? prefs.hz : 'd1';
+  return `<div class="hz" role="group" aria-label="Time frame for the calls">${Object.entries(HZ).map(([k, n]) => `<button data-act="hz" data-hz="${k}" aria-pressed="${k === cur}">${n}</button>`).join('')}</div>${cur !== 'd1' ? '<p class="hz-n">From the model trained on years of news; markets where it hasn\'t proven itself show “–”.</p>' : ''}`;
+}
 function forecasts(fx, w = 70, h = 15) {
-  const a = fx?.assets || {}, m = data?.markets?.items || {};
+  const a = callsOf(fx), m = data?.markets?.items || {};
   return [['GOLD', 'gold'], ['USD', 'usd'], ['NDQ', 'ndq'], ['OIL', 'oil']].map(([label, key]) => {
     const f = a[key] || { dir: 'flat' }, col = DIRC[f.dir] || DIRC.flat, n = f.conf || 0;
     const word = f.dir === 'up' ? 'up' : f.dir === 'down' ? 'down' : 'no clear move';
@@ -1123,8 +1134,10 @@ function hideBrief() { const day = nyDay(new Date()); prefs.briefHid = day; if (
 // Each Forex story from the last 12 hours (and each calendar release the model called) votes for up or down,
 // weighted by its confidence, how important it is, and how recent it is (a 6-hour-old call counts half).
 // The strength (1-10) is how much they agree times how confident they are on average.
-const BIAS_H = 12;
+const BIAS_HOURS = { d1: 12, d3: 24, w1: 48 }; // longer time frames look back further
+let BIAS_H = 12;
 function biasOf(k, now) {
+  BIAS_H = BIAS_HOURS[prefs.hz] || 12;
   let sum = 0, tot = 0, n = 0, top = null, confW = 0;
   const add = (dir, conf, t, imp, ref) => {
     if (!conf || (dir !== 'up' && dir !== 'down')) return;
@@ -1133,8 +1146,8 @@ function biasOf(k, now) {
     sum += w * v; tot += w; n++; confW += w * conf;
     if (!top || w > top.w) top = { w, v, ref };
   };
-  for (const s of data?.stories || []) if (s.fx?.assets?.[k] && visible(s)) add(s.fx.assets[k].dir, s.fx.assets[k].conf, Math.min(s.published, s.firstSeen), s.fx.impact, s.id);
-  for (const e of data?.calendar?.events || []) if (e.model?.assets?.[k]) add(e.model.assets[k].dir, e.model.assets[k].conf, Date.parse(e.time), e.impact === 'high' ? 'high' : 'medium', null);
+  for (const s of data?.stories || []) if (callsOf(s.fx)[k] && visible(s)) add(callsOf(s.fx)[k].dir, callsOf(s.fx)[k].conf, Math.min(s.published, s.firstSeen), s.fx.impact, s.id);
+  if ((prefs.hz || 'd1') === 'd1') for (const e of data?.calendar?.events || []) if (e.model?.assets?.[k]) add(e.model.assets[k].dir, e.model.assets[k].conf, Date.parse(e.time), e.impact === 'high' ? 'high' : 'medium', null);
   if (!tot) return { n: 0 };
   // strength: how much the calls agree, times how confident they are on average (fewer than 4 calls counts for less)
   const score = sum / tot, avgConf = confW / tot;
@@ -1152,7 +1165,7 @@ function biasHTML() {
       <b>${MK[k].short.toUpperCase()}</b><span class="bw">${b.n ? `${b.word === 'Bullish' ? '▲' : b.word === 'Bearish' ? '▼' : '•'} ${b.word}` : '—'}</span>
       <span class="bm">${bar}</span><small>${b.n ? `${b.strength}/10 · ${b.n} news` : 'no calls'}</small></button>`;
   }).join('');
-  return `<section class="bias"><div class="bias-h"><span>Bias</span><span>last ${BIAS_H}h · tap for the top story</span></div><div class="bias-g">${cells}</div></section>`;
+  return `<section class="bias"><div class="bias-h"><span>Bias · ${HZ[prefs.hz] || 'Next day'}</span><span>last ${BIAS_H}h · tap for the top story</span></div><div class="bias-g">${cells}</div></section>`;
 }
 
 
@@ -1198,7 +1211,7 @@ function forexTop() {
     </button>
     ${e ? playbookHTML(e.title, e.forecast) : ''}</div>
     ${prefs.calOpen ? `<div class="cal">${rows || '<p class="muted" style="padding:6px 4px">Nothing on the calendar this week.</p>'}</div>` : ''}</div>
-    ${prismHTML()}${biasHTML()}${bigMoneyHTML()}<div class="fxmods">${scorecardHTML()}</div>`;
+    ${prismHTML()}<div class="fxmods">${hzSwitchHTML()}</div>${biasHTML()}${bigMoneyHTML()}<div class="fxmods">${scorecardHTML()}</div>`;
 }
 
 /* ---------- Economic calendar: one scoreboard card per US release, plus bank holidays ---------- */
@@ -1732,6 +1745,7 @@ document.addEventListener('click', e => {
   else if (act === 'menu') storyMenu(id);
   else if (act === 'preview') previewSheet(id);
   else if (act === 'ai') previewSheet(id, true);
+  else if (act === 'hz') { prefs.hz = el.dataset.hz; save(); render(); }
   else if (act === 'pvsave') { toggleSave(id); const st = findStory(id); $('sheetBody').innerHTML = previewHTML(st); if (st?.fx?.ai) fillAI(st); }
   else if (act === 'close') closeSheet();
   else if (act === 'share') {
