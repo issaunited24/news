@@ -35,6 +35,31 @@ await step('brief', async () => {
   out.push('  after hide: ' + await p.evaluate(() => document.querySelector('.brief-mini') ? 'small button' : document.getElementById('brief') ? 'still open' : 'gone'));
   await p.evaluate(() => scrollTo(0, 0));
 });
+await step('forex order', async () => {
+  await click('.tab[data-tab="forex"]'); await wait(1200); await p.evaluate(() => scrollTo(0, 0));
+  out.push('  forex order: ' + await p.evaluate(() => [...document.querySelectorAll('#top > *, #top .fxmods > *')].map(e => e.id || e.className.split(' ')[0]).filter(Boolean).join(' > ')));
+  const top = await p.$('#top'); if (top) await top.screenshot({ path: 'out/forex-top.png' });
+});
+await step('refresh button', async () => {
+  await p.evaluate(() => scrollTo(0, 0)); await wait(300);
+  await p.screenshot({ path: 'out/header.png', clip: { x: 0, y: 0, width: 412, height: 120 } });
+  await click('#btnRefresh'); await wait(250);
+  out.push('  refresh: spinning ' + await p.evaluate(() => document.getElementById('btnRefresh').classList.contains('spin')));
+  await wait(3000); out.push('  refresh toast: ' + await p.evaluate(() => document.querySelector('.toast, #toast')?.textContent?.trim() || 'none'));
+});
+await step('ai story', async () => {
+  await click('.tab[data-tab="forex"]'); await wait(1000);
+  const has = await p.evaluate(() => { const el = document.querySelector('#feed .aip'); const card = el?.closest('[data-id]'); if (card) { card.click(); return true; } return false; });
+  if (!has) { out.push('  ai story: none analysed yet'); return; }
+  await wait(4000);
+  out.push('  ai panel: ' + await p.evaluate(() => (document.getElementById('aiPanel')?.innerText || 'missing').replace(/\s+/g, ' ').slice(0, 300)));
+  await p.evaluate(() => document.getElementById('aiPanel')?.scrollIntoView({ block: 'start' })); await wait(500);
+  await p.screenshot({ path: 'out/ai-story.png' });
+  await p.keyboard.press('Escape'); await wait(600);
+});
+await step('sections', async () => {
+  for (const t of ['sci', 'tech', 'ent']) out.push(`  ${t} odd: ` + await p.evaluate(t => storiesFor(t, false).filter(s => /\b(fed|fomc|rate hikes?|election|runoff|missiles?|futures)\b/i.test(s.title)).slice(0, 4).map(s => s.title.slice(0, 60)).join(' | ') || 'none', t));
+});
 await step('open story', async () => { await click('.tab[data-tab="world"]'); await wait(800); await click('#feed [data-id]'); await wait(1200); });
 await step('close story', async () => { await p.keyboard.press('Escape'); await wait(600); await p.evaluate(() => document.querySelector('[data-close]')?.click()); await wait(600); });
 await step('story menu', async () => { await click('#feed [data-act="menu"]'); await wait(700); await p.keyboard.press('Escape'); await p.evaluate(() => document.querySelector('#scrim')?.click()); await wait(500); });

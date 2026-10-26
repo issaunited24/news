@@ -53,7 +53,8 @@ jobs:
         run: |
           git config user.name "briefly-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python -m llama_cpp.server --model model/qwen2.5-7b-instruct-q4_k_m-00001-of-00002.gguf --n_ctx 6144 --n_threads 4 --n_batch 512 --host 127.0.0.1 --port 8000 > server.log 2>&1 &
-          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8000/v1/models >/dev/null && break; sleep 2; done
+          for i in $(seq 1 90); do curl -sf http://127.0.0.1:8000/v1/models >/dev/null && break; sleep 2; done
+          (python -c "import llama_cpp; print('llama_cpp', llama_cpp.__version__)"; curl -s http://127.0.0.1:8000/v1/models | head -c 200; echo; tail -5 server.log) > engine.txt 2>&1
           node scripts/analyst-run.mjs
       - name: Server log (for checking)
         if: always()

@@ -10,7 +10,9 @@ const SHARD = +(process.env.SHARD || 0), SHARDS = +(process.env.SHARDS || 1);
 const END = Date.now() + (+(process.env.MINUTES || 110)) * 60e3;
 const BRANCH = `ai-${SHARD}`, FILE = 'data/analyses.json';
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
-const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
+const logs = [];
+const log = (...a) => { const line = `${new Date().toISOString().slice(11, 19)} ${a.join(' ')}`; console.log(line); logs.push(line); if (logs.length > 40) logs.shift(); };
+let lastBeat = 0;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function getText(url) {
@@ -42,6 +44,8 @@ function publish(obj) {
 let analyses = {};
 try { git('fetch', '-q', '--depth=1', 'origin', BRANCH); analyses = JSON.parse(git('show', 'FETCH_HEAD:analyses.json')).analyses || {}; } catch {}
 log(`worker ${SHARD}/${SHARDS}: ${Object.keys(analyses).length} earlier analyses`);
+try { log('engine:', readFileSync('engine.txt', 'utf8').trim().slice(-300)); } catch {}
+publish({ updated: Date.now(), shard: SHARD, analyses, log: logs });
 let macro = null;
 const failed = new Map();
 while (Date.now() < END - 4 * 60e3) {
@@ -53,7 +57,10 @@ while (Date.now() < END - 4 * 60e3) {
   const preds = live.state?.preds || {};
   const stories = live.news.stories.filter(s => s.fx).map(s => ({ ...s, _d1: preds[s.id]?.d1 }));
   const todo = pickStories(stories, analyses, now, SHARD, SHARDS).filter(s => (failed.get(s.id) || 0) < 2);
-  if (!todo.length) { await sleep(45e3); continue; }
+  if (!todo.length) {
+    if (Date.now() - lastBeat > 10 * 60e3) { lastBeat = Date.now(); log('waiting for new important stories'); publish({ updated: Date.now(), shard: SHARD, analyses, log: logs }); }
+    await sleep(45e3); continue;
+  }
   const st = todo[0];
   try { macro = await getMacro(macro, now, getText); } catch {}
   const recent = stories.filter(s => s.fx.driver !== 'wrap' && now - Math.min(s.published, s.firstSeen) < 12 * 3600e3)
@@ -65,10 +72,11 @@ while (Date.now() < END - 4 * 60e3) {
     const a = await analyseOne(st, ctx, now, getText);
     analyses[st.id] = { ...a, redo: !!prev };
     log(`analysed in ${Math.round((Date.now() - t0) / 1000)}s: ${st.title.slice(0, 70)} | gold ${a.res.markets.gold?.bias} ${a.res.markets.gold?.conviction} | ${a.res.status}`);
-    publish({ updated: Date.now(), shard: SHARD, analyses });
+    publish({ updated: Date.now(), shard: SHARD, analyses, log: logs });
   } catch (e) {
     failed.set(st.id, (failed.get(st.id) || 0) + 1);
-    log(`failed after ${Math.round((Date.now() - t0) / 1000)}s on "${st.title.slice(0, 60)}": ${String(e.message).slice(0, 160)}`);
+    log(`failed after ${Math.round((Date.now() - t0) / 1000)}s on "${st.title.slice(0, 60)}": ${String(e.message).slice(0, 160)} ${String(e.cause?.message || '').slice(0, 80)}`);
+    publish({ updated: Date.now(), shard: SHARD, analyses, log: logs });
   }
 }
 log('done');
