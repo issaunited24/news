@@ -513,13 +513,13 @@ const MODEL_FILE = new URL('model/forecast.joblib', ROOT), MODEL_REPORT = new UR
 const modelVersion = existsSync(MODEL_REPORT) ? (JSON.parse(await readFile(MODEL_REPORT, 'utf8')).trained || 'v1') : null;
 const preds = new Map(Object.entries(prevState.preds || {}).filter(([, v]) => now - v.at < 48 * 3600e3 && v.v === modelVersion));
 if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
-  const todo = stories.filter(st => st.fx && !preds.has(st.id)).slice(0, 120)
+  const todo = stories.filter(st => st.fx && !preds.has(st.id)).sort((a, b) => b.firstSeen - a.firstSeen).slice(0, 40) // newest first; the rest next round
     .map(st => ({ id: st.id, title: st.title, text: st.summary || '', ts: Math.min(st.published, st.firstSeen) / 1000, outlet: st.outlet }));
   if (todo.length) {
     const t0 = Date.now();
     // the market headlines of the last 24 hours, so the model can tell a fresh event from one everyone already knows
-    const pool = items.filter(it => now - it.time < 24 * 3600e3 && (it.cats || []).includes('forex')).slice(0, 4000).map(it => ({ title: it.title, ts: it.time / 1000 }));
-    const res = spawnSync('python3', [new URL('scripts/ml/predict.py', ROOT).pathname], { input: JSON.stringify({ stories: todo, pool }), encoding: 'utf8', timeout: 170000, maxBuffer: 32 * 1024 * 1024 });
+    const pool = items.filter(it => now - it.time < 24 * 3600e3 && (it.cats || []).includes('forex')).slice(0, 2000).map(it => ({ title: it.title, ts: it.time / 1000 }));
+    const res = spawnSync('python3', [new URL('scripts/ml/predict.py', ROOT).pathname], { input: JSON.stringify({ stories: todo, pool }), encoding: 'utf8', timeout: 130000, maxBuffer: 32 * 1024 * 1024 });
     try {
       const out = JSON.parse(res.stdout);
       for (const [id, p] of Object.entries(out.preds || {})) preds.set(id, { v: modelVersion, at: now, ...p });

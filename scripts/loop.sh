@@ -53,7 +53,7 @@ while [ "$(date +%s)" -lt "$END" ]; do
   start=$(date +%s); round=$((round + 1))
   # pick up any changes to the rules and feeds made since this run started
   git fetch -q --depth=1 origin main && git checkout -q FETCH_HEAD -- scripts feeds.json 2>/dev/null
-  if timeout 300 node scripts/collect.mjs; then
+  if timeout 420 node scripts/collect.mjs; then
     publish_live
     if [ $(( $(date +%s) - last_sync )) -ge 3600 ]; then backup_to_main; last_sync=$(date +%s); fi
   else
