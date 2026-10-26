@@ -439,8 +439,8 @@ if (!FIXTURES && (!bigMoney || now - bigMoney.fetched > 6 * 3600e3)) {
 }
 
 // 5b. Forecast scorecard: record each gold / USD / Nasdaq call with the price at the time,
-//     then check the price 4 hours later. Kept for 7 days.
-const HORIZON = 4 * 3600e3, KEEP = 7 * 24 * 3600e3;
+//     then check the price a day later (the next-day model's calls). Kept for 7 days.
+const HORIZON = 4 * 3600e3, NEXT_DAY = 24 * 3600e3, KEEP = 7 * 24 * 3600e3; // HORIZON: the old 4-hour calls (and the idea window)
 const forecasts = new Map((prevState.forecasts || []).filter(f => now - f.at < KEEP).map(f => [f.key, f]));
 function priceAt(key, t) {
   const fine = charts.assets?.[key]?.ranges?.['1W']?.bars?.map(b => [b[0] * 1000, b[4]]);
@@ -546,17 +546,13 @@ if (!FIXTURES && modelVersion && existsSync(MODEL_FILE)) {
   }
 }
 for (const st of stories) {
-  const p = st.fx && preds.get(st.id); if (!p) continue;
+  const p = st.fx && preds.get(st.id);
+  if (st.fx && !p && modelVersion) { st.fx.assets = {}; st.fx.waiting = true; } // the model reads it next round
+  if (!p) continue;
   const slim = o => (o ? Object.fromEntries(Object.entries(o).map(([k, a]) => [k, { dir: a.dir, conf: a.conf }])) : undefined);
-  st.fx.assets = { ...(st.fx.assets || {}), ...(slim(p.assets) || {}) }; // markets the model didn't pass keep the rules' call
-  // Every market gets a call: where neither the 4-hour model nor the rules have one, the next-day model's call is
-  // used with its own tested rating, and it's checked a day later (next: true) instead of after 4 hours
-  for (const [k, a] of Object.entries(p.d1 || {})) {
-    const cur = st.fx.assets[k];
-    if (!cur || cur.dir === 'flat' || !cur.conf) st.fx.assets[k] = { dir: a.dir, conf: a.conf || 1, next: true };
-  }
-  if (p.h1 && Object.keys(p.h1).length) st.fx.h1 = slim(p.h1);
-  if (p.d1 && Object.keys(p.d1).length) st.fx.d1 = slim(p.d1);
+  // The calls shown everywhere are the next-day model's (the best tested), each with its own tested rating and checked
+  // a day later. The 1-hour and 4-hour models keep training every week but aren't shown.
+  st.fx.assets = Object.fromEntries(Object.entries(p.d1 || {}).map(([k, a]) => [k, { dir: a.dir, conf: a.conf || 1, next: true }]));
   // Importance: the bigger of the rules' view (major Fed moves, wars, banking stress...) and the model's (how much
   // prices usually move after news like this), and breaking news is always high
   const RANK = { low: 0, medium: 1, high: 2 };
@@ -605,7 +601,7 @@ for (const st of stories) {
     if (!a || a.dir === 'flat' || !a.conf || forecasts.has(key)) continue;
     const p0 = priceAt(k, st.firstSeen);
     if (p0 == null) continue;
-    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, model: st.fx.model || undefined, at: st.firstSeen, p0, ...(a.next ? { horizon: 24 * 3600e3 } : {}) });
+    forecasts.set(key, { key, id: st.id, title: st.title.slice(0, 100), asset: k, dir: a.dir, conf: a.conf, driver: st.fx.driver, model: st.fx.model || undefined, at: st.firstSeen, p0, ...(a.next ? { horizon: NEXT_DAY } : {}) });
   }
 }
 for (const f of forecasts.values()) {
@@ -625,6 +621,7 @@ const vote = new Map();
 for (const f of forecasts.values()) {
   if (f.result !== 'hit' && f.result !== 'miss') continue;
   if (!f.cal && (f.conf || 0) < 5) continue;
+  if (!f.cal && f.horizon !== NEXT_DAY) continue; // only next-day calls are scored now (the old 4-hour ones aren't mixed in)
   const k = f.cal ? f.key : `${f.asset}:${f.dir}:${f.driver || ''}:${Math.floor(f.at / HORIZON)}`;
   const was = vote.get(k);
   if (!was || (f.conf || 0) > (was.conf || 0)) vote.set(k, f);
@@ -636,7 +633,7 @@ const tally = list => {
   return { hit: hit.length, miss: miss.length, w: all ? Math.round(w(hit) / all * 100) : null };
 };
 const scorecard = {
-  horizonH: 4, days: 7,
+  horizonH: 24, days: 7,
   assets: { gold: tally(judged.filter(f => f.asset === 'gold')), usd: tally(judged.filter(f => f.asset === 'usd')), ndq: tally(judged.filter(f => f.asset === 'ndq')), oil: tally(judged.filter(f => f.asset === 'oil')) },
   all: tally(judged), high: tally(judged.filter(f => f.conf >= 7)), news: tally(judged.filter(f => !f.cal)), cal: tally(judged.filter(f => f.cal)),
   pending: [...forecasts.values()].filter(f => !f.result).length, rules: 2,

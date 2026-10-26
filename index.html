@@ -125,9 +125,6 @@ a { color: inherit; text-decoration: none; }
 .bmc small { font: 500 9.5px var(--mono); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bmc small.hot { color: #ffc463; }
 /* Calls for each time frame (story view) */
-.tf { margin-top: 12px; display: grid; grid-template-columns: auto repeat(4, 1fr); gap: 4px 8px; font: 500 11px var(--mono); color: var(--ink2); }
-.tf .h { color: var(--mute); }
-.tf i { font-style: normal; } .tf i.u { color: var(--up); } .tf i.d { color: var(--down); }
 
 /* Tabs */
 .tabs { position: sticky; top: 0; z-index: 10; display: flex; gap: 22px; padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px 12px; overflow-x: auto; scrollbar-width: none;
@@ -453,7 +450,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.9';
+const APP_VERSION = '2026-10-26.10';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1029,16 +1026,16 @@ function hideBrief() { const day = nyDay(new Date()); prefs.briefHid = day; if (
 
 
 /* ---------- Bias meter: every recent call on a market combined into one reading ---------- */
-// Each Forex story from the last 6 hours (and each calendar release the model called) votes for up or down,
-// weighted by its confidence, how important it is, and how recent it is (a 3-hour-old call counts half).
+// Each Forex story from the last 12 hours (and each calendar release the model called) votes for up or down,
+// weighted by its confidence, how important it is, and how recent it is (a 6-hour-old call counts half).
 // The strength (1-10) is how much they agree times how confident they are on average.
-const BIAS_H = 6;
+const BIAS_H = 12;
 function biasOf(k, now) {
   let sum = 0, tot = 0, n = 0, top = null, confW = 0;
   const add = (dir, conf, t, imp, ref) => {
     if (!conf || (dir !== 'up' && dir !== 'down')) return;
     const age = (now - t) / 3600e3; if (age < 0 || age > BIAS_H) return;
-    const w = conf * Math.pow(0.5, age / 3) * ({ high: 1.5, medium: 1, low: 0.6 }[imp] || 1), v = dir === 'up' ? 1 : -1;
+    const w = conf * Math.pow(0.5, age / 6) * ({ high: 1.5, medium: 1, low: 0.6 }[imp] || 1), v = dir === 'up' ? 1 : -1;
     sum += w * v; tot += w; n++; confW += w * conf;
     if (!top || w > top.w) top = { w, v, ref };
   };
@@ -1082,12 +1079,6 @@ function bigMoneyHTML() {
       <small class="${crowd ? 'hot' : ''}">${crowd || usual || `${m.chg >= 0 ? '+' : ''}${m.chg}% this week`}</small></div>`;
   }).join('');
   return `<section class="bias"><div class="bias-h"><span>Big money</span><span>hedge funds · ${fmtD.format(new Date(any.date + 'T12:00:00Z'))} · bar = vs last 3y</span></div><div class="bm-g">${cells}</div></section>`;
-}
-// The model's calls for 1 hour, 4 hours and the next day (story view)
-function timeframesHTML(fx) {
-  if (!fx?.model || !(fx.h1 || fx.d1)) return '';
-  const row = (label, a) => a ? `<span class="h">${label}</span>${['gold', 'usd', 'ndq', 'oil'].map(k => a[k] ? `<span>${{ gold: 'Gold', usd: 'USD', ndq: 'NDQ', oil: 'Oil' }[k]} <i class="${a[k].dir === 'up' ? 'u' : 'd'}">${a[k].dir === 'up' ? '▲' : '▼'}</i>${a[k].conf}</span>` : '<span></span>').join('')}` : '';
-  return `<div class="tf">${row('1 HOUR', fx.h1)}${row('4 HOURS', fx.assets)}${row('NEXT DAY', fx.d1)}</div>`;
 }
 
 function forexTop() {
@@ -1363,7 +1354,7 @@ function previewHTML(s) {
     <h2 class="pv-title">${esc(s.title)}</h2>
     ${s.summary ? `<p class="pv-sum">${esc(s.summary)}${s.summaryFrom ? ` <small>· ${esc(s.summaryFrom)}</small>` : ''}</p>` : '<p class="pv-sum muted">No summary from the outlets yet. Open the full story below.</p>'}
     ${takes ? `<div class="pv-k">Also reported</div>${takes}` : ''}
-    ${s.fx ? `<div class="mini">${forecasts(s.fx, 90, 18)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>${timeframesHTML(s.fx)}${s.fx.model ? '<p class="pv-why" style="opacity:.75">Calls from the trained model: it read this story and compared it with years of past news and what prices did after. Each rating is how often it was right at that level, tested on months it had never seen.</p>' : ''}` : ''}
+    ${s.fx ? `<div class="mini">${forecasts(s.fx, 90, 18)}</div><p class="pv-why">${DRIVER[s.fx.driver] ? `<span class="drv">${DRIVER[s.fx.driver]}</span>` : ''}${esc(s.fx.why)}</p>${s.fx.model ? '<p class="pv-why" style="opacity:.75">Calls from the trained model: it read this story and compared it with years of past news and what prices did after. These are next-day calls: where each market should be about 24 hours after the story. Each rating is how often it was right at that level, tested on months it had never seen (1/10 = a coin flip, 10/10 = right 65% of the time or more).</p>' : ''}` : ''}
     ${others.length ? `<div class="pv-k">Covering · ${others.length}</div><div class="pv-chips">${chipsH}</div>` : ''}
     <div class="pv-actions">
       <button class="sq ${sv ? 'saved' : ''}" data-act="pvsave" data-id="${s.id}" aria-label="${sv ? 'Remove from saved' : 'Save story'}">${sv ? ICON.saved : ICON.save}</button>
