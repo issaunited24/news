@@ -56,6 +56,10 @@ a { color: inherit; text-decoration: none; }
 .logo i { font-style: italic; color: rgb(var(--tint)); transition: color .8s; }
 .live { display: flex; align-items: center; gap: 6px; font: 500 10px var(--mono); color: var(--ink2); padding: 4px 9px; border-radius: 999px; background: rgba(5,7,15,.45); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
 .live.stale { color: #ffc463; }
+.ib.rf { width: 36px; height: 36px; margin-left: -4px; }
+.ib.rf svg { width: 15px; height: 15px; }
+.ib.rf.spin svg { animation: rfspin .8s linear infinite; }
+@keyframes rfspin { to { transform: rotate(360deg); } }
 .ping { position: relative; width: 6px; height: 6px; border-radius: 50%; background: #ff3d6a; }
 .ping::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #ff3d6a; animation: ping 1.8s cubic-bezier(0,0,.2,1) infinite; }
 .live.stale .ping, .live.stale .ping::after { background: #ffc463; }
@@ -406,6 +410,7 @@ textarea { width: 100%; min-height: 110px; background: rgba(0,0,0,.4); color: va
   <div class="bar">
     <div class="logo">Brief<i>ly</i></div>
     <div class="live" id="live" title="Last update" role="button" tabindex="0"><span class="ping"></span><span id="liveText">LIVE</span></div>
+    <button class="ib rf" id="btnRefresh" aria-label="Check for news now"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
     <div class="icons">
       <button class="ib" id="btnSearch" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
       <button class="ib" id="btnSaved" aria-label="Saved stories"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span class="badge" id="savedCount" hidden></span></button>
@@ -449,7 +454,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.12';
+const APP_VERSION = '2026-10-26.13';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -620,7 +625,7 @@ async function load(manual) {
       olderAt = Date.now();
       getJSON('older.json').then(o => { if (o?.stories) { older = o; compose(); render(); } }).catch(() => { olderAt = 0; });
     }
-    if (manual) toast('Up to date');
+    if (manual) toast(`Up to date · checked ${timeFmt.format(new Date(base.updated))}`);
   } catch {
     if (manual) toast(data ? "Couldn't refresh. Check your connection." : 'No news yet');
   }
@@ -1138,7 +1143,8 @@ function forexTop() {
   if (e) { const span = 24 * 3600e3; ring = Math.max(0.04, Math.min(1, 1 - (e.t - Date.now()) / span)); }
   const C = 2 * Math.PI * 19, now = Date.now();
   const rows = calendarHTML(now);
-  return `${briefHTML()}${biasHTML()}${bigMoneyHTML()}${prismHTML()}<div class="fxmods">${sessionsHTML()}
+  // Order: brief, calendar (with market sessions), charts, bias, big money, scorecard, then the news
+  return `${briefHTML()}<div class="fxmods">${sessionsHTML()}
     <div><button class="next glass" id="nextBtn" aria-expanded="${!!prefs.calOpen}">
       <svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true" style="flex:none">
         <circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/>
@@ -1153,8 +1159,8 @@ function forexTop() {
       ${e ? `<span class="next-c" id="countdown" data-t="${e.t}">${countdownText(e.t)}</span>` : ''}
     </button>
     ${e ? playbookHTML(e.title, e.forecast) : ''}</div>
-    ${prefs.calOpen ? `<div class="cal">${rows || '<p class="muted" style="padding:6px 4px">Nothing on the calendar this week.</p>'}</div>` : ''}
-    ${scorecardHTML()}</div>`;
+    ${prefs.calOpen ? `<div class="cal">${rows || '<p class="muted" style="padding:6px 4px">Nothing on the calendar this week.</p>'}</div>` : ''}</div>
+    ${prismHTML()}${biasHTML()}${bigMoneyHTML()}<div class="fxmods">${scorecardHTML()}</div>`;
 }
 
 /* ---------- Economic calendar: one scoreboard card per US release, plus bank holidays ---------- */
@@ -1680,7 +1686,16 @@ $('btnSearch').onclick = () => {
 $('qClose').onclick = () => { view = 'feed'; query = ''; $('q').value = ''; $('searchBar').hidden = true; render(); };
 let qTimer;
 $('q').addEventListener('input', e => { clearTimeout(qTimer); qTimer = setTimeout(() => { query = e.target.value.trim(); shown = PAGE; render(); }, 180); });
-$('live').addEventListener('click', () => load(true));
+// Refresh: fetch the newest news, the older stories and the charts right now (the robot itself checks every few minutes)
+let refreshing = false;
+async function refreshNow() {
+  if (refreshing) return;
+  refreshing = true; $('btnRefresh').classList.add('spin');
+  olderAt = 0;
+  try { await load(true); } finally { refreshing = false; $('btnRefresh').classList.remove('spin'); }
+}
+$('live').addEventListener('click', refreshNow);
+$('btnRefresh').addEventListener('click', refreshNow);
 $('scrim').onclick = closeSheet;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSheet(); closeChart(); } });
 
