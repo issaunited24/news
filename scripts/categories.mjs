@@ -114,6 +114,8 @@ export function classify(title, summary, feedCats, score, tier, outletCount, bre
 
   // Tech & AI: tech feeds, plus tech stories from anywhere else
   if ((fromTech && !(hard && !has(TECH_RE, t))) || has(TECH_RE, t)) cats.add('tech');
+  // the Amazon rainforest isn't Amazon the company
+  if (cats.has('tech') && !fromTech && /\b(rainforest|deforest\w*|amazon (basin|river|region))\b/i.test(t)) cats.delete('tech');
 
   const flags = [];
   if (has(CULTURE_RE, t)) flags.push('culture');
