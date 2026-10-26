@@ -23,6 +23,7 @@ jobs:
         run: |
           sleep 240   # give the website time to publish the latest version
           mkdir -p out && npm init -y >/dev/null && npm i -s playwright@1.48.2 && npx playwright install --with-deps chromium >/dev/null
+          node tools/probe.mjs || true
           node tools/shots.mjs
       - name: Publish
         run: |
