@@ -3,7 +3,7 @@
 stdin:  {"stories": [{"id", "title", "text", "ts", "outlet"}],      the new stories to call
          "pool":    [{"title", "ts"}]}                              market headlines of the last 24 hours ("is it new?")
 stdout: {"version", "preds": {id: {"assets": {asset: {"dir", "conf", "p"}},      the 4-hour calls (shown and scored)
-                                  "h1": {...}, "d1": {...},                      1-hour and next-day calls
+                                  "h1": {...}, "d1": {...}, "d3", "w1",         1-hour, next-day, 3-day and 1-week calls
                                   "impact": "high"|"medium"|"low", "size": float}}}
 Everything is built exactly like in training (features.py, novelty.py, sources.py, market_data.py, positioning.py).
 """
@@ -131,7 +131,7 @@ def main():
 
     for i, it in enumerate(items):
         out['preds'][it['id']] = {
-            'assets': pack('4h', i), 'h1': pack('1h', i), 'd1': pack('1d', i),
+            'assets': pack('4h', i), 'h1': pack('1h', i), 'd1': pack('1d', i), 'd3': pack('3d', i), 'w1': pack('1w', i),
             'impact': 'high' if size[i] >= imp['high'] else 'medium' if size[i] >= imp['medium'] else 'low',
             'size': round(float(size[i]), 2), 'fresh': bool(nov[i, 0] > 0.5),
         }

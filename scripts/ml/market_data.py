@@ -168,6 +168,18 @@ def daily_return(s, ts):
     return (s.values[j] / s.values[i] - 1) * 100
 
 
+def daily_return_n(s, ts, n):
+    """From the last close before the news day to the close n trading days after it (%): n=1 next day, 3, 5 = a week."""
+    t = pd.Timestamp(ts, unit='s', tz='UTC')
+    if s is None or len(s) < n + 3:
+        return np.nan
+    i = _daily_before(s, t)
+    j = s.index.searchsorted(t.normalize() + pd.Timedelta(days=1), side='left') + (n - 1)
+    if i < 0 or j >= len(s) or (s.index[j] - t).days > 5 + 2 * n:
+        return np.nan
+    return (s.values[j] / s.values[i] - 1) * 100
+
+
 # ---------- 5-minute archive (the "prices" branch, see archive_prices.py) ----------
 def load_fine(folder='data/ml/prices5m'):
     out = {}

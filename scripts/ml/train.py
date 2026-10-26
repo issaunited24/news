@@ -36,11 +36,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from calib import RATING_STEPS, caps, check  # noqa: E402
 from features import assemble  # noqa: E402
-from market_data import ASSETS, CONTEXT_KEYS, DAILY_KEYS  # noqa: E402
+from market_data import ASSETS, CONTEXT_KEYS, DAILY_KEYS, daily_return_n, fetch_daily  # noqa: E402
 from positioning import KEYS as POS_KEYS  # noqa: E402
 
 DATA, OUT = 'data/ml/dataset', 'model'
-HORIZONS = {'1h': ('r1', 1), '4h': ('r4', 4), '1d': ('rD', 24)}
+HORIZONS = {'1h': ('r1', 1), '4h': ('r4', 4), '1d': ('rD', 24), '3d': ('r3D', 72), '1w': ('rW', 120)}
+DAYS = {'rD': 1, 'r3D': 3, 'rW': 5}  # multi-day labels (trading days), computed here from daily prices
 BASE = {'hourly': ['headline', 'rules', 'mood'], 'daily': ['headline', 'rules', 'dmood']}
 OPTIONAL = ['fresh', 'source', 'opening', 'positioning']
 EMB_PCA = 48
@@ -68,7 +69,7 @@ def fit_w(m, X, y, w):
 def labels(meta, prefix, k, hours):
     """Direction (1 = up), which rows count (not noise), and how much each counts (clearer moves count more)."""
     r = meta[f'{prefix}_{k}'].values.astype(float)
-    vol = meta[f'dv20_{k}'].values * np.sqrt(2) if prefix == 'rD' else meta[f'v24_{k}'].values * np.sqrt(hours)
+    vol = meta[f'dv20_{k}'].values * np.sqrt(DAYS[prefix] + 1) if prefix in DAYS else meta[f'v24_{k}'].values * np.sqrt(hours)
     good = vol[np.isfinite(vol) & (vol > 0)]
     vol = np.where(np.isfinite(vol) & (vol > 0), vol, np.median(good) if len(good) else 1.0)
     z = r / vol
@@ -76,7 +77,7 @@ def labels(meta, prefix, k, hours):
     w = np.clip(np.abs(np.nan_to_num(z)), 0.1, 3.0)
     # Headlines from the same hour (same day for the 1-day model) all share one outcome; together they count once,
     # so busy news days can't dominate and the model can't just memorise which way a period drifted
-    bucket = (meta.ts.values // (86400 if prefix == 'rD' else 3600)).astype(np.int64)
+    bucket = (meta.ts.values // (86400 if prefix in DAYS else 3600)).astype(np.int64)
     _, inv, cnt = np.unique(np.where(ok, bucket, -1), return_inverse=True, return_counts=True)
     w = w / cnt[inv]
     return ok, (r > 0).astype(int), w, z
@@ -114,7 +115,8 @@ class Frame:
         n = len(self.meta)
         self.ts = self.meta.ts.values.astype(float)
         self.extra = (0.6 + 0.8 * np.arange(n) / max(n - 1, 1)) * np.where(self.meta.src.values == 'live', 3.0, 1.0)
-        self.folds = folds(self.ts)
+        # a gap between training and test months: 8 days for daily rows (week-long outcomes must not leak into the test)
+        self.folds = folds(self.ts, embargo=8 * 86400 if kind == 'daily' else 86400)
         self.cache = {}
 
     def X(self, groups):
@@ -213,6 +215,12 @@ def main():
     order = np.argsort(meta.ts.values, kind='stable')
     meta = meta.iloc[order].reset_index(drop=True)
     feats = {k: feats[k][order] for k in feats.files}
+    # 3-day and 1-week outcomes, from daily prices (the 1-day ones come with the dataset)
+    log('Daily prices for the 3-day and 1-week outcomes...')
+    pxd = fetch_daily('10y')
+    for prefix in ('r3D', 'rW'):
+        for k in ASSETS:
+            meta[f'{prefix}_{k}'] = [daily_return_n(pxd.get(k), float(t), DAYS[prefix]) for t in meta.ts.values]
     hourly = meta[[f'r4_{k}' for k in ASSETS]].notna().any(axis=1).values
     daily = meta[[f'rD_{k}' for k in ASSETS]].notna().any(axis=1).values
     if daily.sum() > MAX_DAILY_ROWS:
@@ -232,7 +240,7 @@ def main():
         report[f'{fk}_inputs'] = {'kept': selected[fk], 'steps': steps}
 
     for h, (prefix, hours) in HORIZONS.items():
-        fk = 'daily' if h == '1d' else 'hourly'
+        fk = 'daily' if prefix in DAYS else 'hourly'
         fr, groups = frames[fk], selected[fk]
         log(f'{h}: choosing the model type...')
         chosen = choose_model(fr, groups, prefix, hours)

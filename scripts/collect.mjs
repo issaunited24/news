@@ -593,6 +593,9 @@ for (const st of stories) {
   // a day later. The 1-hour and 4-hour models keep training every week but aren't shown.
   st.fx.assets = Object.fromEntries(Object.entries(p.d1 || {}).map(([k, a]) => [k, { dir: a.dir, conf: a.conf || 1, next: true }]));
   st._d1 = p.d1;
+  // longer views from the trained model (only markets where it passed its tests): next 3 days and next week
+  const slimH = o => (o && Object.keys(o).length ? Object.fromEntries(Object.entries(o).map(([k, a]) => [k, { dir: a.dir, conf: a.conf }])) : undefined);
+  st.fx.d3 = slimH(p.d3); st.fx.w1 = slimH(p.w1);
   // Importance: the bigger of the rules' view (major Fed moves, wars, banking stress...) and the model's (how much
   // prices usually move after news like this), and breaking news is always high
   const RANK = { low: 0, medium: 1, high: 2 };
