@@ -490,7 +490,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.27'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.28'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -723,7 +723,8 @@ function storiesFor(tab, impOnly) {
   if (tab === 'justin') return list.filter(justIn).sort((a, b) => Math.min(b.published, b.firstSeen) - Math.min(a.published, a.firstSeen));
   if (tab === 'top') list = list.filter(s => s.top || s.tier === 'major' || s.breaking || wideTop(s));
   else if (tab === 'forex') list = list.filter(s => s.fx); // only news that can move gold, the dollar or the Nasdaq
-  else list = list.filter(s => s.categories.includes(tab));
+  else list = list.filter(s => s.categories.includes(tab) || prefs.moved?.[s.id]?.to === tab);
+  if (prefs.moved) list = list.filter(s => prefs.moved[s.id]?.from !== tab); // stories you moved out of this tab
   if (impOnly) list = list.filter(s => important(s, tab));
   return smartRank(list, tab, { now: Date.now(), liked: s => liked(s, tab), boosted: prefs.boosted, read: readSet });
 }
@@ -1440,7 +1441,30 @@ function storyMenu(id) {
     <button class="item" data-act="save" data-id="${s.id}">${SI.save}${sv ? 'Remove from saved' : 'Save for later'}</button>
     <button class="item" data-act="hide" data-id="${s.id}">${SI.hide}Hide this story</button>
     <button class="item" data-act="boost" data-outlet="${esc(s.outlet)}">${SI.boost}${boosted ? `Stop prioritizing ${esc(s.outlet)}` : `Prioritize ${esc(s.outlet)}`}</button>
-    <button class="item" data-act="mute" data-outlet="${esc(s.outlet)}">${SI.mute}Mute ${esc(s.outlet)}</button>`);
+    <button class="item" data-act="mute" data-outlet="${esc(s.outlet)}">${SI.mute}Mute ${esc(s.outlet)}</button>
+    ${Date.now() < FIX_UNTIL && view === 'feed' && prefs.tab !== 'justin' ? `<button class="item" data-act="wrongtab" data-id="${s.id}">${SI.hide}Wrong tab? Move it</button>` : ''}`);
+}
+/* ---------- "Wrong tab" corrections (for two weeks, to teach the sorting) ---------- */
+// The story moves on this phone right away; the correction also goes to the robot (through ntfy.sh, a free public
+// message relay, no account) so it fixes that story for good and similar headlines from then on.
+const FIX_UNTIL = Date.parse('2026-11-09T21:00:00Z');
+const FIX_TOPIC = 'https://ntfy.sh/briefly-tabfix-q7m3x9k2v8';
+const FIX_TABS = { world: 'World', us: 'U.S.', tech: 'Tech & AI', sci: 'Science', ent: 'Entertainment', sports: 'Sports', none: 'Not news / nowhere' };
+function wrongTabSheet(id) {
+  const s = findStory(id); if (!s) return;
+  const from = prefs.tab;
+  openSheet(`<h2>Where does it belong?</h2>
+    <p class="muted">“${esc(s.title)}” is in ${esc((TABS.find(t => t.id === from) || { name: from }).name)}. Pick the right place; Briefly learns from it.</p>
+    ${Object.entries(FIX_TABS).filter(([k]) => k !== from).map(([k, n]) => `<button class="item" data-act="fixtab" data-id="${s.id}" data-to="${k}">${n}</button>`).join('')}`);
+}
+function fixTab(id, to) {
+  const s = findStory(id); if (!s) return;
+  const from = prefs.tab;
+  prefs.moved = { ...(prefs.moved || {}), [id]: { from, to } };
+  const keys = Object.keys(prefs.moved); if (keys.length > 300) delete prefs.moved[keys[0]];
+  save(); closeSheet(); render();
+  toast(to === 'none' ? 'Removed from this tab. Thanks!' : `Moved to ${FIX_TABS[to]}. Thanks!`);
+  fetch(FIX_TOPIC, { method: 'POST', body: JSON.stringify({ id, title: s.title, from, to }) }).catch(() => {});
 }
 let pvId = null;
 function previewHTML(s) {
@@ -1746,6 +1770,8 @@ document.addEventListener('click', e => {
   else if (act === 'preview') previewSheet(id);
   else if (act === 'ai') previewSheet(id, true);
   else if (act === 'hz') { prefs.hz = el.dataset.hz; save(); render(); }
+  else if (act === 'wrongtab') wrongTabSheet(id);
+  else if (act === 'fixtab') fixTab(id, el.dataset.to);
   else if (act === 'pvsave') { toggleSave(id); const st = findStory(id); $('sheetBody').innerHTML = previewHTML(st); if (st?.fx?.ai) fillAI(st); }
   else if (act === 'close') closeSheet();
   else if (act === 'share') {

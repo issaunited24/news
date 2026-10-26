@@ -8,7 +8,7 @@ import { entries, all, first, textOf } from './xml.mjs';
 import { marketCatalyst, isPriceRecap } from './markets.mjs';
 import { classify } from './categories.mjs';
 import { combine, gradeBacktest, AI_MODEL } from './analyst.mjs';
-import { cluster, isHub, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust, justInOk } from './rules.mjs';
+import { cluster, isHub, tokens, scoreStory, analyzeFx, calendarEvent, policyOf, trustRank, isJunkOutlet, notEnglish, qualityAdjust, justInOk } from './rules.mjs';
 
 const ROOT = new URL('../', import.meta.url);
 const WINDOW_H = 36;           // keep stories from the last 36 hours
@@ -268,6 +268,43 @@ const stories = groupsOf.map(group => {
   };
 }).filter(Boolean).map(({ _all, ...s }) => s)
   .sort((a, b) => b.updatedAt - a.updatedAt);
+
+// Your "wrong tab" corrections (sent from the app through ntfy.sh, a free public relay): the story is fixed, and so
+// are later stories with nearly the same headline. Kept for 60 days.
+const FIX_TABS = new Set(['world', 'us', 'forex', 'tech', 'sci', 'ent', 'sports', 'top', 'none']);
+const corrections = (prevState.corrections || []).filter(c => now - c.at < 60 * 864e5);
+let fixSince = prevState.fixSince || '12h';
+if (!FIXTURES) {
+  try {
+    const txt = await getText(`https://ntfy.sh/briefly-tabfix-q7m3x9k2v8/json?poll=1&since=${fixSince}`);
+    for (const line of txt.split('\n')) {
+      if (!line.trim()) continue;
+      const m = JSON.parse(line);
+      if (m.event !== 'message') continue;
+      fixSince = m.id;
+      const c = JSON.parse(m.message || '{}');
+      if (!FIX_TABS.has(c.from) || !FIX_TABS.has(c.to) || typeof c.title !== 'string' || corrections.some(x => x.id === c.id && x.to === c.to)) continue;
+      corrections.push({ id: String(c.id).slice(0, 20), title: c.title.slice(0, 200), from: c.from, to: c.to, at: now });
+    }
+  } catch {}
+  if (corrections.length) console.log(`Tab corrections: ${corrections.length}`);
+}
+{
+  const ct = corrections.map(c => ({ ...c, tk: new Set(tokens(c.title)) }));
+  for (const st of stories) {
+    const tk = tokens(st.title);
+    const c = ct.find(c => c.id === st.id) || ct.find(c => {
+      const shared = tk.filter(w => c.tk.has(w)).length;
+      return shared >= 3 && shared / (tk.length + c.tk.size - shared) >= 0.5;
+    });
+    if (!c || (!st.categories.includes(c.from) && c.from !== 'forex' && c.from !== 'top')) continue;
+    if (c.from === 'forex') st.fx = null;
+    else if (c.from === 'top') st.top = undefined;
+    st.categories = st.categories.filter(x => x !== c.from && x !== 'forex' || (x === 'forex' && st.fx));
+    if (c.to !== 'none' && c.to !== 'forex' && c.to !== 'top' && !st.categories.includes(c.to)) st.categories.push(c.to);
+    st.fixed = true;
+  }
+}
 
 // Related stories (same event, different angle: "Arsenal win" and "Arteta's reaction") share an event tag `ev`,
 // so the app never shows more than 2 of them in a row.
@@ -772,6 +809,6 @@ await writeFile(new URL('data/news.json', ROOT), JSON.stringify(out));
 // Everything else (older or small stories), in its own file so the app's regular check stays light
 await writeFile(new URL('data/older.json', ROOT), JSON.stringify({ updated: now, stories: keep.filter(st => !isRecent(st)) }));
 await writeFile(new URL('data/charts.json', ROOT), JSON.stringify(charts));
-await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries([...[...stalePreds].filter(([id]) => !preds.has(id)), ...preds]), calPreds: Object.fromEntries(calPreds), bigMoney, lastFetch, btGrade }));
+await writeFile(new URL('data/state.json', ROOT), JSON.stringify({ items, calendar, markets, extracts: [...extracts.values()], forecasts: [...forecasts.values()], themes: Object.fromEntries(themes), preds: Object.fromEntries([...[...stalePreds].filter(([id]) => !preds.has(id)), ...preds]), calPreds: Object.fromEntries(calPreds), bigMoney, lastFetch, btGrade, corrections, fixSince }));
 console.log(`Sources working: ${okCount}/${status.length}. Items: ${items.length}. Stories: ${stories.length}.`);
 for (const s of status.filter(s => !s.ok)) console.log(`  failed: ${s.name} (${s.category}) ${s.query || ''} -> ${s.error}`);
