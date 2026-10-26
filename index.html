@@ -112,7 +112,7 @@ a { color: inherit; text-decoration: none; }
 .bi .bw { font: 800 13px var(--ui); color: rgb(var(--bc)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bi .bm { height: 4px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; position: relative; }
 .bi .bm i { position: absolute; top: 0; bottom: 0; left: 50%; border-radius: 4px; background: rgb(var(--bc)); box-shadow: 0 0 8px rgba(var(--bc),.8); }
-.bi small { font: 500 9.5px var(--mono); color: var(--mute); white-space: nowrap; }
+.bi small { font: 500 9.5px var(--mono); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Tabs */
 .tabs { position: sticky; top: 0; z-index: 10; display: flex; gap: 22px; padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px 12px; overflow-x: auto; scrollbar-width: none;
@@ -438,7 +438,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.6';
+const APP_VERSION = '2026-10-26.7';
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1044,9 +1044,9 @@ function biasHTML() {
     const bar = b.n ? `<i style="${b.score >= 0 ? `left:50%;width:${w}%` : `left:${50 - w}%;width:${w}%`}"></i>` : '';
     return `<button class="bi" style="--pc:${MK[k].c};--bc:${col}" ${b.top?.ref ? `data-act="preview" data-id="${esc(b.top.ref)}"` : ''} aria-label="${MK[k].name} bias ${b.n ? `${b.word} ${b.strength} of 10` : 'no recent calls'}">
       <b>${MK[k].short.toUpperCase()}</b><span class="bw">${b.n ? `${b.word === 'Bullish' ? '▲' : b.word === 'Bearish' ? '▼' : '•'} ${b.word}` : '—'}</span>
-      <span class="bm">${bar}</span><small>${b.n ? `${b.strength}/10 · ${b.n} call${b.n > 1 ? 's' : ''}` : 'no calls yet'}</small></button>`;
+      <span class="bm">${bar}</span><small>${b.n ? `${b.strength}/10 · ${b.n} news` : 'no calls'}</small></button>`;
   }).join('');
-  return `<section class="bias"><div class="bias-h"><span>Bias</span><span>last ${BIAS_H} hours · tap for the top story</span></div><div class="bias-g">${cells}</div></section>`;
+  return `<section class="bias"><div class="bias-h"><span>Bias</span><span>last ${BIAS_H}h · tap for the top story</span></div><div class="bias-g">${cells}</div></section>`;
 }
 
 function forexTop() {
