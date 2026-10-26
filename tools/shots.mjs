@@ -49,8 +49,9 @@ await step('refresh button', async () => {
 });
 await step('ai story', async () => {
   await click('.tab[data-tab="forex"]'); await wait(1000);
-  const has = await p.evaluate(() => { const el = document.querySelector('#feed .aip'); const card = el?.closest('[data-id]'); if (card) { card.click(); return true; } return false; });
-  if (!has) { out.push('  ai story: none analysed yet'); return; }
+  const card = await p.$('#feed .mw.fx:has(.aip)');
+  if (!card) { out.push('  ai story: none analysed yet'); return; }
+  await card.scrollIntoViewIfNeeded(); await card.tap();
   await wait(4000);
   out.push('  ai panel: ' + await p.evaluate(() => (document.getElementById('aiPanel')?.innerText || 'missing').replace(/\s+/g, ' ').slice(0, 300)));
   await p.evaluate(() => document.getElementById('aiPanel')?.scrollIntoView({ block: 'start' })); await wait(500);
