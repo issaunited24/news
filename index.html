@@ -123,10 +123,10 @@ a { color: inherit; text-decoration: none; }
 .bm-g { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .bmc { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 8px 8px 7px; border-radius: 14px; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
 .bmc b { font: 600 10.5px var(--mono); letter-spacing: .06em; color: rgb(var(--pc)); }
-.bmc .bv { font: 800 13px var(--ui); white-space: nowrap; }
+.bmc .bv { font: 800 12.5px var(--ui); white-space: nowrap; letter-spacing: -.01em; }
 .bmc .bt { position: relative; height: 4px; border-radius: 4px; background: linear-gradient(90deg, rgba(255,100,135,.55), rgba(255,255,255,.08) 20%, rgba(255,255,255,.08) 80%, rgba(62,240,180,.55)); }
 .bmc .bt i { position: absolute; top: -3px; width: 3px; height: 10px; margin-left: -1.5px; border-radius: 2px; background: #fff; box-shadow: 0 0 6px #fff; }
-.bmc small { font: 500 9.5px var(--mono); color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bmc small { font: 500 9.5px/1.3 var(--mono); color: var(--mute); white-space: normal; }
 .bmc small.hot { color: #ffc463; }
 
 /* Tabs */
@@ -481,7 +481,7 @@ const TABS = [
   { id: 'sports', name: 'Sports' },
 ];
 const PAGE = 20;
-const APP_VERSION = '2026-10-26.21'; // keep version.txt the same
+const APP_VERSION = '2026-10-26.22'; // keep version.txt the same
 // When a new version of the app is published, reload to pick it up (the phone otherwise keeps the old page open)
 async function checkVersion() {
   try {
@@ -1159,8 +1159,8 @@ function bigMoneyHTML() {
     const m = bm[k]; if (!m) return `<div class="bmc" style="--pc:${MK[k].c}"><b>${MK[k].short.toUpperCase()}</b><span class="bv">—</span></div>`;
     const col = m.longPct >= 55 ? 'var(--up)' : m.longPct <= 45 ? 'var(--down)' : 'var(--ink)';
     // compared with their own last 3 years: the extremes are where crowded bets tend to unwind
-    const crowd = m.pctile >= 90 ? 'Most bullish in 3y' : m.pctile <= 10 ? 'Most bearish in 3y' : null;
-    const usual = m.pctile >= 70 ? 'More bullish than usual' : m.pctile <= 30 ? 'Less bullish than usual' : null;
+    const crowd = m.pctile >= 90 ? '3-year high' : m.pctile <= 10 ? '3-year low' : null;
+    const usual = m.pctile >= 70 ? 'Above usual' : m.pctile <= 30 ? 'Below usual' : null;
     return `<div class="bmc" style="--pc:${MK[k].c}" aria-label="${MK[k].name}: hedge funds ${m.longPct}% long; more bullish than ${m.pctile}% of the last 3 years">
       <b>${MK[k].short.toUpperCase()}</b><span class="bv" style="color:${col}">${m.longPct}% long</span>
       <span class="bt"><i style="left:${Math.max(2, Math.min(98, m.pctile))}%"></i></span>
