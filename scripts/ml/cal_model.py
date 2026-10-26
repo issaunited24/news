@@ -183,10 +183,19 @@ def predict():
     except Exception:
         px = {}
     out = {'version': b['version'], 'preds': {}}
+    # markets where the model tested no better than a coin flip get no calendar call
+    weak = set()
+    try:
+        rep = json.load(open(REPORT))
+        weak = {k for k, a in rep.get('assets', {}).items() if a.get('test_accuracy', 0) < 0.52}
+    except Exception:
+        pass
 
     def call(title, z, imp, ctx):
         res = {}
         for k, m in b['models'].items():
+            if k in weak:
+                continue
             if 'rule' in m:
                 g, sign = group_of(title)
                 zz = float(np.clip(z * sign, -4, 4))
