@@ -253,12 +253,10 @@ export function combine(an, d1, rules) {
 // analyses: {id: {...}} already done (by any worker). Returns the stories to analyse next, most important first.
 export function pickStories(stories, analyses, now, shard = 0, shards = 1) {
   const hashN = id => [...id].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7) % shards;
-  const perEvent = new Map();
-  for (const a of Object.values(analyses)) if (a.ev && now - a.at < 6 * H) perEvent.set(a.ev, (perEvent.get(a.ev) || 0) + 1);
   return stories.filter(st => {
     if (hashN(st.id) !== shard || !eligible(st, now)) return false;
     const prev = analyses[st.id];
-    if (!prev) return !(st.ev && (perEvent.get(st.ev) || 0) >= 2);
+    if (!prev) return true; // every story gets its own analysis (different angles on one event can move markets differently)
     // analysed again once if it was shaky and has since been confirmed by more outlets or turned into breaking news
     const outlets = (st.sources || []).length + 1;
     return !prev.redo && ['unverified', 'reported', 'conflicting'].includes(prev.res.status) && (outlets >= prev.outlets + 2 || (st.breaking && !prev.breaking));
