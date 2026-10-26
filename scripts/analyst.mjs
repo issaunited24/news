@@ -168,8 +168,10 @@ function eligible(st, now) {
   const fx = st.fx;
   if (!fx || fx.driver === 'wrap') return false;
   if (now - Math.min(st.published, st.firstSeen) > 10 * H) return false;
+  // nearly every market story gets analysed (most important first); only small single-source items from unknown
+  // outlets are skipped
   const outlets = (st.sources || []).length + 1;
-  return fx.impact === 'high' || st.breaking || st.top || (fx.impact === 'medium' && (st.trusted || outlets >= 2)) || outlets >= 4;
+  return fx.impact !== 'low' || st.breaking || st.top || st.trusted || outlets >= 2;
 }
 
 /* ---------- The model call ---------- */
