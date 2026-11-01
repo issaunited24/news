@@ -1,0 +1,87 @@
+{
+ "trained": "2026-11-01 07:09 UTC",
+ "releases": 1573,
+ "test_from": "2026-02-04",
+ "assets": {
+  "gold": {
+   "uses": "simple rule (beat the model)",
+   "test_accuracy": 0.522,
+   "model_accuracy": 0.52,
+   "rule_accuracy": 0.522,
+   "test_count": 504,
+   "by_rating": {
+    "2": {
+     "n": 73,
+     "hit": 0.548
+    },
+    "3": {
+     "n": 179,
+     "hit": 0.441
+    }
+   }
+  },
+  "usd": {
+   "uses": "simple rule (beat the model)",
+   "test_accuracy": 0.556,
+   "model_accuracy": 0.532,
+   "rule_accuracy": 0.556,
+   "test_count": 453,
+   "by_rating": {
+    "2": {
+     "n": 137,
+     "hit": 0.518
+    },
+    "3": {
+     "n": 50,
+     "hit": 0.56
+    },
+    "4": {
+     "n": 40,
+     "hit": 0.575
+    }
+   }
+  },
+  "ndq": {
+   "uses": "model (lean, C=0.01)",
+   "test_accuracy": 0.572,
+   "model_accuracy": 0.572,
+   "rule_accuracy": 0.51,
+   "test_count": 467,
+   "by_rating": {
+    "1": {
+     "n": 52,
+     "hit": 0.615
+    },
+    "2": {
+     "n": 14,
+     "hit": 0.643
+    },
+    "3": {
+     "n": 31,
+     "hit": 0.581
+    },
+    "4": {
+     "n": 72,
+     "hit": 0.5
+    },
+    "5": {
+     "n": 65,
+     "hit": 0.554
+    }
+   }
+  },
+  "oil": {
+   "uses": "model (lean, C=0.01)",
+   "test_accuracy": 0.449,
+   "model_accuracy": 0.449,
+   "rule_accuracy": null,
+   "test_count": 503,
+   "by_rating": {
+    "1": {
+     "n": 252,
+     "hit": 0.496
+    }
+   }
+  }
+ }
+}

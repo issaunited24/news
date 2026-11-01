@@ -1,0 +1,666 @@
+[  0.0m] Daily prices for the 3-day and 1-week outcomes...
+[  0.1m] 258895 of 325950 headlines have only a date: outcomes measured from the close of their news day
+[  2.1m] 325950 headlines: 59899 for the hourly models, 200000 for the 1-day model
+[  2.1m] Choosing inputs for the hourly models...
+[  2.2m]   base ['headline', 'rules', 'mood']: balanced accuracy 0.4911, log-loss 0.67679
+[  2.3m]     + fresh: balanced accuracy 0.4913, log-loss 0.67458
+[  2.4m]     + source: balanced accuracy 0.4906, log-loss 0.67827
+[  2.5m]     + opening: balanced accuracy 0.4865, log-loss 0.67813
+[  2.7m]     + positioning: balanced accuracy 0.4930, log-loss 0.67080
+[  2.7m] Choosing inputs for the daily models...
+[  2.9m]   base ['headline', 'rules', 'dmood']: balanced accuracy 0.5064, log-loss 0.71188
+[  3.1m]     + fresh: balanced accuracy 0.5092, log-loss 0.71102
+[  3.3m]     + source: balanced accuracy 0.5066, log-loss 0.71170
+[  3.5m]     + positioning: balanced accuracy 0.5835, log-loss 0.70718
+[  3.5m]   kept positioning
+[  3.8m]     + fresh: balanced accuracy 0.5865, log-loss 0.70670
+[  4.0m]     + source: balanced accuracy 0.5818, log-loss 0.70716
+[  4.0m]   kept fresh
+[  4.2m]     + source: balanced accuracy 0.5854, log-loss 0.70668
+[  4.2m] 1h: choosing the model type...
+[  4.7m]     gold: boosting, balanced accuracy 0.4662, accuracy 0.4960
+[  4.7m]     usd: boosting, balanced accuracy 0.4996, accuracy 0.4981
+[  4.7m]     ndq: boosting, balanced accuracy 0.5274, accuracy 0.5377
+[  4.7m]     oil: logistic C=0.01, balanced accuracy 0.4977, accuracy 0.4938
+[  4.7m]   1h gold: fail - balanced accuracy 0.4662, accuracy 0.4960 recent 0.4752 (always-the-same-direction 0.6701; old rules 0.5188 vs model 0.534375 on the same news), by rating {1: {'n': 10285, 'hit': 0.477}, 2: {'n': 185, 'hit': 0.346}}
+[  4.7m]   1h usd: fail - balanced accuracy 0.4996, accuracy 0.4981 recent 0.4798 (always-the-same-direction 0.5015; old rules 0.5075 vs model 0.5451127819548872 on the same news), by rating {1: {'n': 10890, 'hit': 0.48}, 2: {'n': 442, 'hit': 0.475}, 3: {'n': 5, 'hit': 0.0}}
+[  4.7m]   1h ndq: fail - balanced accuracy 0.5274, accuracy 0.5377 recent 0.5753 (always-the-same-direction 0.6321; old rules 0.5712 vs model 0.5389830508474577 on the same news), by rating {1: {'n': 9928, 'hit': 0.568}, 2: {'n': 128, 'hit': 0.727}, 3: {'n': 527, 'hit': 0.679}}
+[  4.7m]   1h oil: fail - balanced accuracy 0.4977, accuracy 0.4938 recent 0.4658 (always-the-same-direction 0.5233; old rules 0.4828 vs model 0.5129310344827587 on the same news), by rating {1: {'n': 3457, 'hit': 0.492}, 2: {'n': 3821, 'hit': 0.468}, 3: {'n': 2770, 'hit': 0.43}}
+[  4.7m] 4h: choosing the model type...
+[  5.1m]     gold: logistic C=0.01, balanced accuracy 0.4994, accuracy 0.5634
+[  5.1m]     usd: boosting, balanced accuracy 0.5000, accuracy 0.6108
+[  5.1m]     ndq: logistic C=0.001, balanced accuracy 0.4997, accuracy 0.8223
+[  5.1m]     oil: boosting, balanced accuracy 0.5280, accuracy 0.5517
+[  5.1m]   4h gold: fail - balanced accuracy 0.4994, accuracy 0.5634 recent 0.4776 (always-the-same-direction 0.7981; old rules 0.5124 vs model 0.6459627329192547 on the same news), by rating {1: {'n': 958, 'hit': 0.494}, 2: {'n': 1523, 'hit': 0.487}, 3: {'n': 108, 'hit': 0.472}, 4: {'n': 1769, 'hit': 0.49}, 5: {'n': 113, 'hit': 0.451}, 6: {'n': 1551, 'hit': 0.473}, 7: {'n': 669, 'hit': 0.459}, 8: {'n': 85, 'hit': 0.447}, 9: {'n': 1697, 'hit': 0.462}, 10: {'n': 2434, 'hit': 0.477}}
+[  5.1m]   4h usd: fail - balanced accuracy 0.5000, accuracy 0.6108 recent 0.5649 (always-the-same-direction 0.6108; old rules 0.4221 vs model 0.6425855513307985 on the same news), by rating {5: {'n': 10994, 'hit': 0.565}}
+[  5.1m]   4h ndq: fail - balanced accuracy 0.4997, accuracy 0.8223 recent 0.8267 (always-the-same-direction 0.823; old rules 0.5879 vs model 0.8286558345642541 on the same news), by rating {10: {'n': 11495, 'hit': 0.827}}
+[  5.2m]   4h oil: PASS - balanced accuracy 0.5280, accuracy 0.5517 recent 0.6646 (always-the-same-direction 0.5267; old rules 0.523 vs model 0.5983263598326359 on the same news), by rating {1: {'n': 10543, 'hit': 0.665}}
+[  5.2m] 1d: choosing the model type...
+[  8.8m]     gold: logistic C=0.003, balanced accuracy 0.6458, accuracy 0.6457
+[  8.8m]     usd: logistic C=0.01, balanced accuracy 0.5002, accuracy 0.4599
+[  8.8m]     ndq: boosting, balanced accuracy 0.5501, accuracy 0.5574
+[  8.8m]     oil: boosting, balanced accuracy 0.7097, accuracy 0.7436
+[  8.8m]   1d gold: PASS - balanced accuracy 0.6458, accuracy 0.6457 recent 0.6976 (always-the-same-direction 0.508; old rules 0.5082 vs model 0.5099552015928323 on the same news), by rating {1: {'n': 30245, 'hit': 0.646}, 2: {'n': 1212, 'hit': 0.851}, 3: {'n': 371, 'hit': 0.827}, 4: {'n': 395, 'hit': 0.856}, 5: {'n': 1407, 'hit': 0.878}, 6: {'n': 373, 'hit': 0.893}, 7: {'n': 1122, 'hit': 0.92}, 8: {'n': 2934, 'hit': 0.931}}
+[  8.8m]   1d usd: fail - balanced accuracy 0.5002, accuracy 0.4599 recent 0.6119 (always-the-same-direction 0.5406; old rules 0.5301 vs model 0.49015544041450776 on the same news), by rating {1: {'n': 37930, 'hit': 0.612}}
+[  9.0m]   1d ndq: PASS - balanced accuracy 0.5501, accuracy 0.5574 recent 0.6944 (always-the-same-direction 0.5337; old rules 0.5009 vs model 0.5388109816314438 on the same news), by rating {1: {'n': 38230, 'hit': 0.694}}
+[  9.3m]   1d oil: PASS - balanced accuracy 0.7097, accuracy 0.7436 recent 0.9053 (always-the-same-direction 0.643; old rules 0.479 vs model 0.505688622754491 on the same news), by rating {1: {'n': 3221, 'hit': 0.997}, 5: {'n': 35154, 'hit': 0.897}}
+[  9.3m] 3d: choosing the model type...
+[ 12.1m]     gold: logistic C=0.01, balanced accuracy 0.4928, accuracy 0.4647
+[ 12.1m]     usd: boosting, balanced accuracy 0.5357, accuracy 0.5548
+[ 12.1m]     ndq: boosting, balanced accuracy 0.5703, accuracy 0.5700
+[ 12.1m]     oil: logistic C=0.003, balanced accuracy 0.6243, accuracy 0.6231
+[ 12.1m]   3d gold: fail - balanced accuracy 0.4928, accuracy 0.4647 recent 0.5701 (always-the-same-direction 0.5327; old rules 0.5539 vs model 0.3798203909138933 on the same news), by rating {1: {'n': 19263, 'hit': 0.401}, 2: {'n': 205, 'hit': 1.0}, 3: {'n': 7347, 'hit': 1.0}, 10: {'n': 1, 'hit': 1.0}}
+[ 12.1m]   3d usd: fail - balanced accuracy 0.5357, accuracy 0.5548 recent 0.5757 (always-the-same-direction 0.5744; old rules 0.5254 vs model 0.5733407696597881 on the same news), by rating {1: {'n': 10391, 'hit': 1.0}, 2: {'n': 5250, 'hit': 1.0}, 3: {'n': 11529, 'hit': 0.0}}
+[ 12.4m]   3d ndq: PASS - balanced accuracy 0.5703, accuracy 0.5700 recent 0.5678 (always-the-same-direction 0.5005; old rules 0.4738 vs model 0.57917760279965 on the same news), by rating {1: {'n': 16779, 'hit': 0.313}, 10: {'n': 9899, 'hit': 1.0}}
+[ 12.4m]   3d oil: PASS - balanced accuracy 0.6243, accuracy 0.6231 recent 0.7086 (always-the-same-direction 0.5164; old rules 0.4514 vs model 0.48086269744835963 on the same news), by rating {1: {'n': 698, 'hit': 0.491}, 2: {'n': 26897, 'hit': 0.714}}
+[ 12.4m] 1w: choosing the model type...
+[ 14.2m]     gold: boosting, balanced accuracy 0.4530, accuracy 0.3454
+[ 14.2m]     usd: boosting, balanced accuracy 0.6328, accuracy 0.5539
+[ 14.2m]     ndq: logistic C=0.01, balanced accuracy 0.4941, accuracy 0.4894
+[ 14.2m]     oil: logistic C=0.01, balanced accuracy 0.5958, accuracy 0.6087
+[ 14.2m]   1w gold: fail - balanced accuracy 0.4530, accuracy 0.3454 recent 0.1650 (always-the-same-direction 0.6597; old rules 0.5432 vs model 0.36111904082215246 on the same news), by rating {1: {'n': 5271, 'hit': 0.271}, 5: {'n': 294, 'hit': 0.0}, 10: {'n': 9549, 'hit': 0.111}}
+[ 14.2m]   1w usd: fail - balanced accuracy 0.6328, accuracy 0.5539 recent 0.4402 (always-the-same-direction 0.6144; old rules 0.5452 vs model 0.5746316463805253 on the same news), by rating {8: {'n': 13325, 'hit': 0.44}}
+[ 14.2m]   1w ndq: fail - balanced accuracy 0.4941, accuracy 0.4894 recent 0.5431 (always-the-same-direction 0.6088; old rules 0.4655 vs model 0.46164874551971324 on the same news), by rating {1: {'n': 15372, 'hit': 0.543}}
+[ 14.2m]   1w oil: fail - balanced accuracy 0.5958, accuracy 0.6087 recent 0.6840 (always-the-same-direction 0.6123; old rules 0.4618 vs model 0.5417251051893408 on the same news), by rating {1: {'n': 2398, 'hit': 0.587}, 2: {'n': 13099, 'hit': 0.702}}
+[ 14.2m] Importance model...
+[ 14.5m] Passed the quality bar: 4h oil, 1d gold, 1d ndq, 1d oil, 3d ndq, 3d oil. Deploying.
+{
+ "trained": "2026-11-01 06:55 UTC",
+ "headlines": 325950,
+ "labels": 2,
+ "gate": 2,
+ "horizons": {
+  "1h": {
+   "gold": {
+    "use": "none",
+    "model": "boosting",
+    "test_accuracy": 0.496,
+    "test_balanced_accuracy": 0.4662,
+    "test_logloss": 0.69839,
+    "test_count": 20939,
+    "recent_accuracy": 0.4752,
+    "baseline_majority": 0.6701,
+    "baseline_rules": 0.5188,
+    "model_where_rules_call": 0.5344,
+    "rules_count": 320,
+    "by_rating": {
+     "1": {
+      "n": 10285,
+      "hit": 0.477
+     },
+     "2": {
+      "n": 185,
+      "hit": 0.346
+     }
+    }
+   },
+   "usd": {
+    "use": "none",
+    "model": "boosting",
+    "test_accuracy": 0.4981,
+    "test_balanced_accuracy": 0.4996,
+    "test_logloss": 0.72047,
+    "test_count": 22673,
+    "recent_accuracy": 0.4798,
+    "baseline_majority": 0.5015,
+    "baseline_rules": 0.5075,
+    "model_where_rules_call": 0.5451,
+    "rules_count": 266,
+    "by_rating": {
+     "1": {
+      "n": 10890,
+      "hit": 0.48
+     },
+     "2": {
+      "n": 442,
+      "hit": 0.475
+     },
+     "3": {
+      "n": 5,
+      "hit": 0.0
+     }
+    }
+   },
+   "ndq": {
+    "use": "none",
+    "model": "boosting",
+    "test_accuracy": 0.5377,
+    "test_balanced_accuracy": 0.5274,
+    "test_logloss": 0.68825,
+    "test_count": 21166,
+    "recent_accuracy": 0.5753,
+    "baseline_majority": 0.6321,
+    "baseline_rules": 0.5712,
+    "model_where_rules_call": 0.539,
+    "rules_count": 590,
+    "by_rating": {
+     "1": {
+      "n": 9928,
+      "hit": 0.568
+     },
+     "2": {
+      "n": 128,
+      "hit": 0.727
+     },
+     "3": {
+      "n": 527,
+      "hit": 0.679
+     }
+    }
+   },
+   "oil": {
+    "use": "none",
+    "model": "logistic C=0.01",
+    "test_accuracy": 0.4938,
+    "test_balanced_accuracy": 0.4977,
+    "test_logloss": 0.71061,
+    "test_count": 20095,
+    "recent_accuracy": 0.4658,
+    "baseline_majority": 0.5233,
+    "baseline_rules": 0.4828,
+    "model_where_rules_call": 0.5129,
+    "rules_count": 232,
+    "by_rating": {
+     "1": {
+      "n": 3457,
+      "hit": 0.492
+     },
+     "2": {
+      "n": 3821,
+      "hit": 0.468
+     },
+     "3": {
+      "n": 2770,
+      "hit": 0.43
+     }
+    }
+   }
+  },
+  "4h": {
+   "gold": {
+    "use": "rules",
+    "model": "logistic C=0.01",
+    "test_accuracy": 0.5634,
+    "test_balanced_accuracy": 0.4994,
+    "test_logloss": 0.68028,
+    "test_count": 21814,
+    "recent_accuracy": 0.4776,
+    "baseline_majority": 0.7981,
+    "baseline_rules": 0.5124,
+    "model_where_rules_call": 0.646,
+    "rules_count": 322,
+    "by_rating": {
+     "1": {
+      "n": 958,
+      "hit": 0.494
+     },
+     "2": {
+      "n": 1523,
+      "hit": 0.487
+     },
+     "3": {
+      "n": 108,
+      "hit": 0.472
+     },
+     "4": {
+      "n": 1769,
+      "hit": 0.49
+     },
+     "5": {
+      "n": 113,
+      "hit": 0.451
+     },
+     "6": {
+      "n": 1551,
+      "hit": 0.473
+     },
+     "7": {
+      "n": 669,
+      "hit": 0.459
+     },
+     "8": {
+      "n": 85,
+      "hit": 0.447
+     },
+     "9": {
+      "n": 1697,
+      "hit": 0.462
+     },
+     "10": {
+      "n": 2434,
+      "hit": 0.477
+     }
+    }
+   },
+   "usd": {
+    "use": "rules",
+    "model": "boosting",
+    "test_accuracy": 0.6108,
+    "test_balanced_accuracy": 0.5,
+    "test_logloss": 0.67346,
+    "test_count": 21988,
+    "recent_accuracy": 0.5649,
+    "baseline_majority": 0.6108,
+    "baseline_rules": 0.4221,
+    "model_where_rules_call": 0.6426,
+    "rules_count": 263,
+    "by_rating": {
+     "5": {
+      "n": 10994,
+      "hit": 0.565
+     }
+    }
+   },
+   "ndq": {
+    "use": "rules",
+    "model": "logistic C=0.001",
+    "test_accuracy": 0.8223,
+    "test_balanced_accuracy": 0.4997,
+    "test_logloss": 0.55178,
+    "test_count": 22989,
+    "recent_accuracy": 0.8267,
+    "baseline_majority": 0.823,
+    "baseline_rules": 0.5879,
+    "model_where_rules_call": 0.8287,
+    "rules_count": 677,
+    "by_rating": {
+     "10": {
+      "n": 11495,
+      "hit": 0.827
+     }
+    }
+   },
+   "oil": {
+    "use": "model",
+    "model": "boosting",
+    "test_accuracy": 0.5517,
+    "test_balanced_accuracy": 0.528,
+    "test_logloss": 0.72646,
+    "test_count": 21086,
+    "recent_accuracy": 0.6646,
+    "baseline_majority": 0.5267,
+    "baseline_rules": 0.523,
+    "model_where_rules_call": 0.5983,
+    "rules_count": 239,
+    "by_rating": {
+     "1": {
+      "n": 10543,
+      "hit": 0.665
+     }
+    }
+   }
+  },
+  "1d": {
+   "gold": {
+    "use": "model",
+    "model": "logistic C=0.003",
+    "test_accuracy": 0.6457,
+    "test_balanced_accuracy": 0.6458,
+    "test_logloss": 0.67803,
+    "test_count": 76117,
+    "recent_accuracy": 0.6976,
+    "baseline_majority": 0.508,
+    "baseline_rules": 0.5082,
+    "model_where_rules_call": 0.51,
+    "rules_count": 4018,
+    "by_rating": {
+     "1": {
+      "n": 30245,
+      "hit": 0.646
+     },
+     "2": {
+      "n": 1212,
+      "hit": 0.851
+     },
+     "3": {
+      "n": 371,
+      "hit": 0.827
+     },
+     "4": {
+      "n": 395,
+      "hit": 0.856
+     },
+     "5": {
+      "n": 1407,
+      "hit": 0.878
+     },
+     "6": {
+      "n": 373,
+      "hit": 0.893
+     },
+     "7": {
+      "n": 1122,
+      "hit": 0.92
+     },
+     "8": {
+      "n": 2934,
+      "hit": 0.931
+     }
+    }
+   },
+   "usd": {
+    "use": "none",
+    "model": "logistic C=0.01",
+    "test_accuracy": 0.4599,
+    "test_balanced_accuracy": 0.5002,
+    "test_logloss": 0.7996,
+    "test_count": 75860,
+    "recent_accuracy": 0.6119,
+    "baseline_majority": 0.5406,
+    "baseline_rules": 0.5301,
+    "model_where_rules_call": 0.4902,
+    "rules_count": 1930,
+    "by_rating": {
+     "1": {
+      "n": 37930,
+      "hit": 0.612
+     }
+    }
+   },
+   "ndq": {
+    "use": "model",
+    "model": "boosting",
+    "test_accuracy": 0.5574,
+    "test_balanced_accuracy": 0.5501,
+    "test_logloss": 0.79522,
+    "test_count": 76460,
+    "recent_accuracy": 0.6944,
+    "baseline_majority": 0.5337,
+    "baseline_rules": 0.5009,
+    "model_where_rules_call": 0.5388,
+    "rules_count": 5063,
+    "by_rating": {
+     "1": {
+      "n": 38230,
+      "hit": 0.694
+     }
+    }
+   },
+   "oil": {
+    "use": "model",
+    "model": "boosting",
+    "test_accuracy": 0.7436,
+    "test_balanced_accuracy": 0.7097,
+    "test_logloss": 0.63584,
+    "test_count": 76750,
+    "recent_accuracy": 0.9053,
+    "baseline_majority": 0.643,
+    "baseline_rules": 0.479,
+    "model_where_rules_call": 0.5057,
+    "rules_count": 3340,
+    "by_rating": {
+     "1": {
+      "n": 3221,
+      "hit": 0.997
+     },
+     "5": {
+      "n": 35154,
+      "hit": 0.897
+     }
+    }
+   }
+  },
+  "3d": {
+   "gold": {
+    "use": "none",
+    "model": "logistic C=0.01",
+    "test_accuracy": 0.4647,
+    "test_balanced_accuracy": 0.4928,
+    "test_logloss": 0.72584,
+    "test_count": 53631,
+    "recent_accuracy": 0.5701,
+    "baseline_majority": 0.5327,
+    "baseline_rules": 0.5539,
+    "model_where_rules_call": 0.3798,
+    "rules_count": 3786,
+    "by_rating": {
+     "1": {
+      "n": 19263,
+      "hit": 0.401
+     },
+     "2": {
+      "n": 205,
+      "hit": 1.0
+     },
+     "3": {
+      "n": 7347,
+      "hit": 1.0
+     },
+     "10": {
+      "n": 1,
+      "hit": 1.0
+     }
+    }
+   },
+   "usd": {
+    "use": "none",
+    "model": "boosting",
+    "test_accuracy": 0.5548,
+    "test_balanced_accuracy": 0.5357,
+    "test_logloss": 0.92696,
+    "test_count": 54339,
+    "recent_accuracy": 0.5757,
+    "baseline_majority": 0.5744,
+    "baseline_rules": 0.5254,
+    "model_where_rules_call": 0.5733,
+    "rules_count": 1793,
+    "by_rating": {
+     "1": {
+      "n": 10391,
+      "hit": 1.0
+     },
+     "2": {
+      "n": 5250,
+      "hit": 1.0
+     },
+     "3": {
+      "n": 11529,
+      "hit": 0.0
+     }
+    }
+   },
+   "ndq": {
+    "use": "model",
+    "model": "boosting",
+    "test_accuracy": 0.57,
+    "test_balanced_accuracy": 0.5703,
+    "test_logloss": 0.7577,
+    "test_count": 53356,
+    "recent_accuracy": 0.5678,
+    "baseline_majority": 0.5005,
+    "baseline_rules": 0.4738,
+    "model_where_rules_call": 0.5792,
+    "rules_count": 4572,
+    "by_rating": {
+     "1": {
+      "n": 16779,
+      "hit": 0.313
+     },
+     "10": {
+      "n": 9899,
+      "hit": 1.0
+     }
+    }
+   },
+   "oil": {
+    "use": "model",
+    "model": "logistic C=0.003",
+    "test_accuracy": 0.6231,
+    "test_balanced_accuracy": 0.6243,
+    "test_logloss": 0.68949,
+    "test_count": 55189,
+    "recent_accuracy": 0.7086,
+    "baseline_majority": 0.5164,
+    "baseline_rules": 0.4514,
+    "model_where_rules_call": 0.4809,
+    "rules_count": 3292,
+    "by_rating": {
+     "1": {
+      "n": 698,
+      "hit": 0.491
+     },
+     "2": {
+      "n": 26897,
+      "hit": 0.714
+     }
+    }
+   }
+  },
+  "1w": {
+   "gold": {
+    "use": "none",
+    "model": "boosting",
+    "test_accuracy": 0.3454,
+    "test_balanced_accuracy": 0.453,
+    "test_logloss": 1.41164,
+    "test_count": 30228,
+    "recent_accuracy": 0.165,
+    "baseline_majority": 0.6597,
+    "baseline_rules": 0.5432,
+    "model_where_rules_call": 0.3611,
+    "rules_count": 3503,
+    "by_rating": {
+     "1": {
+      "n": 5271,
+      "hit": 0.271
+     },
+     "5": {
+      "n": 294,
+      "hit": 0.0
+     },
+     "10": {
+      "n": 9549,
+      "hit": 0.111
+     }
+    }
+   },
+   "usd": {
+    "use": "none",
+    "model": "boosting",
+    "test_accuracy": 0.5539,
+    "test_balanced_accuracy": 0.6328,
+    "test_logloss": 0.89356,
+    "test_count": 26650,
+    "recent_accuracy": 0.4402,
+    "baseline_majority": 0.6144,
+    "baseline_rules": 0.5452,
+    "model_where_rules_call": 0.5746,
+    "rules_count": 1561,
+    "by_rating": {
+     "8": {
+      "n": 13325,
+      "hit": 0.44
+     }
+    }
+   },
+   "ndq": {
+    "use": "none",
+    "model": "logistic C=0.01",
+    "test_accuracy": 0.4894,
+    "test_balanced_accuracy": 0.4941,
+    "test_logloss": 0.76612,
+    "test_count": 30744,
+    "recent_accuracy": 0.5431,
+    "baseline_majority": 0.6088,
+    "baseline_rules": 0.4655,
+    "model_where_rules_call": 0.4616,
+    "rules_count": 4185,
+    "by_rating": {
+     "1": {
+      "n": 15372,
+      "hit": 0.543
+     }
+    }
+   },
+   "oil": {
+    "use": "none",
+    "model": "logistic C=0.01",
+    "test_accuracy": 0.6087,
+    "test_balanced_accuracy": 0.5958,
+    "test_logloss": 0.70839,
+    "test_count": 30994,
+    "recent_accuracy": 0.684,
+    "baseline_majority": 0.6123,
+    "baseline_rules": 0.4618,
+    "model_where_rules_call": 0.5417,
+    "rules_count": 2852,
+    "by_rating": {
+     "1": {
+      "n": 2398,
+      "hit": 0.587
+     },
+     "2": {
+      "n": 13099,
+      "hit": 0.702
+     }
+    }
+   }
+  }
+ },
+ "hourly_inputs": {
+  "kept": [
+   "headline",
+   "rules",
+   "mood"
+  ],
+  "steps": [
+   {
+    "groups": [
+     "headline",
+     "rules",
+     "mood"
+    ],
+    "balanced_accuracy": 0.4911,
+    "logloss": 0.67679
+   }
+  ]
+ },
+ "daily_inputs": {
+  "kept": [
+   "headline",
+   "rules",
+   "dmood",
+   "positioning",
+   "fresh"
+  ],
+  "steps": [
+   {
+    "groups": [
+     "headline",
+     "rules",
+     "dmood"
+    ],
+    "balanced_accuracy": 0.5064,
+    "logloss": 0.71188
+   },
+   {
+    "groups": [
+     "headline",
+     "rules",
+     "dmood",
+     "positioning"
+    ],
+    "balanced_accuracy": 0.5835,
+    "logloss": 0.70718
+   },
+   {
+    "groups": [
+     "headline",
+     "rules",
+     "dmood",
+     "positioning",
+     "fresh"
+    ],
+    "balanced_accuracy": 0.5865,
+    "logloss": 0.7067
+   }
+  ]
+ },
+ "quality_ok": true,
+ "deploy": true,
+ "compared_with": {
+  "previous_next_day_score": 0.5,
+  "new_next_day_score": 0.6013999999999999
+ }
+}
+[ 14.5m] Done
