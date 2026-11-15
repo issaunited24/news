@@ -1,0 +1,67 @@
+Store: 272058 headlines, 5827 searches done, 2597 openings, 417918 texts read
+Google News: 18 searches to do
+Google News: 1646 headlines from 18 searches this run; 273541 headlines in the store
+GDELT: 2657 searches to do, 5845 already done
+  retry 1: HTTP Error 429: Too Many Requests
+  retry 2: HTTP Error 429: Too Many Requests
+  retry 1: HTTP Error 429: Too Many Requests
+  retry 2: HTTP Error 429: Too Many Requests
+  retry 1: HTTP Error 429: Too Many Requests
+  retry 1: HTTP Error 429: Too Many Requests
+  retry 1: HTTP Error 429: Too Many Requests
+  retry 2: HTTP Error 429: Too Many Requests
+  retry 1: HTTP Error 429: Too Many Requests
+  retry 2: HTTP Error 429: Too Many Requests
+  retry 1: HTTP Error 429: Too Many Requests
+  retry 2: HTTP Error 429: Too Many Requests
+GDELT: refusing repeatedly, stopping for this run
+GDELT: 161 new headlines this run, 273667 in total, from 2017-01-02
+Prices...
+  5-minute archive: gold from 2026-10-20, usd from 2026-10-20, ndq from 2026-10-20, oil from 2026-10-20, vix from 2026-10-19, tnx from 2026-10-19
+  gold: 13761 hourly bars from 2024-06-24, 2516 daily from 2016-11-14
+  usd: 14318 hourly bars from 2024-06-24, 2516 daily from 2016-11-14
+  ndq: 13728 hourly bars from 2024-06-24, 2517 daily from 2016-11-14
+  oil: 13598 hourly bars from 2024-06-24, 2516 daily from 2016-11-14
+  positioning: gold 520 weeks, oil 520 weeks, ndq 520 weeks, usd 520 weeks
+Rows by source: gnews 269435, archive 201091, gdelt 2830, live 148
+Article openings: 127 to fetch, 2597 already have
+  127 fetched, 2719 with text
+Labels and market mood...
+/home/runner/work/news/news/scripts/ml/market_data.py:145: RuntimeWarning: invalid value encountered in log
+  c[f'dv20_{k}'] = float(np.std(np.diff(np.log(v[i - 20:i + 1]))) * 100)
+464504 labelled headlines (324052 with hourly labels, 144 from the app)
+Reading the headlines and openings...
+  reading 68084 new texts with FinBERT and the meaning model...
+    FinBERT 0/68084
+    FinBERT 3200/68084
+    FinBERT 6400/68084
+    FinBERT 9600/68084
+    FinBERT 12800/68084
+    FinBERT 16000/68084
+    FinBERT 19200/68084
+    FinBERT 22400/68084
+    FinBERT 25600/68084
+    FinBERT 28800/68084
+    FinBERT 32000/68084
+    FinBERT 35200/68084
+    FinBERT 38400/68084
+    FinBERT 41600/68084
+    FinBERT 44800/68084
+    FinBERT 48000/68084
+    FinBERT 51200/68084
+    FinBERT 54400/68084
+    FinBERT 57600/68084
+    FinBERT 60800/68084
+    FinBERT 64000/68084
+    FinBERT 67200/68084
+  reading 9881 new texts with FinBERT and the meaning model...
+    FinBERT 0/9881
+    FinBERT 3200/9881
+    FinBERT 6400/9881
+    FinBERT 9600/9881
+Rules, "is it new?", sources...
+  gold: 271293 with 4-hour labels (median move 0.282%), 455521 with 1-day labels
+  usd: 270739 with 4-hour labels (median move 0.078%), 455521 with 1-day labels
+  ndq: 271672 with 4-hour labels (median move 0.296%), 455521 with 1-day labels
+  oil: 271420 with 4-hour labels (median move 0.665%), 455521 with 1-day labels
+Stage 1 done in 68 min
